@@ -14,17 +14,19 @@ Design complete MMORPG worlds directly in your browser: maps, terrain, NPCs, mon
 ## ✨ Highlights
 
 - 🌍 Full 3D World Editor
-- 🏰 Building Builder
-- 👤 Character & NPC Builder
+- 🏰 Building Editor
+- 📃 100+ Assets, with the option to build your own, or upload FBX/GLB Models
+- 👤 Character & NPC Editor
 - 🗼 Dungeons and Tower Climbing Mode
 - 👹 Monster Editor with animation tools
-- ✨ Skill & VFX Builder with Status Logik (like stun, taunt, slow, burn...)
+- ✨ Skill & VFX Editor with Status Logik (stun, taunt, slow, burn...)
 - 📜 Quest, Dialogue & Event System
 - ⚒️ Crafting, Gathering & Items
 - 🗺️ Multi-map support with teleporters
 - 🌊 Terrain, rivers, lakes and roads
 - 🎨 Procedural asset generation
 - 🌐 Server-authoritative multiplayer architecture
+
 
 ## 📸 Screenshots
 
@@ -86,7 +88,7 @@ This is an actively developed solo project. Things like proper skill animations,
 
 
 ## 🗺️ Roadmap
-Not sure in which order, but features that will come in the future are: Better UI, AI NPCs who can quest, level etc, many more Assets, a Guuld System, saved Character progression, a proper landing page with logins.
+Not sure in which order, but features that will come in the future are: A lot of feature polishing for easier use, Better UI, AI NPCs who can quest, level etc, many more Assets, a Guuld System, saved Character progression, a proper landing page with logins.
 
 See:
 
