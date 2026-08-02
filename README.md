@@ -73,15 +73,15 @@ npm start
 
 Open:
 
-- `/`
-- `/editor.html`
-- `/buildings.html`
-- `/characters.html`
-- `/skills.html`
+- `/` Ingame Preview
+- `/editor.html` World Editor
+- `/buildings.html` Create Buildings
+- `/characters.html`Create NPCs and playable Characters
+- `/skills.html` Create Skills for playable Characters
 
 ## 📌 Project Status
 
-This is an actively developed solo project.
+This is an actively developed solo project. Things like proper skill animations, sound effects and such are supported, but i didn't bother with them yet, since i'm focusing on the builders systems for now. A few assets are also visually broken, it has been too expensive to fix them so they will be fixed at a later point. 
 
 See:
 
