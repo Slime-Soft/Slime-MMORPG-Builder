@@ -1,0 +1,25 @@
+[
+  {
+    "id": "iron-ingot",
+    "name": "Iron Ingot",
+    "profession": "BLACKSMITHING",
+    "requiredStationTypeId": "STATION_ANVIL_TIER_1",
+    "requiredSkillLevel": 1,
+    "craftingTimeSeconds": 2,
+    "expReward": 10,
+    "reagents": [
+      {
+        "itemId": "ore",
+        "quantity": 2
+      }
+    ],
+    "output": {
+      "itemId": "ingot",
+      "yieldMin": 1,
+      "yieldMax": 1,
+      "successChancePercent": 100,
+      "critChancePercent": 0
+    },
+    "failAction": "DESTROY_ALL_MATERIALS"
+  }
+]

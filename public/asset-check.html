@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Asset Check</title>
+<!--
+  public/asset-check.html — look at props through the GAME'S OWN RENDERER.
+
+  WHY THIS EXISTS. On 2026-08-01 a batch of assets shipped after being
+  "verified" against scripts/prop-sheet.mjs, which is a Node software
+  rasteriser: flat shading, no shadows, no toon ramp, and above all NO BLOOM.
+  The bakery's entire front wall — door included — was blown out to white by
+  bloom in game, and that defect is literally invisible to that tool. So is
+  anything else that only goes wrong once real tone mapping, cel shading and
+  post-processing are in the chain.
+
+  This page builds the SAME renderer, the SAME atmosphere preset, the SAME
+  toonify() pass and the SAME EffectComposer chain that src/main.js does, so
+  what you see here is what a player sees. It is the last gate before an asset
+  is called done.
+
+    /asset-check.html?types=bld-blacksmith,bld-bakery
+    /asset-check.html?category=buildings
+    /asset-check.html?types=hedge&seeds=1,7,42
+
+  Controls: drag to orbit, wheel to zoom, right-drag to pan.
+  The Bloom / Toon toggles are there so a defect can be attributed rather than
+  guessed at — if a wall is unreadable, turn bloom off and see whether the
+  geometry underneath was fine all along.
+-->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/",
+      "three.quarks": "https://cdn.jsdelivr.net/npm/three.quarks@0.17.1/dist/three.quarks.esm.js",
+      "quarks.core": "https://cdn.jsdelivr.net/npm/quarks.core@0.17.1/dist/quarks.core.esm.js"
+    }
+  }
+</script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141a; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  #ui {
+    position: fixed; top: 0; left: 0; right: 0; padding: 8px 10px; z-index: 10;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    background: linear-gradient(#11141aee, #11141a88 70%, transparent);
+    color: #e8e4da; font-size: 13px;
+  }
+  #ui select, #ui input, #ui button {
+    background: #232833; color: #e8e4da; border: 1px solid #3a4150;
+    border-radius: 5px; padding: 4px 8px; font: inherit;
+  }
+  #ui button { cursor: pointer; }
+  #ui button:hover { background: #2e3542; }
+  #ui button.on { background: #4a6f4a; border-color: #6d9a6d; }
+  #ui label { display: flex; gap: 4px; align-items: center; }
+  #hint { margin-left: auto; opacity: 0.6; font-size: 12px; }
+  #names {
+    position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 10px; z-index: 10;
+    color: #e8e4da; font-size: 13px; background: #11141acc; text-align: center;
+  }
+  #err { position: fixed; inset: 40px; color: #ff9c9c; font-family: ui-monospace, monospace;
+         font-size: 13px; white-space: pre-wrap; z-index: 20; display: none; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <label>Category
+    <select id="cat"></select>
+  </label>
+  <label>Asset
+    <select id="type"></select>
+  </label>
+  <label>Seeds <input id="seeds" size="10" value="1"></label>
+  <button id="bloom" class="on">Bloom</button>
+  <button id="toon" class="on">Toon</button>
+  <button id="shadows" class="on">Shadows</button>
+  <button id="grid">Ground grid</button>
+  <button id="man" class="on">1.8m figure</button>
+  <span id="hint">drag = orbit &middot; wheel = zoom &middot; right-drag = pan</span>
+</div>
+<div id="names"></div>
+<div id="err"></div>
+<canvas id="c"></canvas>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createRenderer, createScene, toonify } from '../src/render/scene.js';
+import { createPostProcessing } from '../src/render/postProcessing.js';
+import { updateAtmosphere, applyGraphicsSettingsToAtmosphere } from '../src/render/atmosphere.js';
+import { PROP_CATEGORIES, propTypesIn, PROP_TYPES } from '../src/sim/propTypes.js';
+import { defaultGraphicsSettings } from '../src/sim/graphicsSettings.js';
+import { buildProp } from '../src/generators/props.js';
+import { loadFloraPlugins } from '../src/generators/pluginLoader.js';
+
+const err = document.getElementById('err');
+window.addEventListener('error', (e) => {
+  err.style.display = 'block';
+  err.textContent = `${e.message}\n\n${e.error?.stack || ''}`;
+});
+
+try { await loadFloraPlugins(); } catch { /* plugins are optional here */ }
+
+const params = new URLSearchParams(location.search);
+const canvas = document.getElementById('c');
+const renderer = createRenderer(canvas, { shadows: true });
+const scene = createScene(params.get('preset') || 'meadow');
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 4000);
+const post = createPostProcessing(renderer, scene, camera);
+// The REAL settings object the game runs with — postProcessing.applySettings
+// expects the exact shape of defaultGraphicsSettings(), not a flat bag of
+// values. Using the game's own defaults is also the point of this page: the
+// bloom here has to be the bloom a player gets, or the page is as blind as the
+// Node rasteriser it exists to replace.
+const gfx = defaultGraphicsSettings();
+post.applySettings(gfx);
+// src/main.js pushes the same settings into the scene's sun/ambient/fog as
+// well as into the composer. Skipping this half would leave the page lit by
+// the atmosphere preset alone — close, but not the lighting a player sees,
+// which is the one thing this page has to get right.
+applyGraphicsSettingsToAtmosphere(scene, gfx);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+// A ground plane that takes shadow, so a prop is lit and grounded exactly as
+// it would be in the world rather than floating in a void.
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(400, 400),
+  new THREE.MeshStandardMaterial({ color: 0x6f8a4e, roughness: 1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+const grid = new THREE.GridHelper(120, 120, 0x9aa89a, 0x7f8d7f);
+grid.position.y = 0.01;
+grid.visible = false;
+scene.add(grid);
+
+/** A 1.8 m stand-in, so scale is answerable at a glance. */
+function figure() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x2f4f6f, roughness: 0.9 });
+  const add = (w, h, d, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z); m.castShadow = true; g.add(m);
+  };
+  add(0.40, 0.72, 0.24, 0, 1.22, 0); add(0.22, 0.24, 0.22, 0, 1.70, 0);
+  add(0.14, 0.86, 0.16, -0.11, 0.43, 0); add(0.14, 0.86, 0.16, 0.11, 0.43, 0);
+  add(0.11, 0.62, 0.13, -0.25, 1.25, 0); add(0.11, 0.62, 0.13, 0.25, 1.25, 0);
+  return g;
+}
+
+const stage = new THREE.Group();
+scene.add(stage);
+let manGroup = null;
+
+function clearStage() {
+  stage.traverse((o) => {
+    if (o.isMesh) {
+      o.geometry?.dispose();
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => m?.dispose());
+    }
+  });
+  stage.clear();
+}
+
+function show(ids, seeds) {
+  clearStage();
+  let cursorX = 0;
+  const placed = [];
+  const box = new THREE.Box3(), size = new THREE.Vector3();
+  for (const id of ids) {
+    for (const seed of seeds) {
+      let mesh;
+      try { mesh = buildProp(id, seed); } catch (e) { console.error(id, e); continue; }
+      // The same toon conversion the live game applies, and the same
+      // shadow flags — a prop that only looks right unshaded isn't done.
+      if (toonOn) toonify(mesh);
+      mesh.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      box.setFromObject(mesh);
+      box.getSize(size);
+      const halfW = Math.max(1, size.x / 2);
+      mesh.position.x = cursorX + halfW;
+      cursorX += halfW * 2 + 2.5;
+      stage.add(mesh);
+      placed.push({ id, seed, size: size.clone() });
+    }
+  }
+  // Centre the row on the origin.
+  stage.position.x = -cursorX / 2;
+
+  if (manGroup) { scene.remove(manGroup); manGroup = null; }
+  if (manOn) {
+    manGroup = figure();
+    manGroup.position.set(-cursorX / 2 - 1.4, 0, 1.2);
+    scene.add(manGroup);
+  }
+
+  document.getElementById('names').textContent = placed
+    .map((p) => `${p.id}${seeds.length > 1 ? ` (seed ${p.seed})` : ''} — ${p.size.x.toFixed(1)}×${p.size.y.toFixed(1)}×${p.size.z.toFixed(1)} m`)
+    .join('     •     ');
+
+  // Frame the whole row from a low three-quarter angle, the way a player sees
+  // a building — not from above, where every defect at eye level hides.
+  const all = new THREE.Box3().setFromObject(stage);
+  const c = all.getCenter(new THREE.Vector3());
+  const s = all.getSize(new THREE.Vector3());
+  const dist = Math.max(s.x, s.y * 1.6, 6) * 1.15;
+  camera.position.set(c.x + dist * 0.55, Math.max(2.2, s.y * 0.55), c.z + dist);
+  controls.target.set(c.x, Math.min(s.y * 0.42, 6), c.z);
+  controls.update();
+  post.warmUp();
+}
+
+// --- controls -------------------------------------------------------------
+let bloomOn = true, toonOn = true, shadowsOn = true, manOn = true;
+const catSel = document.getElementById('cat');
+const typeSel = document.getElementById('type');
+const seedsIn = document.getElementById('seeds');
+
+catSel.innerHTML = '<option value="">(all)</option>' +
+  PROP_CATEGORIES.map((c) => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+
+function fillTypes() {
+  const rows = (catSel.value ? propTypesIn(catSel.value) : PROP_TYPES)
+    .filter((d) => d.id !== 'custom' && d.id !== 'model');
+  typeSel.innerHTML = (catSel.value ? '<option value="*">— whole category —</option>' : '') +
+    rows.map((d) => `<option value="${d.id}">${d.label}</option>`).join('');
+}
+
+function currentIds() {
+  if (typeSel.value === '*') {
+    return propTypesIn(catSel.value).filter((d) => d.id !== 'custom' && d.id !== 'model').map((d) => d.id);
+  }
+  return typeSel.value ? [typeSel.value] : [];
+}
+const currentSeeds = () =>
+  seedsIn.value.split(',').map((s) => Number(s.trim())).filter((n) => Number.isFinite(n)) || [1];
+
+function refresh() { show(currentIds(), currentSeeds()); }
+
+catSel.addEventListener('change', () => { fillTypes(); refresh(); });
+typeSel.addEventListener('change', refresh);
+seedsIn.addEventListener('change', refresh);
+
+const toggle = (elId, get, set) => {
+  const b = document.getElementById(elId);
+  b.addEventListener('click', () => {
+    set(!get());
+    b.classList.toggle('on', get());
+  });
+};
+toggle('bloom', () => bloomOn, (v) => {
+  bloomOn = v;
+  gfx.postFx.bloom.enabled = v;
+  post.applySettings(gfx);
+});
+toggle('toon', () => toonOn, (v) => { toonOn = v; refresh(); });
+toggle('shadows', () => shadowsOn, (v) => { shadowsOn = v; renderer.shadowMap.enabled = v; refresh(); });
+toggle('man', () => manOn, (v) => { manOn = v; refresh(); });
+document.getElementById('grid').addEventListener('click', (e) => {
+  grid.visible = !grid.visible;
+  e.currentTarget.classList.toggle('on', grid.visible);
+});
+
+// --- initial selection from the URL ---------------------------------------
+fillTypes();
+if (params.get('category')) {
+  catSel.value = params.get('category');
+  fillTypes();
+  typeSel.value = '*';
+}
+if (params.get('seeds')) seedsIn.value = params.get('seeds');
+const urlTypes = (params.get('types') || '').split(',').map((s) => s.trim()).filter(Boolean);
+if (urlTypes.length) {
+  catSel.value = '';
+  fillTypes();
+  typeSel.value = urlTypes[0];
+  show(urlTypes, currentSeeds());
+} else {
+  refresh();
+}
+
+// --- loop -----------------------------------------------------------------
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  post.setSize(innerWidth, innerHeight);
+});
+
+renderer.setAnimationLoop((t) => {
+  controls.update();
+  updateAtmosphere(scene, camera.position, controls.target, t / 1000);
+  post.update(t / 1000);
+  post.composer.render();
+});
+</script>
+</body>
+</html>

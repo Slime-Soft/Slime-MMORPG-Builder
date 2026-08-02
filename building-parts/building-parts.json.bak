@@ -1,0 +1,672 @@
+[
+  {
+    "id": "wall-log",
+    "name": "Log Wall",
+    "category": "wall",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "log-wall",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.5,
+          "z": 1
+        },
+        "color": 7031348
+      }
+    ]
+  },
+  {
+    "id": "wall-timber-frame",
+    "name": "Timber-Frame Wall",
+    "category": "wall",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 1.25,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.5,
+          "z": 0.3
+        },
+        "color": 14208440
+      },
+      {
+        "id": "s2",
+        "kind": "box",
+        "position": {
+          "x": -0.9,
+          "y": 1.25,
+          "z": 0.16
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 35
+        },
+        "scale": {
+          "x": 0.12,
+          "y": 2.6,
+          "z": 0.08
+        },
+        "color": 4862752
+      },
+      {
+        "id": "s3",
+        "kind": "box",
+        "position": {
+          "x": 0.9,
+          "y": 1.25,
+          "z": 0.16
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": -35
+        },
+        "scale": {
+          "x": 0.12,
+          "y": 2.6,
+          "z": 0.08
+        },
+        "color": 4862752
+      },
+      {
+        "id": "s4",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 2.3,
+          "z": 0.16
+        },
+        "scale": {
+          "x": 3,
+          "y": 0.12,
+          "z": 0.08
+        },
+        "color": 4862752
+      }
+    ]
+  },
+  {
+    "id": "wall-stone",
+    "name": "Stone Block Wall",
+    "category": "wall",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 1.25,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.5,
+          "z": 0.4
+        },
+        "color": 9406077
+      },
+      {
+        "id": "s2",
+        "kind": "box",
+        "position": {
+          "x": -1,
+          "y": 0.5,
+          "z": 0.22
+        },
+        "scale": {
+          "x": 0.9,
+          "y": 0.9,
+          "z": 0.06
+        },
+        "color": 7827044
+      },
+      {
+        "id": "s3",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0.5,
+          "z": 0.22
+        },
+        "scale": {
+          "x": 0.9,
+          "y": 0.9,
+          "z": 0.06
+        },
+        "color": 10064008
+      },
+      {
+        "id": "s4",
+        "kind": "box",
+        "position": {
+          "x": 1,
+          "y": 0.5,
+          "z": 0.22
+        },
+        "scale": {
+          "x": 0.9,
+          "y": 0.9,
+          "z": 0.06
+        },
+        "color": 7827044
+      }
+    ]
+  },
+  {
+    "id": "wall-plaster",
+    "name": "Plaster Wall",
+    "category": "wall",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 1.25,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.5,
+          "z": 0.35
+        },
+        "color": 15260088
+      }
+    ]
+  },
+  {
+    "id": "roof-shingle-blue",
+    "name": "Shingle Roof — Blue",
+    "category": "roof",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "shingle-roof-panel",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 1,
+          "z": 4
+        },
+        "color": 4157322
+      }
+    ]
+  },
+  {
+    "id": "roof-shingle-red",
+    "name": "Shingle Roof — Red",
+    "category": "roof",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "shingle-roof-panel",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 1,
+          "z": 4
+        },
+        "color": 11031615
+      }
+    ]
+  },
+  {
+    "id": "roof-flat-tile",
+    "name": "Flat Tile Roof",
+    "category": "roof",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 4,
+          "y": 0.25,
+          "z": 4.5
+        },
+        "color": 6974058
+      }
+    ]
+  },
+  {
+    "id": "roof-tower-cone",
+    "name": "Conical Tower Roof",
+    "category": "roof",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "cone",
+        "position": {
+          "x": 0,
+          "y": 1.5,
+          "z": 0
+        },
+        "scale": {
+          "x": 2.6,
+          "y": 3,
+          "z": 2.6
+        },
+        "color": 3816042
+      }
+    ]
+  },
+  {
+    "id": "window-framed",
+    "name": "Framed Window",
+    "category": "window",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.05,
+          "y": 1.15,
+          "z": 0.1
+        },
+        "color": 3811352
+      },
+      {
+        "id": "s2",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0.06
+        },
+        "scale": {
+          "x": 0.9,
+          "y": 1,
+          "z": 0.04
+        },
+        "color": 3824234
+      }
+    ]
+  },
+  {
+    "id": "window-round",
+    "name": "Round Window",
+    "category": "window",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "cylinder",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 90,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.9,
+          "y": 0.12,
+          "z": 0.9
+        },
+        "color": 3811352
+      },
+      {
+        "id": "s2",
+        "kind": "cylinder",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0.06
+        },
+        "rotation": {
+          "x": 90,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.7,
+          "y": 0.08,
+          "z": 0.7
+        },
+        "color": 3824234
+      }
+    ]
+  },
+  {
+    "id": "door-framed",
+    "name": "Framed Door",
+    "category": "door",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 1.1,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.65,
+          "y": 2.35,
+          "z": 0.15
+        },
+        "color": 3811352
+      },
+      {
+        "id": "s2",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 1.1,
+          "z": 0.08
+        },
+        "scale": {
+          "x": 1.5,
+          "y": 2.2,
+          "z": 0.05
+        },
+        "color": 985608
+      }
+    ]
+  },
+  {
+    "id": "door-arched",
+    "name": "Arched Door",
+    "category": "door",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0.9,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.5,
+          "y": 1.8,
+          "z": 0.15
+        },
+        "color": 3811352
+      },
+      {
+        "id": "s2",
+        "kind": "cylinder",
+        "position": {
+          "x": 0,
+          "y": 1.8,
+          "z": 0
+        },
+        "rotation": {
+          "x": 90,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1.5,
+          "y": 0.15,
+          "z": 1.5
+        },
+        "color": 3811352
+      },
+      {
+        "id": "s3",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0.9,
+          "z": 0.08
+        },
+        "scale": {
+          "x": 1.35,
+          "y": 1.7,
+          "z": 0.05
+        },
+        "color": 985608
+      }
+    ]
+  },
+  {
+    "id": "trim-horns",
+    "name": "Crossed Roof Horns",
+    "category": "trim",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "cylinder",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 28.6
+        },
+        "scale": {
+          "x": 0.12,
+          "y": 4,
+          "z": 0.18
+        },
+        "color": 3811352
+      },
+      {
+        "id": "s2",
+        "kind": "cylinder",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": -28.6
+        },
+        "scale": {
+          "x": 0.12,
+          "y": 4,
+          "z": 0.18
+        },
+        "color": 3811352
+      }
+    ]
+  },
+  {
+    "id": "trim-ridge-beam",
+    "name": "Ridge Beam",
+    "category": "trim",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.22,
+          "y": 0.22,
+          "z": 4.3
+        },
+        "color": 3811352
+      }
+    ]
+  },
+  {
+    "id": "trim-chimney",
+    "name": "Chimney",
+    "category": "trim",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0.75,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.6,
+          "y": 1.5,
+          "z": 0.6
+        },
+        "color": 9406077
+      },
+      {
+        "id": "s2",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 1.58,
+          "z": 0
+        },
+        "scale": {
+          "x": 0.75,
+          "y": 0.16,
+          "z": 0.75
+        },
+        "color": 7827044
+      }
+    ]
+  },
+  {
+    "id": "gable-log",
+    "name": "Gable — Log",
+    "category": "trim",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "wedge",
+        "position": {
+          "x": 0,
+          "y": 1.2,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.4,
+          "z": 0.15
+        },
+        "color": 7031348
+      }
+    ]
+  },
+  {
+    "id": "gable-timber-frame",
+    "name": "Gable — Timber-Frame",
+    "category": "trim",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "wedge",
+        "position": {
+          "x": 0,
+          "y": 1.2,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.4,
+          "z": 0.15
+        },
+        "color": 14208440
+      }
+    ]
+  },
+  {
+    "id": "gable-stone",
+    "name": "Gable — Stone",
+    "category": "trim",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "wedge",
+        "position": {
+          "x": 0,
+          "y": 1.2,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.4,
+          "z": 0.2
+        },
+        "color": 9406077
+      }
+    ]
+  },
+  {
+    "id": "gable-plaster",
+    "name": "Gable — Plaster",
+    "category": "trim",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "wedge",
+        "position": {
+          "x": 0,
+          "y": 1.2,
+          "z": 0
+        },
+        "scale": {
+          "x": 3,
+          "y": 2.4,
+          "z": 0.15
+        },
+        "color": 15260088
+      }
+    ]
+  },
+  {
+    "id": "plinth-stone",
+    "name": "Stone Plinth",
+    "category": "other",
+    "shapes": [
+      {
+        "id": "s1",
+        "kind": "box",
+        "position": {
+          "x": 0,
+          "y": 0.22,
+          "z": 0
+        },
+        "scale": {
+          "x": 3.5,
+          "y": 0.44,
+          "z": 4.5
+        },
+        "color": 9406077
+      }
+    ]
+  }
+]

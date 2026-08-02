@@ -1,0 +1,12 @@
+{
+  "floorNumber": 5,
+  "isBossFloor": true,
+  "bounds": { "minX": -28, "maxX": 28, "minZ": -28, "maxZ": 28 },
+  "spawnPoint": { "x": 0, "y": 0, "z": -24 },
+  "exitPoint": { "x": 0, "y": 0, "z": 24 },
+  "monsterSpawns": [
+    { "id": "f5-boss", "type": "boss-golem", "position": { "x": 0, "y": 0, "z": 4 }, "maxHealth": 400, "damage": 18, "speed": 1.4, "aggroRange": 18, "attackRange": 2.4, "attackCooldownMs": 1800, "isBoss": true },
+    { "id": "f5-goblin-1", "type": "goblin", "position": { "x": -12, "y": 0, "z": -6 }, "maxHealth": 60, "damage": 9, "speed": 2.4, "aggroRange": 10, "attackRange": 1.8, "attackCooldownMs": 1100 },
+    { "id": "f5-goblin-2", "type": "goblin", "position": { "x": 12, "y": 0, "z": -6 }, "maxHealth": 60, "damage": 9, "speed": 2.4, "aggroRange": 10, "attackRange": 1.8, "attackCooldownMs": 1100 }
+  ]
+}

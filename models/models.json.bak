@@ -1,0 +1,15 @@
+[
+  {
+    "id": "model-1784624996055-83068",
+    "name": "FireStaff",
+    "url": "/assets/models/model-1784624995864-211343342.glb",
+    "importScale": 1,
+    "footprintRadius": null,
+    "height": null,
+    "category": "weapon",
+    "weapon": {
+      "hands": 1,
+      "slot": "main"
+    }
+  }
+]

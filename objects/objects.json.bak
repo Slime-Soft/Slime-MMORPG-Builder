@@ -1,0 +1,72 @@
+[
+  {
+    "id": "test",
+    "name": "test",
+    "shapes": [
+      {
+        "id": "shape-1783588925999-957927",
+        "kind": "box",
+        "position": {
+          "x": -1.75,
+          "y": 0.5,
+          "z": -1.5
+        },
+        "rotationDeg": 0,
+        "scale": {
+          "x": 1.45,
+          "y": 1,
+          "z": 1
+        },
+        "color": 13421772
+      },
+      {
+        "id": "shape-1783588958887-473392",
+        "kind": "cone",
+        "position": {
+          "x": -1.75,
+          "y": 1.5,
+          "z": -1.5
+        },
+        "rotationDeg": 0,
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "color": 9836311
+      },
+      {
+        "id": "shape-1783589014033-295906",
+        "kind": "sphere",
+        "position": {
+          "x": -2.25,
+          "y": 0.5,
+          "z": -1
+        },
+        "rotationDeg": 0,
+        "scale": {
+          "x": 0.1,
+          "y": 0.1,
+          "z": 0.1
+        },
+        "color": 13986096
+      },
+      {
+        "id": "shape-1783589046695-333990",
+        "kind": "sphere",
+        "position": {
+          "x": -1.25,
+          "y": 0.5,
+          "z": -1
+        },
+        "rotationDeg": 0,
+        "scale": {
+          "x": 0.1,
+          "y": 0.1,
+          "z": 0.1
+        },
+        "color": 11626283
+      }
+    ]
+  }
+]

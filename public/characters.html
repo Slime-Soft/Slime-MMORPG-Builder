@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Character &amp; NPC Builder — Fantasy MMO</title>
+  <link rel="stylesheet" href="/theme.css" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; display: flex; font: 13px/1.4 'Lusitana', serif; background: #0f0b07; color: #e8d9b5; }
+    #stage { flex: 1; min-width: 0; position: relative; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #panel {
+      width: 300px; flex: none; min-height: 0; overflow-y: auto; padding: 12px;
+      background: linear-gradient(180deg, #2b1e12 0%, #1b140d 100%);
+      border-left: 2px solid #8a6423;
+      box-shadow: inset 1px 0 0 rgba(217,164,65,0.2);
+    }
+    h1 { font-family: 'Lusitana', serif; font-size: 15px; margin: 0 0 8px; color: #f4d78a; text-shadow: 0 0 10px rgba(244,215,138,0.3), 0 1px 0 #000; }
+    h2 {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #8a6423; margin: 14px 0 6px;
+      border-bottom: 1px solid rgba(217,164,65,0.25); padding-bottom: 3px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+    button {
+      font-family: 'Lusitana', serif; font-weight: 600;
+      padding: 6px 5px; background: linear-gradient(180deg, #4a3620, #3a2717); color: #f4d78a;
+      border: 1px solid #8a6423; border-radius: 5px; cursor: pointer; font-size: 11px;
+    }
+    button:hover { border-color: #d9a441; box-shadow: 0 0 6px rgba(244,215,138,0.3); }
+    button.active { background: linear-gradient(180deg, #5a4326, #241a10); border-color: #d9a441; }
+    button.danger:hover { border-color: #c65b2e; box-shadow: 0 0 6px rgba(198,91,46,0.4); }
+    label { display: block; margin-top: 7px; color: #e8d9b5; opacity: 0.85; font-size: 11px; }
+    select, input[type=text] { width: 100%; margin-top: 3px; padding: 5px; background: #3a2717; color: #e8d9b5; border: 1px solid #8a6423; border-radius: 5px; font-family: inherit; }
+    .slider { display: grid; grid-template-columns: 30px 1fr 46px; align-items: center; gap: 5px; margin-top: 2px; }
+    .slider span { color: #e8d9b5; opacity: 0.8; font-size: 11px; }
+    .slider input { width: 100%; }
+    .slider output { font-variant-numeric: tabular-nums; text-align: right; font-size: 11px; }
+    .slider input.numbox { width: 100%; padding: 2px 3px; background: #3a2717; color: #e8d9b5;
+      border: 1px solid #8a6423; border-radius: 4px; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .slider input.numbox::-webkit-outer-spin-button,
+    .slider input.numbox::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .sub { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #8a6423; margin-top: 9px; }
+    #shape-list { max-height: 120px; overflow-y: auto; border: 1px solid #8a6423; border-radius: 5px; margin-top: 4px; }
+    #shape-list div { padding: 4px 6px; cursor: pointer; font-size: 11px; border-bottom: 1px solid rgba(217,164,65,0.15); }
+    #shape-list div:hover { background: #3a2717; }
+    #shape-list div.active { background: linear-gradient(180deg, #5a4326, #3a2717); color: #f4d78a; }
+    #status { margin-top: 8px; min-height: 15px; font-size: 11px; color: #9dd08a; }
+    #status.err { color: #e0955a; }
+    #hint { position: absolute; left: 12px; bottom: 10px; color: #e8d9b5; opacity: 0.6; font-size: 11px; text-shadow: 0 1px 2px #000; }
+    .row { display: flex; gap: 5px; margin-top: 8px; }
+    .row > button { flex: 1; }
+    input[type=color] { width: 100%; height: 26px; margin-top: 3px; background: #3a2717; border: 1px solid #8a6423; border-radius: 5px; }
+    .skill-row {
+      display: grid; grid-template-columns: 1fr 44px 54px 22px; gap: 4px; align-items: center;
+      padding: 5px 0; border-bottom: 1px solid rgba(217,164,65,0.15); font-size: 11px;
+    }
+    .skill-row .skill-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .skill-row select, .skill-row input[type=number] { margin-top: 0; padding: 3px; font-size: 10px; }
+    .skill-row button { padding: 2px; }
+    .skill-row .reassign-note { grid-column: 1 / -1; font-size: 10px; color: #e0955a; margin-top: -2px; }
+    .weapon-model-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 0; border-bottom: 1px solid rgba(217,164,65,0.15); font-size: 11px;
+    }
+    .weapon-model-row button { padding: 2px 6px; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="preview-canvas"></canvas>
+    <div id="hint">click a body part to select · G move · R rotate · S scale · Esc deselect · drag to orbit · scroll to zoom</div>
+  </div>
+
+  <div id="panel">
+    <h1>Character &amp; NPC Builder</h1>
+
+    <h2>Catalog</h2>
+    <select id="catalog" size="6"></select>
+    <div class="row">
+      <button id="new-btn">New</button>
+      <button id="dup-btn">Duplicate</button>
+      <button id="del-btn" class="danger">Delete</button>
+    </div>
+    <label>Name<input type="text" id="name-input" /></label>
+    <label>Kind
+      <select id="kind-sel">
+        <option value="character">character (player class)</option>
+        <option value="npc">npc</option>
+      </select>
+    </label>
+
+    <h2>Body part</h2>
+    <div class="grid3" id="slot-tabs"></div>
+
+    <div class="sub">Slot anchor (where the limb attaches)</div>
+    <div id="anchor-sliders"></div>
+
+    <div class="sub">Replace with preset</div>
+    <div class="grid" id="preset-grid"></div>
+
+    <div class="sub">Shapes in this part</div>
+    <div id="shape-list"></div>
+    <div class="row">
+      <button id="add-shape">Add shape</button>
+      <button id="del-shape" class="danger">Delete shape</button>
+    </div>
+
+    <div id="shape-editor"></div>
+
+    <h2>Weapons</h2>
+    <label>Main hand<select id="main-hand"></select></label>
+    <label>Off hand<select id="off-hand"></select></label>
+    <label>Animation
+      <select id="anim">
+        <option value="idle">Idle</option>
+        <option value="walk">Walk</option>
+      </select>
+    </label>
+
+    <h2>Import Weapon Model (FBX/GLB)</h2>
+    <input type="file" id="weapon-model-upload-file" accept=".fbx,.glb" />
+    <input type="text" id="weapon-model-upload-name" placeholder="Weapon name" />
+    <div class="grid">
+      <label>Import scale<input type="number" id="weapon-model-upload-scale" value="1" step="0.001" min="0.0001" /></label>
+      <label>Hands
+        <select id="weapon-model-upload-hands">
+          <option value="1">1 (one-handed)</option>
+          <option value="2">2 (two-handed)</option>
+        </select>
+      </label>
+    </div>
+    <label>Slot
+      <select id="weapon-model-upload-slot">
+        <option value="main">Main hand</option>
+        <option value="off">Off hand</option>
+        <option value="either">Either hand</option>
+      </select>
+    </label>
+    <div style="font-size:11px;color:#8a6423;margin-top:4px">FBX/GLB exporters disagree on units — 1 unit = 1 meter here; if a Blender/Maya export used centimeters, try 0.01.</div>
+    <button id="weapon-model-upload-btn" style="width:100%; margin-top:6px;">⬆ Upload Weapon Model</button>
+    <div id="weapon-model-upload-status" style="font-size:11px;color:#9dd08a;margin-top:4px"></div>
+    <div class="sub">Uploaded weapon models</div>
+    <div id="weapon-model-list"></div>
+
+    <h2>Tune weapon grip &amp; arm pose</h2>
+    <label>Weapon<select id="tune-target"></select></label>
+    <div id="tuner"></div>
+    <div class="row">
+      <button id="copy-btn">Copy snippet</button>
+      <button id="reset-weapon">Reset weapon</button>
+    </div>
+
+    <div id="class-skills-section" style="display:none">
+      <h2>Class Skills</h2>
+      <div id="assigned-skills-list"></div>
+      <div class="row">
+        <select id="add-skill-sel" style="flex:1"></select>
+        <button id="add-skill-btn">Assign</button>
+      </div>
+    </div>
+
+    <h2>Save</h2>
+    <div class="row">
+      <button id="save-btn">Save catalog</button>
+      <button id="revert-btn">Reload from server</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="/src/character-builder/main.js"></script>
+</body>
+</html>

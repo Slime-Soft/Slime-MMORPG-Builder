@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Prop Test</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #cfe6a8; font-family: system-ui, sans-serif; }
+    canvas { display: block; }
+    #tag { position: absolute; top: 6px; left: 8px; color: #fff; background: rgba(0,0,0,.55);
+           padding: 3px 8px; border-radius: 4px; font-size: 13px; z-index: 5; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="tag">loading…</div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { buildProp } from '/src/generators/props.js';
+    import { toonify } from '/src/render/scene.js';
+
+    const qs = new URLSearchParams(location.search);
+    const ids = (qs.get('p') || 'fountain').split(',');
+    const seed = Number(qs.get('seed') || 7);
+    const elev = Number(qs.get('elev') || 22);   // camera elevation in degrees
+    const azim = Number(qs.get('azim') || 30);   // camera azimuth in degrees
+    const zoom = Number(qs.get('zoom') || 1);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x9fd2f0);
+
+    const sun = new THREE.DirectionalLight(0xffffff, 2.1);
+    sun.position.set(30, 55, 20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    scene.add(sun, new THREE.HemisphereLight(0xbfe3ff, 0x6a7a4a, 1.0));
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    // Lay the requested props out in a row, each on its own patch of ground.
+    let cursor = 0;
+    const built = [];
+    for (const id of ids) {
+      const mesh = buildProp(id, seed);
+      const box = new THREE.Box3().setFromObject(mesh);
+      const size = box.getSize(new THREE.Vector3());
+      mesh.position.x = cursor + size.x / 2 - (box.min.x + size.x / 2);
+      group.add(mesh);
+      built.push({ id, size, box });
+      cursor += size.x * 1.4 + 1;
+    }
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(400, 400),
+      new THREE.MeshStandardMaterial({ color: 0x86b35a, roughness: 1 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+    toonify(group);
+    group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+    const whole = new THREE.Box3().setFromObject(group);
+    const c = whole.getCenter(new THREE.Vector3());
+    const s = whole.getSize(new THREE.Vector3());
+    const radius = Math.max(s.x, s.y, s.z) * 1.15 * zoom;
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 3000);
+    const e = THREE.MathUtils.degToRad(elev), a = THREE.MathUtils.degToRad(azim);
+    camera.position.set(
+      c.x + Math.cos(e) * Math.cos(a) * radius * 2.0,
+      c.y + Math.sin(e) * radius * 2.0,
+      c.z + Math.cos(e) * Math.sin(a) * radius * 2.0
+    );
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(c);
+    controls.update();
+
+    document.getElementById('tag').textContent =
+      built.map((b) => `${b.id} — ${b.size.x.toFixed(2)} x ${b.size.y.toFixed(2)} x ${b.size.z.toFixed(2)}m`).join('  |  ');
+
+    window.addEventListener('resize', () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    function tick() { requestAnimationFrame(tick); controls.update(); renderer.render(scene, camera); }
+    tick();
+    // Non-rAF render hook, so a backgrounded tab can still be captured.
+    window.__render = () => renderer.render(scene, camera);
+  </script>
+</body>
+</html>

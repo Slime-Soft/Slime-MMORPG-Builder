@@ -1,0 +1,83 @@
+{
+  "id": "floor-1",
+  "name": "Floor 1",
+  "mapType": "overworld",
+  "bounds": {
+    "minX": -50,
+    "maxX": 50,
+    "minZ": -50,
+    "maxZ": 50
+  },
+  "spawnPoint": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "zones": [],
+  "buildings": [],
+  "props": [],
+  "teleporters": [],
+  "graphicsSettings": {
+    "postFx": {
+      "fxaa": {
+        "enabled": true
+      },
+      "ssao": {
+        "enabled": false,
+        "intensity": 1
+      },
+      "sharpen": {
+        "enabled": false,
+        "strength": 0.3
+      },
+      "bloom": {
+        "enabled": true,
+        "strength": 0.35,
+        "radius": 0.4,
+        "threshold": 0.85
+      },
+      "dof": {
+        "enabled": false,
+        "focus": 30,
+        "aperture": 0.00003,
+        "maxBlur": 0.01
+      },
+      "cloudShadows": {
+        "enabled": false,
+        "strength": 0.3,
+        "speed": 0.02
+      }
+    },
+    "exposure": 1,
+    "saturation": 0,
+    "colorfulness": 0,
+    "light": {
+      "color": 16773320,
+      "intensity": 1.75,
+      "shadowElevationDeg": 55,
+      "shadowAzimuthDeg": 40,
+      "shadowRange": 300,
+      "shadowMapSize": 2048,
+      "shadowBias": 0,
+      "shadowNormalBias": 0.04
+    },
+    "ambient": {
+      "skyColor": 12577023,
+      "groundColor": 6257210,
+      "intensity": 0.85
+    },
+    "fog": {
+      "density": 0.0026,
+      "color": 15787704
+    },
+    "sound": {
+      "defaultMusicId": null,
+      "defaultAmbientSoundId": null
+    },
+    "environmental": {
+      "type": null,
+      "intensity": 1
+    },
+    "anisotropy": 4
+  }
+}

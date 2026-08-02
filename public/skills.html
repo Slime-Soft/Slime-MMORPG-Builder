@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skill Builder — Fantasy MMO</title>
+  <link rel="stylesheet" href="/theme.css" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; display: flex; font: 13px/1.4 'Lusitana', serif; background: #0f0b07; color: #e8d9b5; }
+    #stage { flex: 1; min-width: 0; position: relative; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #panel {
+      width: 340px; flex: none; min-height: 0; overflow-y: auto; padding: 12px;
+      background: linear-gradient(180deg, #2b1e12 0%, #1b140d 100%);
+      border-left: 2px solid #8a6423;
+      box-shadow: inset 1px 0 0 rgba(217,164,65,0.2);
+    }
+    h1 { font-family: 'Lusitana', serif; font-size: 15px; margin: 0 0 8px; color: #f4d78a; text-shadow: 0 0 10px rgba(244,215,138,0.3), 0 1px 0 #000; }
+    h2 {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #8a6423; margin: 14px 0 6px;
+      border-bottom: 1px solid rgba(217,164,65,0.25); padding-bottom: 3px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+    button {
+      font-family: 'Lusitana', serif; font-weight: 600;
+      padding: 6px 5px; background: linear-gradient(180deg, #4a3620, #3a2717); color: #f4d78a;
+      border: 1px solid #8a6423; border-radius: 5px; cursor: pointer; font-size: 11px;
+    }
+    button:hover { border-color: #d9a441; box-shadow: 0 0 6px rgba(244,215,138,0.3); }
+    button.active { background: linear-gradient(180deg, #5a4326, #241a10); border-color: #d9a441; }
+    button.danger:hover { border-color: #c65b2e; box-shadow: 0 0 6px rgba(198,91,46,0.4); }
+    button.primary { background: linear-gradient(180deg, #5a4326, #241a10); border-color: #d9a441; }
+    button.primary:hover { box-shadow: 0 0 10px rgba(244,215,138,0.4); }
+    label { display: block; margin-top: 7px; color: #e8d9b5; opacity: 0.85; font-size: 11px; }
+    label.inline { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    label.inline input[type=checkbox] { margin: 0; }
+    select, input[type=text], input[type=number] { width: 100%; margin-top: 3px; padding: 5px; background: #3a2717; color: #e8d9b5; border: 1px solid #8a6423; border-radius: 5px; font-family: inherit; }
+    textarea { width: 100%; margin-top: 3px; padding: 5px; background: #3a2717; color: #e8d9b5; border: 1px solid #8a6423; border-radius: 5px; font: inherit; resize: vertical; min-height: 40px; }
+    .sub { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #8a6423; margin-top: 9px; }
+    #skill-list { max-height: 160px; overflow-y: auto; border: 1px solid #8a6423; border-radius: 5px; margin-top: 4px; }
+    #skill-list div { padding: 4px 6px; cursor: pointer; font-size: 11px; border-bottom: 1px solid rgba(217,164,65,0.15); }
+    #skill-list div:hover { background: #3a2717; }
+    #skill-list div.active { background: linear-gradient(180deg, #5a4326, #3a2717); color: #f4d78a; }
+    #vfx-list { max-height: 140px; overflow-y: auto; border: 1px solid #8a6423; border-radius: 5px; margin-top: 4px; }
+    #vfx-list div { padding: 4px 6px; cursor: pointer; font-size: 11px; border-bottom: 1px solid rgba(217,164,65,0.15); }
+    #vfx-list div:hover { background: #3a2717; }
+    #vfx-list div.active { background: linear-gradient(180deg, #5a4326, #3a2717); color: #f4d78a; }
+    #status { margin-top: 8px; min-height: 15px; font-size: 11px; color: #9dd08a; }
+    #status.err { color: #e0955a; }
+    #hint { position: absolute; left: 12px; bottom: 10px; color: #e8d9b5; opacity: 0.6; font-size: 11px; text-shadow: 0 1px 2px #000; }
+    .row { display: flex; gap: 5px; margin-top: 8px; }
+    .row > button { flex: 1; }
+    .checks { display: flex; gap: 10px; margin-top: 4px; }
+    .checks label { display: flex; align-items: center; gap: 4px; margin: 0; color: #e8d9b5; }
+    #effects-list { margin-top: 4px; }
+    .effect-row { border: 1px solid #8a6423; border-radius: 5px; padding: 6px; margin-top: 6px; background: #241a10; }
+    .effect-row.selected { border-color: #f4d78a; box-shadow: 0 0 6px rgba(244,215,138,0.4); }
+    .effect-row .head { display: flex; gap: 6px; align-items: center; }
+    .effect-row .head select { flex: 1; }
+    .effect-row .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; }
+    .effect-row .fields label { margin-top: 0; }
+    .field2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+
+    #scrubber-time { font-size: 11px; color: #8a6423; margin-top: 8px; text-align: right; }
+    #scrubber-track {
+      position: relative; height: 30px; margin-top: 3px; background: #241a10;
+      border: 1px solid #8a6423; border-radius: 5px; cursor: pointer; user-select: none;
+    }
+    #scrubber-events { position: absolute; inset: 0; }
+    .scrub-marker {
+      position: absolute; top: 8px; width: 12px; height: 12px; margin-left: -6px;
+      transform: rotate(45deg); border: 1px solid #1b140d; cursor: grab; z-index: 2;
+    }
+    .scrub-marker.pose { background: #f4d78a; }
+    .scrub-marker.cast { background: #6fa8dc; }
+    .scrub-marker.impact { background: #c65b2e; }
+    .scrub-marker.travel-start, .scrub-marker.travel-end { background: #7fd18a; }
+    .scrub-marker.selected { outline: 2px solid #fff; }
+    .scrub-travel-span { position: absolute; top: 13px; height: 2px; background: #7fd18a; opacity: 0.6; z-index: 1; }
+    #scrubber-playhead {
+      position: absolute; top: 0; bottom: 0; width: 2px; background: #d9a441;
+      box-shadow: 0 0 6px rgba(217,164,65,0.8); pointer-events: none; z-index: 3;
+    }
+    #selected-part-label { font-weight: 400; opacity: 0.75; margin-left: 4px; }
+    button.dummy-active { border-color: #f4d78a; box-shadow: 0 0 6px rgba(244,215,138,0.4); }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="preview-canvas"></canvas>
+    <div id="hint">drag to orbit · scroll to zoom · Play runs the windup/cast/effect/recovery timeline with real VFX</div>
+  </div>
+
+  <div id="panel">
+    <h1>Skill Builder</h1>
+
+    <h2>Catalog</h2>
+    <div id="skill-list"></div>
+    <div class="row">
+      <button id="new-btn">New</button>
+      <button id="dup-btn">Duplicate</button>
+      <button id="del-btn" class="danger">Delete</button>
+    </div>
+
+    <label>Preview body<select id="preview-class-sel"></select></label>
+    <div style="font-size:11px;color:#7d879a;margin-top:-6px">Which class's body/weapon the preview shows — purely a local preview choice, not saved with the skill. A class' actual skill assignment happens in the Character &amp; NPC Builder's Class Skills panel.</div>
+
+    <h2>Identity</h2>
+    <label>Name<input type="text" id="name-input" /></label>
+    <label>Description<textarea id="desc-input"></textarea></label>
+    <label>Icon (emoji/text, or upload an image)<input type="text" id="icon-input" /></label>
+    <div class="row" style="align-items:center">
+      <img id="icon-preview" style="width:32px;height:32px;object-fit:cover;border-radius:4px;display:none;border:1px solid #333b4c" />
+      <input type="file" id="icon-file" accept="image/*" style="flex:1" />
+    </div>
+    <label>Cast sound (upload an audio file)</label>
+    <div class="row">
+      <input type="file" id="sound-file" accept="audio/*" style="flex:1" />
+      <button id="sound-play-btn">▶</button>
+    </div>
+    <div id="sound-name" style="font-size:11px;color:#7d879a;margin-top:2px"></div>
+    <div style="font-size:11px;color:#7d879a;margin-top:6px">Class, hotbar key, and required level are assigned in the Character &amp; NPC Builder's Class Skills panel, not here.</div>
+
+    <h2>Custom VFX Library</h2>
+    <div style="font-size:11px;color:#7d879a">Author your own spell effects here, then pick them in the Cast/Travel/Impact VFX dropdowns below (or a Timeline VFX event) alongside the built-in presets. Each one is a tuned instance of a small set of shapes (Burst, Sparkle Burst, Ring, Aura, Cloud, Stream, Fall) — pick a shape, then adjust its colors/timing/size below.</div>
+    <div id="vfx-list"></div>
+    <div class="row">
+      <button id="vfx-new-btn">New</button>
+      <button id="vfx-dup-btn">Duplicate</button>
+      <button id="vfx-del-btn" class="danger">Delete</button>
+    </div>
+    <label>Name<input type="text" id="vfx-name-input" /></label>
+    <label>Shape<select id="vfx-shape-sel"></select></label>
+    <div class="field2">
+      <label>Color A<input type="color" id="vfx-colorA-input" /></label>
+      <label>Color B<input type="color" id="vfx-colorB-input" /></label>
+    </div>
+    <div id="vfx-params-fields"></div>
+    <div class="row">
+      <button id="vfx-preview-btn">▶ Preview on dummy</button>
+      <button id="vfx-save-btn">💾 Save VFX Library</button>
+    </div>
+
+    <h2>Costs &amp; timing</h2>
+    <div class="field2">
+      <label>Resource cost<input type="number" id="cost-input" min="0" /></label>
+      <label>Cooldown (ms)<input type="number" id="cooldown-input" min="0" /></label>
+    </div>
+    <div class="field2">
+      <label>Cast time (ms)<input type="number" id="castms-input" min="0" /></label>
+      <label class="inline" style="margin-top:22px"><input type="checkbox" id="canmove-input" /> Can move while casting</label>
+    </div>
+
+    <h2>Targeting</h2>
+    <div class="checks" id="mode-checks"></div>
+    <div class="field2">
+      <label>Shape<select id="shape-sel"></select></label>
+      <label>Range<input type="number" id="range-input" min="0" /></label>
+    </div>
+    <div class="field2" id="shape-extra-fields"></div>
+
+    <h2>Effects</h2>
+    <div id="effects-list"></div>
+    <div class="row">
+      <button id="add-effect">+ Add effect</button>
+    </div>
+
+    <h2>Level Scaling</h2>
+    <div style="font-size:11px;color:#7d879a">Optional level breakpoints. At each level, re-enter this skill's effect numbers as they should be from that level on — cloned from the current Effects above, so you only need to change what's different.</div>
+    <div id="level-upgrades-list"></div>
+    <div class="row">
+      <button id="add-level-upgrade">+ Add Level Breakpoint</button>
+    </div>
+
+    <h2>Animation</h2>
+    <div class="grid3">
+      <label>Windup ms<input type="number" id="windup-input" min="0" /></label>
+      <label>Effect ms<input type="number" id="effect-input" min="0" /></label>
+      <label>Recovery ms<input type="number" id="recovery-input" min="0" /></label>
+    </div>
+
+    <h2>VFX (simple mode)</h2>
+    <div style="font-size:11px;color:#7d879a">Ignored once the Timeline below has any events — the timeline fully replaces this.</div>
+    <label>Cast VFX<select id="cast-vfx-sel"></select></label>
+    <label>Cast anchor<select id="cast-anchor-sel"></select></label>
+    <label>Travel VFX<select id="travel-vfx-sel"></select></label>
+    <label>Impact VFX<select id="impact-vfx-sel"></select></label>
+    <label>Impact anchor<select id="impact-anchor-sel"></select></label>
+
+    <h2>Timeline (advanced)</h2>
+    <div style="font-size:11px;color:#7d879a">Drag the playhead to scrub — the preview poses live at that instant. Click a body part to grab its rotate handle, drag to pose it, then "Set Keyframe" at the playhead's time. Click a cast/impact event's 🎯 to drag its VFX anchor (e.g. onto a staff's tip).</div>
+    <div id="scrubber-time">0 / 0 ms</div>
+    <div id="scrubber-track">
+      <div id="scrubber-events"></div>
+      <div id="scrubber-playhead"></div>
+    </div>
+    <div class="row">
+      <button id="set-keyframe-btn">📍 Set Keyframe<span id="selected-part-label"></span></button>
+      <button id="use-anchor-btn">✔ Use This Position</button>
+    </div>
+    <div id="timeline-list"></div>
+    <div class="grid">
+      <button id="add-pose-event">+ Pose keyframe</button>
+      <button id="add-cast-event">+ Cast VFX</button>
+      <button id="add-travel-event">+ Travel VFX</button>
+      <button id="add-impact-event">+ Impact VFX</button>
+    </div>
+
+    <h2>Test Dummies</h2>
+    <div style="font-size:11px;color:#7d879a">Click a dummy in the preview to aim Play's travel/impact VFX at it.</div>
+    <div class="row">
+      <button id="select-enemy-dummy">🔴 Enemy</button>
+      <button id="select-ally-dummy">🔵 Ally</button>
+    </div>
+
+    <div class="row">
+      <button id="play-btn" class="primary">▶ Play</button>
+    </div>
+
+    <h2>Save</h2>
+    <div class="row">
+      <button id="save-btn">Save catalog</button>
+      <button id="revert-btn">Reload from server</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/",
+        "three.quarks": "https://cdn.jsdelivr.net/npm/three.quarks@0.17.1/dist/three.quarks.esm.js",
+        "quarks.core": "https://cdn.jsdelivr.net/npm/quarks.core@0.17.1/dist/quarks.core.esm.js"
+      }
+    }
+  </script>
+  <script type="module" src="/src/skill-builder/main.js"></script>
+</body>
+</html>

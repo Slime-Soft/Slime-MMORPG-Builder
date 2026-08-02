@@ -1,0 +1,96 @@
+[
+  {
+    "id": "hp_potion_1",
+    "name": "Health Potion",
+    "type": "consumable",
+    "rarity": "common",
+    "description": "Heals you for 25% of your health",
+    "sellPrice": 0,
+    "usageConfig": {
+      "mode": "single",
+      "cooldownSeconds": 30,
+      "effectTrigger": {
+        "stat": "resourceRegen",
+        "amount": 25,
+        "durationSeconds": 30
+      }
+    }
+  },
+  {
+    "id": "Tube",
+    "name": "Tube",
+    "type": "consumable",
+    "rarity": "common",
+    "description": "A Tube for Alchemy",
+    "sellPrice": 50,
+    "usageConfig": {
+      "mode": "unlimited",
+      "cooldownSeconds": 0
+    }
+  },
+  {
+    "id": "SpiderWeb",
+    "name": "Spider Web",
+    "type": "misc",
+    "rarity": "common",
+    "description": "Can be sold to merchants",
+    "sellPrice": 25,
+    "iconUrl": "/assets/icons/icon-1785318980711-173968777.png"
+  },
+  {
+    "id": "wolffang1",
+    "name": "Wolf Fang",
+    "type": "quest",
+    "rarity": "common",
+    "description": "Fang of a Wolf roaming outside of Asteria",
+    "sellPrice": 0,
+    "questLocked": true
+  },
+  {
+    "id": "slimecore",
+    "name": "Slime Core",
+    "type": "misc",
+    "rarity": "common",
+    "description": "Core of a Slime",
+    "sellPrice": 10
+  },
+  {
+    "id": "wolffur",
+    "name": "Wolf Fur",
+    "type": "misc",
+    "rarity": "common",
+    "sellPrice": 25
+  },
+  {
+    "id": "spiderleg",
+    "name": "Spider Leg",
+    "type": "misc",
+    "rarity": "common",
+    "sellPrice": 25
+  },
+  {
+    "id": "boarmeat",
+    "name": "Boar Meat",
+    "type": "misc",
+    "rarity": "common",
+    "description": "Boar Meat. Can be used to cook or can be sold.",
+    "sellPrice": 25
+  },
+  {
+    "id": "wildmeat",
+    "name": "Wild Meat",
+    "type": "quest",
+    "rarity": "common",
+    "description": "Meat of a wild Deer",
+    "sellPrice": 0,
+    "questLocked": true
+  },
+  {
+    "id": "foxfur",
+    "name": "Fox Fur",
+    "type": "misc",
+    "rarity": "common",
+    "description": "Fur used for Crafting",
+    "sellPrice": 0
+  }
+]

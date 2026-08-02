@@ -1,0 +1,27 @@
+[
+  {
+    "id": "overworld-default",
+    "name": "Default World",
+    "mapType": "overworld",
+    "path": "overworld-default.json"
+  },
+  {
+    "id": "asteria",
+    "name": "Asteria",
+    "mapType": "overworld",
+    "path": "asteria.json",
+    "isDefault": true
+  },
+  {
+    "id": "floor-1-slime-dungeon",
+    "name": "Floor 1 - Slime Dungeon",
+    "mapType": "dungeon",
+    "path": "floor-1-slime-dungeon.json"
+  },
+  {
+    "id": "floor-2-dominion-of-the-slime-king",
+    "name": "Floor 2 - Dominion of the Slime King",
+    "mapType": "dungeon",
+    "path": "floor-2-dominion-of-the-slime-king.json"
+  }
+]

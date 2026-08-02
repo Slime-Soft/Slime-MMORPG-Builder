@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Tree Test — fluffy tree vs reference</title>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; background: #222; }
+    #wrap { display: flex; width: 100vw; height: 100vh; }
+    #left, #right { flex: 1; position: relative; }
+    #left { background: #6ec6f0; }
+    #right { background: #333; display: flex; align-items: center; justify-content: center; }
+    #right img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    canvas { display: block; }
+    #panel {
+      position: absolute; top: 8px; left: 8px; z-index: 10;
+      background: rgba(20,24,34,0.85); color: #dfe3ea; padding: 10px 12px;
+      border-radius: 6px; font-size: 12px; line-height: 1.7; max-width: 240px;
+    }
+    #panel button { font-size: 12px; margin: 2px 0; width: 100%; padding: 4px; }
+    #panel label { display: block; margin-top: 6px; }
+    #panel input[type=range] { width: 100%; }
+    .tag { position: absolute; bottom: 8px; left: 8px; z-index: 10; color: #fff; background: rgba(0,0,0,.5); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="wrap">
+    <div id="left">
+      <div id="panel">
+        <div><b>Fluffy tree test</b></div>
+        <button id="regen">↻ New seed</button>
+        <label>Seed: <span id="seed-val">1</span></label>
+        <label>Leaf density <span id="density-val">1.5</span></label>
+        <input type="range" id="density" min="0.5" max="3.5" step="0.1" value="1.5" />
+        <label><input type="checkbox" id="autorotate" checked /> Auto-rotate</label>
+      </div>
+      <div class="tag">PROJECT (this build)</div>
+    </div>
+    <div id="right">
+      <img src="treetest-reference.png" alt="reference" />
+      <div class="tag">REFERENCE (fluffytree-threejs)</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { generateTree } from '/src/generators/environment/tree.js';
+    import { toonify } from '/src/render/scene.js';
+
+    const left = document.getElementById('left');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    left.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x6ec6f0);
+
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Lighting roughly matching the reference: bright ambient + a warm sun.
+    scene.add(new THREE.AmbientLight(0xffffff, 1.4));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    sun.position.set(6, 12, 5);
+    scene.add(sun);
+
+    // Simple ground so scale/shadow reads.
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(14, 40),
+      new THREE.MeshStandardMaterial({ color: 0xcdb782, roughness: 1 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    let treeGroup = null;
+    let seed = 1;
+
+    function rebuild() {
+      if (treeGroup) scene.remove(treeGroup);
+      const density = parseFloat(document.getElementById('density').value);
+      treeGroup = generateTree(seed, { type: 'round', leafDensity: density });
+      toonify(treeGroup); // convert the trunk's MeshStandardMaterial like the live game does
+      scene.add(treeGroup);
+
+      // Frame the camera on the tree.
+      treeGroup.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(treeGroup);
+      const c = box.getCenter(new THREE.Vector3());
+      const s = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(s.x, s.y, s.z);
+      controls.target.copy(c);
+      camera.position.set(c.x + maxDim * 0.4, c.y + maxDim * 0.15, c.z + maxDim * 1.3);
+      window.__treeInfo = { seed, density, height: +s.y.toFixed(2) };
+    }
+
+    document.getElementById('regen').addEventListener('click', () => {
+      seed = Math.floor(Math.random() * 1e9);
+      document.getElementById('seed-val').textContent = seed;
+      rebuild();
+    });
+    document.getElementById('density').addEventListener('input', (e) => {
+      document.getElementById('density-val').textContent = e.target.value;
+      rebuild();
+    });
+
+    function resize() {
+      const w = left.clientWidth, h = left.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      // Drive the canopy wind shader (isTreeLeaves meshes), same as the game.
+      if (treeGroup) {
+        treeGroup.traverse((o) => {
+          if (o.userData.isTreeLeaves && o.material.userData.shader) {
+            o.material.userData.shader.uniforms.uTime.value = t;
+          }
+        });
+        if (document.getElementById('autorotate').checked) treeGroup.rotation.y = t * 0.25;
+      }
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    resize();
+    rebuild();
+    animate();
+  </script>
+</body>
+</html>

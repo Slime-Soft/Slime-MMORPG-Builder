@@ -1,0 +1,530 @@
+{
+  "id": "forest-spider",
+  "name": "Forest Spider",
+  "stance": "quadruped",
+  "configuredLevel": 3,
+  "baseStats": {
+    "maxHealth": 22,
+    "damage": 5,
+    "speed": 2.1,
+    "aggroRange": 7,
+    "attackRange": 1.0,
+    "attackCooldownMs": 1000
+  },
+  "abilitySlots": [
+    {
+      "id": "venom-bite",
+      "name": "Venom Bite",
+      "unlockLevel": 2,
+      "kind": "melee",
+      "cooldownMs": 1000,
+      "windupMs": 200,
+      "effectMs": 120,
+      "recoveryMs": 250,
+      "power": 5,
+      "description": "A quick venomous bite."
+    }
+  ],
+  "slots": [
+    {
+      "role": "torso",
+      "anchor": {
+        "x": 0,
+        "y": 0.34,
+        "z": 0
+      },
+      "shapes": [
+        {
+          "id": "cephalo",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0.14
+          },
+          "scale": {
+            "x": 0.3,
+            "y": 0.25,
+            "z": 0.3
+          },
+          "color": 4862488
+        },
+        {
+          "id": "abdomen",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.04,
+            "z": -0.17
+          },
+          "scale": {
+            "x": 0.39,
+            "y": 0.35,
+            "z": 0.39
+          },
+          "color": 7031338
+        },
+        {
+          "id": "fangL",
+          "kind": "cone",
+          "position": {
+            "x": -0.05,
+            "y": -0.08,
+            "z": 0.22
+          },
+          "scale": {
+            "x": 0.035,
+            "y": 0.09,
+            "z": 0.035
+          },
+          "color": 15658734,
+          "rotation": {
+            "x": 150,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "fangR",
+          "kind": "cone",
+          "position": {
+            "x": 0.05,
+            "y": -0.08,
+            "z": 0.22
+          },
+          "scale": {
+            "x": 0.035,
+            "y": 0.09,
+            "z": 0.035
+          },
+          "color": 15658734,
+          "rotation": {
+            "x": 150,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "eyeL",
+          "kind": "sphere",
+          "position": {
+            "x": -0.06,
+            "y": 0.08,
+            "z": 0.24
+          },
+          "scale": {
+            "x": 0.035,
+            "y": 0.035,
+            "z": 0.028
+          },
+          "color": 14168112
+        },
+        {
+          "id": "eyeR",
+          "kind": "sphere",
+          "position": {
+            "x": 0.06,
+            "y": 0.08,
+            "z": 0.24
+          },
+          "scale": {
+            "x": 0.035,
+            "y": 0.035,
+            "z": 0.028
+          },
+          "color": 14168112
+        },
+        {
+          "id": "eyeML",
+          "kind": "sphere",
+          "position": {
+            "x": -0.03,
+            "y": 0.05,
+            "z": 0.26
+          },
+          "scale": {
+            "x": 0.025,
+            "y": 0.025,
+            "z": 0.02
+          },
+          "color": 14168112
+        },
+        {
+          "id": "eyeMR",
+          "kind": "sphere",
+          "position": {
+            "x": 0.03,
+            "y": 0.05,
+            "z": 0.26
+          },
+          "scale": {
+            "x": 0.025,
+            "y": 0.025,
+            "z": 0.02
+          },
+          "color": 14168112
+        }
+      ]
+    },
+    {
+      "role": "legFrontL",
+      "anchor": {
+        "x": -0.085,
+        "y": 0.34,
+        "z": 0.12
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": -0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": 25,
+            "z": 58
+          }
+        }
+      ]
+    },
+    {
+      "role": "legFrontR",
+      "anchor": {
+        "x": 0.085,
+        "y": 0.34,
+        "z": 0.12
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": 0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": -25,
+            "z": -58
+          }
+        }
+      ]
+    },
+    {
+      "role": "legMidFrontL",
+      "anchor": {
+        "x": -0.1,
+        "y": 0.34,
+        "z": 0.02
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": -0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": 20,
+            "z": 62
+          }
+        }
+      ]
+    },
+    {
+      "role": "legMidFrontR",
+      "anchor": {
+        "x": 0.1,
+        "y": 0.34,
+        "z": 0.02
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": 0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": -20,
+            "z": -62
+          }
+        }
+      ]
+    },
+    {
+      "role": "legMidBackL",
+      "anchor": {
+        "x": -0.1,
+        "y": 0.34,
+        "z": -0.14
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": -0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": -18,
+            "z": 62
+          }
+        }
+      ]
+    },
+    {
+      "role": "legMidBackR",
+      "anchor": {
+        "x": 0.1,
+        "y": 0.34,
+        "z": -0.14
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": 0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": 18,
+            "z": -62
+          }
+        }
+      ]
+    },
+    {
+      "role": "legBackL",
+      "anchor": {
+        "x": -0.085,
+        "y": 0.34,
+        "z": -0.09
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": -0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": -25,
+            "z": 58
+          }
+        }
+      ]
+    },
+    {
+      "role": "legBackR",
+      "anchor": {
+        "x": 0.085,
+        "y": 0.34,
+        "z": -0.09
+      },
+      "shapes": [
+        {
+          "id": "joint",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 4862488
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": 0.07,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.042,
+            "y": 0.46,
+            "z": 0.042
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": 0,
+            "y": 25,
+            "z": -58
+          }
+        }
+      ]
+    }
+  ]
+}

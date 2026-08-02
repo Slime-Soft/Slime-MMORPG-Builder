@@ -1,0 +1,14 @@
+{
+  "floorNumber": 3,
+  "isBossFloor": false,
+  "bounds": { "minX": -24, "maxX": 24, "minZ": -24, "maxZ": 24 },
+  "spawnPoint": { "x": 0, "y": 0, "z": -20 },
+  "exitPoint": { "x": 0, "y": 0, "z": 20 },
+  "monsterSpawns": [
+    { "id": "f3-goblin-1", "type": "goblin", "position": { "x": -10, "y": 0, "z": -6 }, "maxHealth": 55, "damage": 8, "speed": 2.3, "aggroRange": 10, "attackRange": 1.8, "attackCooldownMs": 1100 },
+    { "id": "f3-goblin-2", "type": "goblin", "position": { "x": 10, "y": 0, "z": -2 }, "maxHealth": 55, "damage": 8, "speed": 2.3, "aggroRange": 10, "attackRange": 1.8, "attackCooldownMs": 1100 },
+    { "id": "f3-goblin-3", "type": "goblin", "position": { "x": 0, "y": 0, "z": 6 }, "maxHealth": 55, "damage": 8, "speed": 2.3, "aggroRange": 10, "attackRange": 1.8, "attackCooldownMs": 1100 },
+    { "id": "f3-slime-1", "type": "slime", "position": { "x": -8, "y": 0, "z": 12 }, "maxHealth": 40, "damage": 6, "speed": 1.8, "aggroRange": 8, "attackRange": 1.6, "attackCooldownMs": 1300 },
+    { "id": "f3-slime-2", "type": "slime", "position": { "x": 8, "y": 0, "z": 14 }, "maxHealth": 40, "damage": 6, "speed": 1.8, "aggroRange": 8, "attackRange": 1.6, "attackCooldownMs": 1300 }
+  ]
+}

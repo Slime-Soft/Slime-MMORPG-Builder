@@ -1,0 +1,460 @@
+{
+  "id": "owl",
+  "name": "Owl",
+  "stance": "humanoid",
+  "configuredLevel": 3,
+  "baseStats": {
+    "maxHealth": 14,
+    "damage": 4,
+    "speed": 2.0,
+    "aggroRange": 8,
+    "attackRange": 1.2,
+    "attackCooldownMs": 1300
+  },
+  "abilitySlots": [
+    {
+      "id": "talon-strike",
+      "name": "Talon Strike",
+      "unlockLevel": 2,
+      "kind": "melee",
+      "cooldownMs": 1300,
+      "windupMs": 250,
+      "effectMs": 130,
+      "recoveryMs": 300,
+      "power": 4,
+      "description": "A swooping talon strike."
+    }
+  ],
+  "slots": [
+    {
+      "role": "torso",
+      "anchor": {
+        "x": 0,
+        "y": 0.55,
+        "z": 0
+      },
+      "shapes": [
+        {
+          "id": "body",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.3,
+            "y": 0.38,
+            "z": 0.34
+          },
+          "color": 7031338
+        },
+        {
+          "id": "belly",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": -0.06,
+            "z": 0.12
+          },
+          "scale": {
+            "x": 0.22,
+            "y": 0.24,
+            "z": 0.18
+          },
+          "color": 15260864
+        }
+      ]
+    },
+    {
+      "role": "head",
+      "anchor": {
+        "x": 0,
+        "y": 0.82,
+        "z": 0.02
+      },
+      "shapes": [
+        {
+          "id": "h1",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.22,
+            "y": 0.22,
+            "z": 0.22
+          },
+          "color": 7031338
+        },
+        {
+          "id": "faceDisc",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": -0.01,
+            "z": 0.06
+          },
+          "scale": {
+            "x": 0.19,
+            "y": 0.17,
+            "z": 0.1
+          },
+          "color": 15260864
+        },
+        {
+          "id": "beak",
+          "kind": "cone",
+          "position": {
+            "x": 0,
+            "y": -0.03,
+            "z": 0.13
+          },
+          "scale": {
+            "x": 0.07,
+            "y": 0.13,
+            "z": 0.07
+          },
+          "color": 4864554,
+          "rotation": {
+            "x": 90,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "eyeL",
+          "kind": "sphere",
+          "position": {
+            "x": -0.04631881065009434,
+            "y": 0.013895643195028302,
+            "z": 0.09263762130018868
+          },
+          "scale": {
+            "x": 0.075,
+            "y": 0.075,
+            "z": 0.06
+          },
+          "color": 16113760
+        },
+        {
+          "id": "eyeR",
+          "kind": "sphere",
+          "position": {
+            "x": 0.04631881065009434,
+            "y": 0.013895643195028302,
+            "z": 0.09263762130018868
+          },
+          "scale": {
+            "x": 0.075,
+            "y": 0.075,
+            "z": 0.06
+          },
+          "color": 16113760
+        },
+        {
+          "id": "pupilL",
+          "kind": "sphere",
+          "position": {
+            "x": -0.051194474929051645,
+            "y": 0.015358342478715491,
+            "z": 0.10238894985810329
+          },
+          "scale": {
+            "x": 0.028,
+            "y": 0.028,
+            "z": 0.022
+          },
+          "color": 1710618
+        },
+        {
+          "id": "pupilR",
+          "kind": "sphere",
+          "position": {
+            "x": 0.051194474929051645,
+            "y": 0.015358342478715491,
+            "z": 0.10238894985810329
+          },
+          "scale": {
+            "x": 0.028,
+            "y": 0.028,
+            "z": 0.022
+          },
+          "color": 1710618
+        },
+        {
+          "id": "tuftL",
+          "kind": "pyramid",
+          "position": {
+            "x": -0.044015736654747395,
+            "y": 0.08002861209954071,
+            "z": -0.020007153024885177
+          },
+          "scale": {
+            "x": 0.05,
+            "y": 0.1,
+            "z": 0.045
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": -15,
+            "y": 0,
+            "z": 15
+          }
+        },
+        {
+          "id": "tuftR",
+          "kind": "pyramid",
+          "position": {
+            "x": 0.044015736654747395,
+            "y": 0.08002861209954071,
+            "z": -0.020007153024885177
+          },
+          "scale": {
+            "x": 0.05,
+            "y": 0.1,
+            "z": 0.045
+          },
+          "color": 4862488,
+          "rotation": {
+            "x": -15,
+            "y": 0,
+            "z": -15
+          }
+        }
+      ]
+    },
+    {
+      "role": "tail",
+      "anchor": {
+        "x": 0,
+        "y": 0.5,
+        "z": -0.12
+      },
+      "shapes": [
+        {
+          "id": "fan",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": 0.06,
+            "z": -0.14
+          },
+          "scale": {
+            "x": 0.26,
+            "y": 0.03,
+            "z": 0.28
+          },
+          "color": 7031338,
+          "rotation": {
+            "x": 28,
+            "y": 0,
+            "z": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "armL",
+      "anchor": {
+        "x": -0.11,
+        "y": 0.58,
+        "z": 0
+      },
+      "shapes": [
+        {
+          "id": "sh",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.1,
+            "y": 0.1,
+            "z": 0.1
+          },
+          "color": 7031338
+        },
+        {
+          "id": "wing",
+          "kind": "box",
+          "position": {
+            "x": -0.06,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.14,
+            "y": 0.03,
+            "z": 0.36
+          },
+          "color": 7031338,
+          "rotation": {
+            "x": 0,
+            "y": 8,
+            "z": 22
+          }
+        }
+      ]
+    },
+    {
+      "role": "armR",
+      "anchor": {
+        "x": 0.11,
+        "y": 0.58,
+        "z": 0
+      },
+      "shapes": [
+        {
+          "id": "sh",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.1,
+            "y": 0.1,
+            "z": 0.1
+          },
+          "color": 7031338
+        },
+        {
+          "id": "wing",
+          "kind": "box",
+          "position": {
+            "x": 0.06,
+            "y": -0.04,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.14,
+            "y": 0.03,
+            "z": 0.36
+          },
+          "color": 7031338,
+          "rotation": {
+            "x": 0,
+            "y": -8,
+            "z": -22
+          }
+        }
+      ]
+    },
+    {
+      "role": "legL",
+      "anchor": {
+        "x": -0.08,
+        "y": 0.4,
+        "z": 0
+      },
+      "shapes": [
+        {
+          "id": "hip",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.09,
+            "y": 0.09,
+            "z": 0.09
+          },
+          "color": 7031338
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": 0,
+            "y": -0.2,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.04,
+            "y": 0.4,
+            "z": 0.04
+          },
+          "color": 7031338
+        },
+        {
+          "id": "foot",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.38,
+            "z": 0.04
+          },
+          "scale": {
+            "x": 0.1,
+            "y": 0.03,
+            "z": 0.14
+          },
+          "color": 9078136
+        }
+      ]
+    },
+    {
+      "role": "legR",
+      "anchor": {
+        "x": 0.08,
+        "y": 0.4,
+        "z": 0
+      },
+      "shapes": [
+        {
+          "id": "hip",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.09,
+            "y": 0.09,
+            "z": 0.09
+          },
+          "color": 7031338
+        },
+        {
+          "id": "l1",
+          "kind": "capsule",
+          "position": {
+            "x": 0,
+            "y": -0.2,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.04,
+            "y": 0.4,
+            "z": 0.04
+          },
+          "color": 7031338
+        },
+        {
+          "id": "foot",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.38,
+            "z": 0.04
+          },
+          "scale": {
+            "x": 0.1,
+            "y": 0.03,
+            "z": 0.14
+          },
+          "color": 9078136
+        }
+      ]
+    }
+  ]
+}

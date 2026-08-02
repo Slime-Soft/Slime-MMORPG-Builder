@@ -1,0 +1,2358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fantasy MMO — World Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/theme.css" />
+  <style>
+    :root {
+      --panel-bg: linear-gradient(180deg, #2b1e12 0%, #1b140d 100%);
+      --panel-border: #8a6423;
+      --accent: #5a4326;
+      --accent-hover: #d9a441;
+    }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0f0b07; font-family: 'Lusitana', serif; }
+    #editor-canvas { display: block; width: 100%; height: 100%; }
+
+    /* Alt+drag box-select rectangle (Place mode). Fixed-positioned and
+       pointer-events:none so it never eats the drag it's describing. */
+    #marquee-box {
+      position: fixed; display: none; z-index: 9; pointer-events: none;
+      border: 1px solid #f4d78a; background: rgba(244,215,138,0.12);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
+    }
+
+    /* --- Floating tool flyout (top-left): shows the active tool's controls --- */
+    /* 345px = the old 300px + 15%. Overridden at runtime by whatever width
+       the drag handle was last left at (persisted in localStorage), so this
+       is only the first-run default. */
+    #tool-flyout {
+      position: fixed; top: 12px; left: 12px; width: 345px;
+      max-height: calc(100vh - 96px); overflow-y: auto; overflow-x: hidden;
+      background: var(--panel-bg); color: #e8d9b5;
+      border: 2px solid var(--panel-border); border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.2), inset 0 2px 10px rgba(0,0,0,0.5), 0 6px 20px rgba(0,0,0,0.6);
+      padding: 12px; box-sizing: border-box; font-size: 15px;
+    }
+    /* Drag handle on the panel's right edge. A fixed-position, scrolling
+       panel can't use CSS `resize` (it would resize the scroll box and fight
+       the scrollbar), so this is a real grab strip driven by pointer events. */
+    #tool-flyout-resizer {
+      position: fixed; top: 12px; width: 10px; z-index: 11;
+      cursor: ew-resize; border-radius: 0 6px 6px 0;
+      background: transparent; transition: background 0.15s ease;
+    }
+    #tool-flyout-resizer:hover, #tool-flyout-resizer.dragging { background: rgba(217,164,65,0.45); }
+    /* Grip pips, so the strip is discoverable instead of an invisible hotspot. */
+    #tool-flyout-resizer::after {
+      content: ''; position: absolute; top: 50%; left: 3px; transform: translateY(-50%);
+      width: 4px; height: 44px; border-radius: 2px;
+      background: repeating-linear-gradient(180deg, rgba(217,164,65,0.55) 0 2px, transparent 2px 5px);
+    }
+    /* While dragging, stop the pointer from selecting text or the canvas from
+       stealing the drag as a camera orbit. */
+    body.resizing-flyout { user-select: none; cursor: ew-resize; }
+    #tool-flyout h2 { font-family: 'Lusitana', serif; font-size: 17px; margin: 0 0 8px; color: #f4d78a; text-shadow: 0 0 10px rgba(244,215,138,0.3), 0 1px 0 #000; display: flex; align-items: center; gap: 6px; }
+    #tool-flyout h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #8a6423; margin: 16px 0 6px; border-bottom: 1px solid rgba(217,164,65,0.25); padding-bottom: 3px; }
+    button {
+      font-family: 'Lusitana', serif; font-weight: 600;
+      background: linear-gradient(180deg, #4a3620, #3a2717); color: #f4d78a; border: 1px solid #8a6423; border-radius: 5px;
+      padding: 6px 9px; cursor: pointer; font-size: 14px;
+    }
+    button:hover { border-color: #d9a441; box-shadow: 0 0 6px rgba(244,215,138,0.3); }
+    button.active { background: linear-gradient(180deg, #5a4326, #241a10); border-color: #d9a441; }
+    .palette { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .palette button { padding: 10px 4px; font-size: 14px; }
+    .palette button.active { border-color: #f4d78a; outline: 2px solid #f4d78a; }
+    .palette button canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: 3px; }
+    #groundtex-palette { max-height: 220px; overflow-y: auto; padding-right: 2px; }
+    label { display: block; margin: 8px 0 2px; color: #e8d9b5; opacity: 0.85; }
+    input[type="number"], input[type="text"], select, textarea {
+      width: 100%; box-sizing: border-box; background: #3a2717; color: #e8d9b5;
+      border: 1px solid #8a6423; border-radius: 4px; padding: 4px 6px;
+      font-family: inherit; font-size: 14px; resize: vertical;
+    }
+    #item-icon-preview {
+      width: 48px; height: 48px; object-fit: contain; background: #3a2717;
+      border: 1px solid #8a6423; border-radius: 4px; display: block; margin: 4px 0;
+    }
+    input[type="range"] { width: 100%; }
+    .row { display: flex; gap: 6px; }
+    .row > * { flex: 1; }
+    #zone-list, #obj-list, #item-list, #npc-list, #quest-list, #builder-shape-list, #builder-object-list, #mb-shape-list, #mb-catalog-list, #path-list, #mountain-list, #groundtex-list, #fz-list { max-height: 180px; overflow-y: auto; font-size: 13px; }
+    #zone-list div, #obj-list div, #mon-list div, #bld-list div, #item-list div, #npc-list div, #quest-list div, #builder-shape-list div, #builder-object-list div, #mb-shape-list div, #mb-catalog-list div, #path-list div, #mountain-list div, #groundtex-list div, #fz-list div { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px solid rgba(217,164,65,0.15); gap: 4px; }
+    #zone-list button, #obj-list button, #mon-list button, #item-list button, #npc-list button, #quest-list button, #builder-shape-list button, #builder-object-list button, #mb-shape-list button, #mb-catalog-list button, #path-list button, #mountain-list button, #groundtex-list button, #fz-list button { padding: 2px 7px; font-size: 12px; flex: 0 0 auto; }
+    #zone-shape-circle.active, #zone-shape-freeform.active { background: #5a4326; border-color: var(--accent-hover); }
+    #npc-dialog-mode-simple.active, #npc-dialog-mode-tree.active { background: #5a4326; border-color: var(--accent-hover); }
+    #npc-dialog-node-list, #npc-dialog-choice-list { max-height: 180px; overflow-y: auto; font-size: 13px; margin-top: 4px; }
+    #npc-dialog-node-list div, #npc-dialog-choice-list div { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px solid #223; gap: 4px; }
+    #npc-dialog-node-list button, #npc-dialog-choice-list button { padding: 2px 7px; font-size: 12px; flex: 0 0 auto; }
+    #npc-dialog-node-list div.active { background: #2a5a8a; }
+    #npc-dialog-node-list span[data-select-node] { cursor: pointer; flex: 1; }
+    #npc-dialog-choice-list .choice-text { flex: 2; min-width: 0; }
+    #npc-dialog-choice-list select { flex: 1; min-width: 0; font-size: 12px; }
+    #builder-shape-list div.active, #mb-shape-list div.active, #fz-list div.active { background: #2a5a8a; }
+    #fz-list span[data-select-fz] { cursor: pointer; flex: 1; }
+    #builder-shape-list span[data-select-builder-shape], #mb-shape-list span[data-select-mb-shape] { cursor: pointer; flex: 1; }
+    .hint { color: rgba(232,217,181,0.65); font-size: 13px; line-height: 1.5; }
+    hr { border: none; border-top: 1px solid #223; margin: 12px 0; }
+
+    /* --- Top-right: status, camera hints, global save/download actions --- */
+    #top-right {
+      position: fixed; top: 12px; right: 12px; z-index: 10;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+    }
+    #status-line { color: #9c9; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.55); padding: 4px 8px; border-radius: 4px; }
+    #camera-hint, #controls-hint { color: #ccc; font-family: monospace; font-size: 13px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; text-align: right; }
+    #save-btn { background: #3f8850; border-color: #3f8850; padding: 8px 14px; font-size: 14px; }
+    #save-btn:hover { background: #4fa060; }
+    #download-btn { padding: 7px 14px; font-size: 14px; }
+    /* Unsaved-changes cue: the Save button turns amber the moment the world
+       is edited and goes back to green once it's written, so "did that save?"
+       is answerable at a glance without waiting for the toast. */
+    #save-btn.dirty { background: #b07a1f; border-color: #b07a1f; }
+    #save-btn.dirty:hover { background: #c98d2a; }
+    #save-toast {
+      position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+      z-index: 60; pointer-events: none; opacity: 0;
+      font-family: system-ui, sans-serif; font-size: 20px; font-weight: 600;
+      color: #eaffea; background: rgba(28, 74, 40, 0.94);
+      border: 1px solid #6fbf84; border-radius: 8px; padding: 12px 28px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+      transition: opacity 0.25s ease;
+    }
+    #save-toast.error { color: #ffe6e6; background: rgba(90, 30, 30, 0.94); border-color: #c76a6a; }
+    #save-toast.visible { opacity: 1; }
+    #open-graphics-settings-btn, #open-camera-settings-btn { padding: 7px 11px; font-size: 17px; line-height: 1; }
+
+    /* --- Graphics Settings modal: per-map profile, gear icon in #top-right ---
+       Anchored below the gear icon instead of centered, and the shared
+       .modal-overlay's dimming backdrop is switched off here — this panel
+       is meant to stay open while you look at and orbit the live scene to
+       see slider changes land in real time, not block it like the Monster
+       Builder's centered/dimmed dialog does. pointer-events:none on the
+       overlay lets clicks reach the canvas anywhere outside the dialog
+       itself (which re-enables pointer-events for its own contents), so the
+       old click-backdrop-to-close behavior no longer applies — closing is
+       via the X button only. */
+    #graphics-settings-modal {
+      background: transparent;
+      align-items: flex-start; justify-content: flex-end;
+      padding: 100px 12px 0 0;
+      pointer-events: none;
+    }
+    #graphics-settings-modal .modal-dialog {
+      width: 640px; height: 82vh; margin: 0;
+      pointer-events: auto;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+    }
+    /* Five tabs no longer fit on one 640px row — without this they shrink
+       past their own labels and clip. Wrapping to a second row is the only
+       option that keeps every tab readable at any dialog width. */
+    #graphics-settings-modal .modal-tabstrip { flex-wrap: wrap; }
+    .gfx-row { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; }
+    .gfx-row label { flex: 1 1 auto; margin: 0; }
+    .gfx-row input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; }
+    .gfx-row input[type="number"], .gfx-row input[type="range"] { flex: 0 0 110px; }
+    .gfx-row input[type="color"] { flex: 0 0 44px; padding: 2px; height: 28px; }
+    .gfx-row select { flex: 0 0 auto; width: auto; min-width: 140px; }
+    .gfx-subhead { color: var(--accent-hover); font-size: 15px; margin: 16px 0 4px; border-top: 1px solid rgba(217,164,65,0.18); padding-top: 12px; }
+    .gfx-subhead:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+    /* --- Camera Controls modal: EDITOR preference, not map data ---
+       Same anchored, non-dimming, click-through-the-backdrop treatment as
+       the Graphics Settings panel above (you need to right-drag the scene
+       while nudging a sensitivity slider to feel what it does), but sized
+       to its own short content instead of a fixed 82vh. Saved to
+       localStorage, never into world.json — it's how THIS browser drives
+       the camera, not something the map should carry. */
+    #camera-settings-modal {
+      background: transparent;
+      align-items: flex-start; justify-content: flex-end;
+      padding: 100px 12px 0 0;
+      pointer-events: none;
+    }
+    #camera-settings-modal .modal-dialog {
+      width: 400px; height: auto; max-height: 84vh; margin: 0;
+      pointer-events: auto;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+    }
+    #camera-settings-modal .modal-tab-panel { flex: 0 1 auto; }
+    #cam-reset-btn { width: 100%; }
+
+    /* --- Bottom icon toolbar: primary mode switcher, numbered hotkeys ---
+       Visual treatment (wood/gold slots) lives in /theme.css's .rb-toolbar/
+       .rb-slot/.rb-slot-frame classes; this just positions the belt itself. */
+    #bottom-toolbar {
+      position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10;
+      max-width: calc(100vw - 24px);
+    }
+    .toolbar-btn .rb-slot-label { max-width: 56px; }
+
+    /* --- Tabbed modal (src/editor/modal.js) — first of its kind, used by the Monster Builder --- */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 20;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-dialog {
+      background: var(--panel-bg); border: 2px solid var(--panel-border); border-radius: 10px;
+      width: 1040px; max-width: 96vw; height: 88vh; display: flex; flex-direction: column;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.2), inset 0 2px 10px rgba(0,0,0,0.5), 0 8px 28px rgba(0,0,0,0.6);
+      color: #e8d9b5; font-size: 15px;
+      /* Drag-resizable from the bottom-right corner — plain CSS, no JS. */
+      resize: both; overflow: hidden; min-width: 480px; min-height: 320px;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 11px 16px; border-bottom: 1px solid rgba(217,164,65,0.25); font-size: 17px; color: #f4d78a;
+    }
+    .modal-header button { background: none; border: none; color: #8a6423; font-size: 18px; cursor: pointer; padding: 2px 6px; }
+    .modal-header button:hover { color: #f4d78a; box-shadow: none; }
+    .modal-tabstrip, .modal-subtabstrip { display: flex; border-bottom: 1px solid rgba(217,164,65,0.25); flex: 0 0 auto; }
+    .modal-subtabstrip { border-bottom: 1px solid rgba(217,164,65,0.18); margin-bottom: 10px; }
+    /* Bumped from #8aa0b8 (too low-contrast on the dark navy background,
+       hard to read per direct feedback) and 13px -> 14px. */
+    .modal-tab, .modal-subtab { padding: 9px 16px; background: none; border: none; color: #e8d9b5; cursor: pointer; font-size: 15px; border-radius: 0; }
+    .modal-tab:hover, .modal-subtab:hover { background: rgba(217,164,65,0.12); color: #f4d78a; box-shadow: none; }
+    .modal-tab.active, .modal-subtab.active { color: #f4d78a; border-bottom: 2px solid var(--accent-hover); }
+    /* flex:1 alone isn't enough for a scroll container nested inside other
+       flex boxes — a flex item's default min-height is `auto`, which means
+       it refuses to shrink below its content's natural size, so overflow
+       never actually triggers and the whole chain grows instead of
+       scrolling. min-height:0 on every level here is the actual fix (see
+       WORLD_BUILDER_ROADMAP.md's Monster Builder entry for the story). */
+    .modal-dialog { min-height: 0; }
+    .modal-tab-panel { flex: 1; overflow-y: auto; padding: 14px; min-height: 0; }
+    .modal-footer { border-top: 1px solid rgba(217,164,65,0.25); padding: 10px 14px; flex: 0 0 auto; }
+
+    /* Model Editor tab: two-pane layout (live preview + tabbed part editor),
+       overriding .modal-tab-panel's generic scroll-the-whole-thing behavior
+       — only #mb-part-content scrolls. The preview pane is now allowed to
+       SHRINK (flex-shrink:1, not 0) down to a real minimum instead of
+       staying rigidly 320px and forcing the editor pane out of usable
+       space on a narrower window — a fixed pane that refuses to yield was
+       exactly what made the 3D preview unreachable/uncontrollable before.
+       Below 760px wide, the row layout switches to stacked (preview on
+       top, full width, fixed height) via the media query further down —
+       side-by-side only makes sense once there's room for both to be
+       genuinely usable at once. */
+    #monster-builder-modal-tab-model { overflow: hidden; display: flex; }
+    .mb-model-layout { display: flex; gap: 12px; width: 100%; height: 100%; min-height: 0; }
+    .mb-preview-pane { flex: 1 1 340px; min-width: 220px; max-width: 420px; display: flex; flex-direction: column; min-height: 0; }
+    /* canvas is a "replaced element" (like img/video) — flexbox's default
+       automatic min-size for replaced elements is their INTRINSIC size, not
+       0, so it resists shrinking below whatever createRenderer() set its
+       width/height attributes to (window.innerWidth/innerHeight) unless
+       min-width/min-height are forced to 0 here explicitly. */
+    #mb-workspace-canvas { flex: 1; width: 100%; min-width: 0; min-height: 0; display: block; background: #0f0b07; border: 1px solid var(--panel-border); border-radius: 4px; }
+    .mb-editor-pane { flex: 1 1 380px; min-width: 280px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    #mb-part-tabstrip { flex: 0 0 auto; display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(217,164,65,0.25); margin-bottom: 10px; }
+    #mb-part-tabstrip button { padding: 7px 13px; background: none; border: none; color: #e8d9b5; cursor: pointer; font-size: 15px; }
+    #mb-part-tabstrip button:hover { background: rgba(217,164,65,0.12); color: #f4d78a; box-shadow: none; }
+    #mb-part-tabstrip button.active { color: #f4d78a; border-bottom: 2px solid var(--accent-hover); }
+    #mb-part-tabstrip button.filled::after { content: " ●"; color: #6bd67f; font-size: 12px; }
+    #mb-part-content { flex: 1; overflow-y: auto; min-height: 0; padding-right: 4px; }
+
+    @media (max-width: 760px) {
+      .mb-model-layout { flex-direction: column; }
+      .mb-preview-pane { flex: 0 0 280px; max-width: none; width: 100%; }
+      .mb-editor-pane { min-width: 0; }
+    }
+
+    .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; margin-bottom: 10px; }
+    .preset-thumb {
+      background: #241a10; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer;
+      padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .preset-thumb:hover { border-color: var(--accent); }
+    .preset-thumb.active { border-color: var(--accent-hover); background: #3a2717; }
+    .preset-thumb img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #0f0b07; border-radius: 3px; }
+    .preset-thumb span { font-size: 13px; color: #e8d9b5; text-align: center; }
+    .color-swatch-row { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+    .color-swatch {
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--panel-border); cursor: pointer; padding: 0;
+    }
+    .color-swatch:hover { border-color: #fff; }
+    #mb-adjust-toggle { width: 100%; margin: 4px 0 10px; }
+    #mb-adjust-body { display: none; border-top: 1px solid rgba(217,164,65,0.18); padding-top: 10px; margin-top: 4px; }
+
+    .anim-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 6px; border: 1px solid rgba(217,164,65,0.2); border-radius: 4px; margin-bottom: 4px; font-size: 14px;
+    }
+    .anim-row .anim-part { flex: 0 0 82px; color: #e8d9b5; }
+    .anim-row select, .anim-row input { flex: 1; min-width: 0; }
+    .anim-row .anim-unit { flex: 0 0 auto; color: rgba(232,217,181,0.6); font-size: 12px; }
+    .anim-head { display: flex; gap: 6px; font-size: 12px; color: rgba(232,217,181,0.65); padding: 0 6px 3px; }
+    .anim-head span:nth-child(1) { flex: 0 0 82px; }
+    .anim-head span:nth-child(2) { flex: 1; }
+    .anim-head span:nth-child(3) { flex: 1; }
+    .anim-head span:nth-child(4) { flex: 1; }
+
+    .ability-ladder-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 8px; border: 1px solid rgba(217,164,65,0.2); border-radius: 4px; margin-bottom: 5px; font-size: 14px;
+    }
+    .ability-ladder-row .level-badge { color: #6a8; font-weight: bold; width: 34px; flex: 0 0 auto; }
+    .warn-text { color: #e08a4a; font-size: 14px; margin-top: 6px; }
+
+    /* Scenery palette: category tabs + rendered thumbnail grid. */
+    .scenery-palette { margin: 6px 0 10px; }
+    .palette-tabs { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 6px; }
+    .palette-tab { flex: 1 1 30%; display: flex; flex-direction: column; align-items: center; gap: 1px;
+      padding: 5px 2px; font-size: 11px; line-height: 1.1; background: #241a10; color: #e8d9b5;
+      border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; }
+    .palette-tab span { font-size: 16px; }
+    .palette-tab:hover { background: #3a2717; }
+    .palette-tab.active { background: #5a4326; border-color: var(--accent-hover); color: #f4d78a; }
+    .palette-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+      max-height: 268px; overflow-y: auto; padding-right: 2px; }
+    .palette-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 3px 2px 4px; background: #241a10; border: 1px solid var(--panel-border); border-radius: 5px;
+      cursor: pointer; color: #e8d9b5; font-size: 11px; }
+    .palette-cell img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 3px;
+      background: #1b140d; }
+    .palette-cell span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .palette-cell:hover { background: #3a2717; }
+    .palette-cell.active { background: #5a4326; border-color: #f0a63a; color: #f4d78a; }
+    /* Delete-X (top-right) / Remeasure (top-left) badges on an uploaded-model cell. */
+    .palette-cell-delete, .palette-cell-remeasure { position: absolute; top: -5px; width: 15px; height: 15px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; line-height: 1; color: #fff; border: 1px solid rgba(0,0,0,0.4); }
+    .palette-cell-delete { right: -5px; background: #a33; }
+    .palette-cell-delete:hover { background: #d44; }
+    .palette-cell-remeasure { left: -5px; background: #446; }
+    .palette-cell-remeasure:hover { background: #558; }
+    #mode-scatter output { color: #e8d9b5; font-variant-numeric: tabular-nums; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/",
+        "three.quarks": "https://cdn.jsdelivr.net/npm/three.quarks@0.17.1/dist/three.quarks.esm.js",
+        "quarks.core": "https://cdn.jsdelivr.net/npm/quarks.core@0.17.1/dist/quarks.core.esm.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="editor-canvas"></canvas>
+  <div id="marquee-box"></div>
+
+  <!-- Big, centre-screen save confirmation. The status line in the corner is
+       easy to miss mid-edit, which is exactly why it was never clear whether a
+       save had actually gone through. -->
+  <div id="save-toast"></div>
+
+  <div id="top-right">
+    <div id="status-line">Loading world…</div>
+    <div id="camera-hint">WASD/QE: fly &nbsp;•&nbsp; Right-drag: rotate &nbsp;•&nbsp; Middle-drag / arrow keys: pan &nbsp;•&nbsp; Scroll: zoom</div>
+    <div id="controls-hint">🖱️ Left: place/select/paint</div>
+    <label id="show-zones-toggle" style="color:#ccc; font-size:12px; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:4px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="show-zones-checkbox" checked style="width:14px; height:14px; margin:0;"> Show zones
+    </label>
+    <label id="show-grid-toggle" style="color:#ccc; font-size:12px; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:4px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="show-grid-checkbox" style="width:14px; height:14px; margin:0;"> Floor grid (Shift+G)
+    </label>
+    <button id="undo-btn" title="Nothing to undo" disabled>↶ Undo</button>
+    <button id="save-btn">💾 Save World to Server</button>
+    <button id="download-btn">⬇ Download world.json</button>
+    <button id="open-graphics-settings-btn" title="Graphics Settings">⚙</button>
+    <button id="open-camera-settings-btn" title="Camera Controls (sensitivity, fly speed)">🎥</button>
+  </div>
+
+  <div id="tool-flyout-resizer" title="Drag to resize the tool panel (double-click to reset)"></div>
+
+  <div id="tool-flyout">
+    <h2>World Editor</h2>
+
+    <!-- PLACE MODE -->
+    <div id="mode-place" class="mode-panel">
+      <h3>Asset Palette</h3>
+      <div class="palette">
+        <button data-place="wall">🧱 Wall</button>
+      </div>
+      <div id="place-palette"></div>
+      <p class="hint">Click a palette item, then click the ground to place. New seed each click. Placement stays armed — keep clicking the ground to place more, click the active item again (or press Esc) to stop.</p>
+
+      <label>Upload a model (FBX/GLB)</label>
+      <input type="file" id="model-upload-file" accept=".fbx,.glb" />
+      <input type="text" id="model-upload-name" placeholder="Model name" />
+      <div class="row">
+        <div>
+          <label>Category</label>
+          <select id="model-upload-category"></select>
+        </div>
+        <div>
+          <label>Import scale</label>
+          <input type="number" id="model-upload-scale" value="1" step="0.001" min="0.0001" />
+        </div>
+      </div>
+      <p class="hint">FBX/GLB exporters disagree on units — 1 unit = 1 meter here; if a Blender/Maya export used centimeters, try 0.01. Category picks which palette tab the model appears under, above.</p>
+      <button id="model-upload-btn" style="width:100%; margin-top:4px;">⬆ Upload Model</button>
+      <p class="hint" id="model-upload-status"></p>
+
+      <label><input type="checkbox" id="grid-snap" checked /> Grid snap</label>
+      <label>Snap size</label>
+      <input type="number" id="snap-size" value="1" min="0.1" step="0.1" />
+
+      <h3>Selected Object(s)</h3>
+      <p class="hint"><b>Multi-select:</b> Alt+click an object to add/remove it, or Alt+drag on the ground to box-select everything inside. Drag any selected object to move the whole group (relative spacing is kept). Ctrl+C copies the selection, Ctrl+V pastes it centred on the cursor. Del deletes all of it, Esc clears the selection. The fields below apply to <i>every</i> selected object.</p>
+      <div id="selected-info" class="hint">Nothing selected. Click a placed object, or Alt+drag to box-select several.</div>
+      <div id="selected-controls" style="display:none">
+        <div id="sel-rotation-xz-row">
+          <label>Rotation (deg, X / Y / Z)</label>
+          <div class="row">
+            <input type="number" id="sel-rot-x" value="0" step="5" />
+            <input type="number" id="sel-rot-y" value="0" step="5" />
+            <input type="number" id="sel-rot-z" value="0" step="5" />
+          </div>
+        </div>
+        <div id="sel-rotation-y-only-row" style="display:none;">
+          <label>Rotation (deg)</label>
+          <input type="number" id="sel-rot-y-only" value="0" step="5" />
+        </div>
+        <div id="sel-scale-height-row">
+          <label>Scale (%)</label>
+          <input type="number" id="sel-scale-pct" value="100" min="1" step="5" />
+          <label>Height offset (up/down)</label>
+          <input type="number" id="sel-height" value="0" step="0.1" />
+        </div>
+        <div id="sel-color-row">
+          <label>Color tint</label>
+          <div class="row" style="align-items:center;">
+            <input type="color" id="sel-color" value="#ffffff" style="height:28px; padding:2px;" />
+            <button id="reset-color" style="flex:0 0 auto;">Reset</button>
+          </div>
+        </div>
+        <div id="sel-wall-invisible-row" class="row" style="align-items:center; display:none;">
+          <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="sel-wall-invisible" /> Invisible (collider only)</label>
+        </div>
+        <div id="sel-tree-density-row" style="display:none;">
+          <label>Leaf density (selected trees only) <output id="sel-tree-density-out">1.5</output>x</label>
+          <input type="range" id="sel-tree-density" min="0.5" max="3.5" step="0.1" />
+          <button id="sel-tree-density-reset" style="width:100%; margin-top:4px;">Reset to world default</button>
+        </div>
+        <button id="delete-selected" style="width:100%; margin-top:8px; background:#883f3f; border-color:#883f3f;">Delete (Del)</button>
+      </div>
+
+      <h3>Placed Props (<span id="prop-count">0</span>)</h3>
+      <div id="obj-list"></div>
+    </div>
+
+    <!-- SCATTER MODE -->
+    <div id="mode-scatter" class="mode-panel" style="display:none">
+      <h3>Scatter Brush</h3>
+      <p class="hint">Pick a type, then click-drag on the ground to scatter many instances. Shift + drag erases scattered props of the selected type within the brush. "Grass Tuft" scatters like anything else here — the live game batches every placed tuft into one dense, wind-swaying, cel-shaded field (see grassCover.js).</p>
+      <div id="scatter-palette"></div>
+
+      <div id="prop-scatter-controls">
+        <h3>Brush</h3>
+        <label>Pattern</label>
+        <select id="scatter-pattern">
+          <option value="scatter">Scatter (random)</option>
+          <option value="hexagon">Hexagon (even)</option>
+          <option value="grid">Grid</option>
+        </select>
+        <label>Brush radius <output id="scatter-radius-out">10</output></label>
+        <input type="range" id="scatter-radius" min="2" max="40" step="1" value="10" />
+        <label>Density (instances/tick) <output id="scatter-density-out">3</output></label>
+        <input type="range" id="scatter-density" min="1" max="12" step="1" value="3" />
+        <label>Position variation % <output id="scatter-variation-out">50</output></label>
+        <input type="range" id="scatter-variation" min="0" max="100" step="1" value="50" />
+        <label>Angle <output id="scatter-angle-out">0</output>°</label>
+        <input type="range" id="scatter-angle" min="0" max="360" step="1" value="0" />
+        <label>Angle variation <output id="scatter-angle-var-out">360</output>°</label>
+        <input type="range" id="scatter-angle-var" min="0" max="360" step="1" value="360" />
+        <!-- Both sliders share one range on purpose: they used to stop at 2
+             and 3, so dragging BOTH to the right end left a 2..3 spread and
+             the brush still randomized sizes when it looked like it
+             shouldn't. Same min/max means min==max is actually reachable. -->
+        <label>Min scale <output id="scatter-scale-min-out">0.85</output>×</label>
+        <input type="range" id="scatter-scale-min" min="0.3" max="3" step="0.05" value="0.85" />
+        <label>Max scale <output id="scatter-scale-max-out">1.15</output>×</label>
+        <input type="range" id="scatter-scale-max" min="0.3" max="3" step="0.05" value="1.15" />
+        <label><input type="checkbox" id="scatter-snap" /> Snap to grid</label>
+        <label><input type="checkbox" id="scatter-overwrite" /> Overwrite (clear existing props under the brush first)</label>
+        <label><input type="checkbox" id="scatter-erase-any" /> Shift+drag erases any type (not just the selected one)</label>
+      </div>
+
+      <h3>Scattered This Session (<span id="scatter-count">0</span>)</h3>
+      <p class="hint">Individually selectable/deletable in the Place tab like any other prop.</p>
+
+      <h3>Tree Leaf Density</h3>
+      <p class="hint">Affects every round-canopy tree in the world ("Tree", "Oak", "Birch" — not "Pine"), already-placed ones included. Higher = fuller canopy, more triangles per tree: 1x is ~17k tris/tree, 3x is ~65k+.</p>
+      <label>Leaf density <output id="tree-density-out">1.5</output>x</label>
+      <input type="range" id="tree-density" min="0.5" max="3.5" step="0.1" value="1.5" />
+    </div>
+
+    <!-- TERRAIN MODE -->
+    <div id="mode-terrain" class="mode-panel" style="display:none">
+      <label>Tool</label>
+      <div class="row">
+        <button id="terrain-tool-sculpt" class="active" style="flex:1;">Sculpt</button>
+        <button id="terrain-tool-barrier" style="flex:1;">Invisible Wall</button>
+      </div>
+
+      <div id="terrain-sculpt-controls">
+        <h3>Height Painting</h3>
+        <p class="hint">Left-click + drag to raise. Shift + click-drag to lower.</p>
+        <label>Brush radius</label>
+        <input type="range" id="brush-radius" min="4" max="60" step="1" value="20" />
+        <label>Brush strength</label>
+        <input type="range" id="brush-strength" min="0.05" max="1" step="0.05" value="0.3" />
+        <label><input type="checkbox" id="mountain-preset" /> Mountain preset (tall, jagged peaks)</label>
+        <label><input type="checkbox" id="flatten-mode" /> Flatten mode (drag pulls the brush area toward height 0)</label>
+        <button id="reset-terrain" style="width:100%; margin-top:10px;">Flatten All Terrain</button>
+      </div>
+
+      <div id="terrain-barrier-controls" style="display:none">
+        <h3>Invisible Wall</h3>
+        <p class="hint">Draw like a path: click to drop points (or click-drag to trail them), <b>Enter</b> to finish, <b>Escape</b> to cancel. Players can't cross the line. Nothing renders in the live game — the red ribbon is editor-only, and only visible while this tool is selected.</p>
+        <label>Thickness</label>
+        <input type="number" id="barrier-thickness" value="1" min="0.2" step="0.2" />
+        <div class="row">
+          <button id="finish-barrier-btn" style="flex:1;">Finish (Enter)</button>
+          <button id="cancel-barrier-btn" style="flex:1;">Cancel (Esc)</button>
+        </div>
+        <h3>Selected Wall</h3>
+        <div id="barrier-selected-info" class="hint">Nothing selected. Click a wall to select it.</div>
+        <div id="barrier-selected-controls" style="display:none">
+          <p class="hint">Drag a yellow handle to reshape. Delete removes the whole wall.</p>
+          <button id="delete-barrier-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Wall</button>
+        </div>
+        <h3>Invisible Walls (<span id="barrier-count">0</span>)</h3>
+        <div id="barrier-list" class="hint"></div>
+        <p class="hint">Invisible walls save with the main Save World button.</p>
+      </div>
+    </div>
+
+    <!-- WATER MODE -->
+    <div id="mode-water" class="mode-panel" style="display:none">
+      <h3>Water</h3>
+      <label>Tool</label>
+      <div class="row">
+        <button id="water-tool-paint" class="active" style="flex:1;">Paint (legacy)</button>
+        <button id="water-tool-lake" style="flex:1;">Lake</button>
+        <button id="water-tool-river" style="flex:1;">River</button>
+        <button id="water-tool-puddle" style="flex:1;">Puddle</button>
+      </div>
+
+      <div id="water-paint-controls">
+        <p class="hint">Click-drag to paint water. Shift + drag erases it. Painting automatically carves a basin into the terrain underneath, so the water sits in real ground instead of floating — raising/applying Water Level re-carves that basin deeper too. This is the OLD single-flat-level system — every painted lake shares one height. Use the Lake tool above for lakes at independent elevations with real per-pixel depth.</p>
+        <label>Brush radius</label>
+        <input type="range" id="water-radius" min="2" max="40" step="1" value="12" />
+        <label>Brush softness (edge falloff)</label>
+        <input type="range" id="water-softness" min="0.05" max="1" step="0.05" value="0.4" />
+        <label>Water level (Y height)</label>
+        <input type="number" id="water-level" value="0.1" step="0.1" />
+        <button id="apply-water-level" style="width:100%; margin-top:6px;">Apply water level</button>
+        <button id="erase-water-body" style="width:100%; margin-top:10px;">Remove One Lake (click)</button>
+        <button id="reset-water" style="width:100%; margin-top:10px; background:#883f3f; border-color:#883f3f;">Clear All Water</button>
+      </div>
+
+      <div id="water-lake-controls" style="display:none">
+        <p class="hint">A lake is a rectangle, optionally with rounded corners (see Edge rounding below) — click "Place Lake" then click the ground to drop one at the size below. Click an existing lake to select it: it gets a yellow outline with four <b>yellow corner handles (drag to resize)</b> and a <b>blue center handle (drag to move)</b>. The fields underneath do the same thing numerically and stay in sync with the handles. Doesn't touch the terrain at all, so there's nothing to carve or mismatch — fit it to the ground by eye.</p>
+        <button id="lake-place-btn" style="width:100%;">Place Lake</button>
+
+        <h3 style="margin-top:10px;">Selected lake</h3>
+        <div class="row">
+          <div><label>Width</label><input type="number" id="lake-width" value="20" step="1" min="1" /></div>
+          <div><label>Depth</label><input type="number" id="lake-depth" value="20" step="1" min="1" /></div>
+        </div>
+        <label>Edge rounding (<span id="lake-rounding-value">0%</span>)</label>
+        <input type="range" id="lake-rounding" min="0" max="100" step="1" value="0" />
+        <p class="hint">0% = sharp rectangle. 100% rounds by half the short side — a circle when Width and Depth match, an oval/stadium when they don't. Applies to the lake you're placing next as well as the selected one.</p>
+        <div class="row">
+          <div><label>Position X</label><input type="number" id="lake-pos-x" value="0" step="0.5" /></div>
+          <div><label>Position Z</label><input type="number" id="lake-pos-z" value="0" step="0.5" /></div>
+        </div>
+        <label>Position Y (height)</label>
+        <input type="number" id="lake-pos-y" value="0" step="0.1" />
+        <div class="row">
+          <button id="lake-nudge-down-btn" style="flex:1;">▼ Lower</button>
+          <button id="lake-nudge-up-btn" style="flex:1;">▲ Raise</button>
+        </div>
+        <label>Raise/lower step</label>
+        <input type="number" id="lake-nudge-step" value="0.25" step="0.05" min="0.01" />
+        <label>Max depth (visual only — how deep the water looks)</label>
+        <input type="number" id="lake-max-depth" value="3" step="0.1" min="0.1" />
+
+        <h3>Lakes (<span id="lake-count">0</span>)</h3>
+        <div id="lake-list"></div>
+
+        <button id="convert-water-mask-btn" style="width:100%; margin-top:10px;">Convert painted water to lakes</button>
+        <p class="hint" id="convert-water-mask-status"></p>
+      </div>
+
+      <div id="water-river-controls" style="display:none">
+        <p class="hint">Click to add points along the river's path, Enter to finish (rivers are an open path, not a closed shape — no click-to-close). Escape cancels the in-progress draft (or deselects). Each point's height is sampled from the terrain there and automatically clamped so the river can never flow uphill. Click an existing river to select it, then drag its yellow point handles to reshape (height re-samples on drop); Delete removes the selected point.</p>
+        <label>Width</label>
+        <input type="number" id="river-width" value="6" step="0.5" min="1" />
+        <div class="row">
+          <button id="river-nudge-down-btn" style="flex:1;">▼ Lower selected river</button>
+          <button id="river-nudge-up-btn" style="flex:1;">▲ Raise selected river</button>
+        </div>
+        <p class="hint">Shifts the WHOLE selected river up/down by the nudge step, keeping its slope — use this to fit it flush to the ground if it's floating or sunk.</p>
+        <label>Nudge step</label>
+        <input type="number" id="river-nudge-step" value="0.25" step="0.05" min="0.01" />
+        <label>Max depth</label>
+        <input type="number" id="river-max-depth" value="1.5" step="0.1" min="0.1" />
+        <div class="row">
+          <button id="river-finish-btn" style="flex:1;">Finish Path (Enter)</button>
+          <button id="river-cancel-btn" style="flex:1;">Cancel (Esc)</button>
+        </div>
+
+        <h3>Rivers (<span id="river-count">0</span>)</h3>
+        <div id="river-list"></div>
+      </div>
+
+      <div id="water-puddle-controls" style="display:none">
+        <p class="hint">Click to drop a puddle (click-drag scatters several). Puddles sit right on the existing terrain wherever you click — no basin carving — so place them in spots that already look low/damp. Quick-place only: to resize or reshape one, delete it and place a new one.</p>
+        <label>Radius</label>
+        <input type="number" id="puddle-radius" value="2" step="0.25" min="0.25" />
+        <label>Max depth</label>
+        <input type="number" id="puddle-max-depth" value="0.15" step="0.05" min="0.02" />
+
+        <h3>Puddles (<span id="puddle-count">0</span>)</h3>
+        <div id="puddle-list"></div>
+      </div>
+    </div>
+
+    <!-- ZONES MODE -->
+    <div id="mode-zones" class="mode-panel" style="display:none">
+      <h3>Zone Tagging</h3>
+      <label>Shape</label>
+      <div class="row">
+        <button id="zone-shape-circle" class="active" style="flex:1;">Circle</button>
+        <button id="zone-shape-freeform" style="flex:1;">Freeform</button>
+      </div>
+
+      <div id="zone-circle-controls">
+        <p class="hint">Click-drag on the ground: click sets center, drag sets radius, release confirms.</p>
+        <label>Zone type</label>
+        <select id="zone-type">
+          <option value="gathering">gathering</option>
+          <option value="city">city</option>
+          <option value="tower">tower</option>
+        </select>
+        <label>Resource (gathering only)</label>
+        <select id="zone-resource">
+          <option value="wood_and_herbs">wood_and_herbs</option>
+          <option value="ore">ore</option>
+          <option value="fish">fish</option>
+          <option value="misc_flora">misc_flora</option>
+        </select>
+        <label>Zone id</label>
+        <input type="text" id="zone-id" placeholder="e.g. forest-2" />
+
+        <h3>Existing Zones (<span id="zone-count">0</span>)</h3>
+        <div id="zone-list"></div>
+      </div>
+
+      <div id="zone-freeform-controls" style="display:none">
+        <p class="hint">Click to add points, click near the start point (or press Enter) to close the shape. Escape cancels the in-progress draft. Click an existing zone to select it, then drag its yellow point handles to reshape, Delete removes the selected point.</p>
+        <label>Name</label>
+        <input type="text" id="fz-name" placeholder="e.g. Haunted Grove" />
+
+        <label>Music</label>
+        <select id="fz-music"><option value="">— none —</option></select>
+        <label><input type="checkbox" id="fz-music-loop" checked /> Loop Music</label>
+        <label>Default Volume <output id="fz-music-volume-out">1.00</output></label>
+        <input type="range" id="fz-music-volume" min="0" max="1" step="0.05" value="1" />
+        <div class="row">
+          <input type="file" id="fz-music-upload-file" accept="audio/*" />
+        </div>
+        <input type="text" id="fz-music-upload-name" placeholder="Track name (optional)" />
+        <button id="fz-music-upload-btn" style="width:100%;">⬆ Upload Music</button>
+        <p class="hint" id="fz-music-upload-status"></p>
+        <label>Uploaded music <span class="hint">(✕ deletes the file too)</span></label>
+        <div id="fz-music-track-list"></div>
+
+        <label>Ambient Sound</label>
+        <select id="fz-ambient"><option value="">— none —</option></select>
+        <div class="row">
+          <input type="file" id="fz-ambient-upload-file" accept="audio/*" />
+        </div>
+        <input type="text" id="fz-ambient-upload-name" placeholder="Sound name (optional)" />
+        <button id="fz-ambient-upload-btn" style="width:100%;">⬆ Upload Ambient</button>
+        <p class="hint" id="fz-ambient-upload-status"></p>
+        <label>Uploaded ambient sounds <span class="hint">(✕ deletes the file too)</span></label>
+        <div id="fz-ambient-track-list"></div>
+
+        <label>Particles</label>
+        <select id="fz-particle">
+          <option value="">None</option>
+        </select>
+
+        <div class="row">
+          <button id="fz-finish-btn" style="flex:1;">Finish Shape (Enter)</button>
+          <button id="fz-cancel-btn" style="flex:1;">Cancel (Esc)</button>
+        </div>
+
+        <h3>Freeform Zones (<span id="fz-count">0</span>)</h3>
+        <div id="fz-list"></div>
+      </div>
+    </div>
+
+    <!-- BUILDINGS MODE -->
+    <div id="mode-buildings" class="mode-panel" style="display:none">
+      <h3>Place Building</h3>
+      <label>Building id</label>
+      <input type="text" id="bld-id" placeholder="e.g. blacksmith" />
+      <label>Type (also picks the roof/shape)</label>
+      <select id="bld-type">
+        <option value="cottage">🏠 Cottage</option>
+        <option value="shop" selected>🏪 Shop</option>
+        <option value="guild-hall">🏛️ Guild Hall</option>
+        <option value="longhouse">🛖 Longhouse</option>
+      </select>
+      <div class="row">
+        <div><label>Width</label><input type="number" id="bld-width" value="8" min="2" /></div>
+        <div><label>Depth</label><input type="number" id="bld-depth" value="8" min="2" /></div>
+      </div>
+      <label><input type="checkbox" id="bld-enterable" checked /> Enterable</label>
+      <label>Linked building map (Maps mode)</label>
+      <input type="text" id="bld-interior-id" list="building-map-ids" placeholder="pick or type a Building map's id" />
+      <datalist id="building-map-ids"></datalist>
+      <button id="place-building-btn" style="width:100%; margin-top:8px;">Click ground to place</button>
+
+      <h3>Existing Buildings</h3>
+      <div id="bld-list" class="hint"></div>
+    </div>
+
+    <!-- MONSTERS MODE -->
+    <div id="mode-monsters" class="mode-panel" style="display:none">
+      <h3>Tower Floor</h3>
+      <label>Floor</label>
+      <select id="floor-select"></select>
+      <p class="hint" id="floor-status">No floor loaded.</p>
+
+      <button id="open-monster-builder-btn" style="width:100%; margin-top:6px; margin-bottom:10px;">🧬 Manage Monster Types</button>
+
+      <h3>Monster Stats</h3>
+      <p class="hint">Fields below are used both for placing a new monster and for editing the selected one.</p>
+      <label>Type</label>
+      <select id="mon-type">
+        <option value="slime">Slime</option>
+        <option value="goblin">Goblin</option>
+        <option value="boss-golem">Boss Golem</option>
+      </select>
+      <div class="row">
+        <div><label>Max HP</label><input type="number" id="mon-maxHealth" value="30" min="1" /></div>
+        <div><label>Damage</label><input type="number" id="mon-damage" value="5" min="0" /></div>
+      </div>
+      <div class="row">
+        <div><label>Speed</label><input type="number" id="mon-speed" value="1.6" min="0" step="0.1" /></div>
+        <div><label>Attack CD (ms)</label><input type="number" id="mon-attackCooldownMs" value="1400" min="100" step="50" /></div>
+      </div>
+      <div class="row">
+        <div><label>Aggro range</label><input type="number" id="mon-aggroRange" value="8" min="1" step="0.5" /></div>
+        <div><label>Attack range</label><input type="number" id="mon-attackRange" value="1.6" min="0.5" step="0.1" /></div>
+      </div>
+      <div class="row">
+        <div><label>Scale</label><input type="range" id="mon-scale" min="0.3" max="3" step="0.05" value="1" /></div>
+        <div><label>Color tint</label><input type="color" id="mon-color" value="#ffffff" style="height:28px; padding:2px;" /></div>
+      </div>
+      <label><input type="checkbox" id="mon-isBoss" /> Boss</label>
+      <label><input type="checkbox" id="mon-friendly" /> Friendly (won't attack, can't be attacked)</label>
+      <label>XP reward (blank = auto, ~60% of Max HP)</label>
+      <input type="number" id="mon-xpReward" min="0" step="1" placeholder="auto" />
+      <label>Quest group (kill-quests target this tag)</label>
+      <input type="text" id="mon-group" placeholder="e.g. tower-f1-slimes, field-slimes-east" />
+      <label>Respawn time, ms (overworld only — blank = 30s default)</label>
+      <input type="number" id="mon-respawnMs" min="1000" step="1000" placeholder="30000" />
+
+      <label><input type="checkbox" id="mon-wander" /> Wanders about</label>
+      <div class="row">
+        <div><label>Wander radius</label><input type="number" id="mon-wanderRadius" value="6" min="1" step="0.5" /></div>
+      </div>
+      <p class="hint">Same idle stroll the NPCs do — only while the monster has no target. Aggro, chasing and leashing all take priority, and it still walks back to its spawn point when it leashes.</p>
+
+      <h3>Loot Table <span class="hint">(each entry rolls independently on a kill — a kill can drop several, or none)</span></h3>
+      <div id="mon-loot-list" class="hint"></div>
+      <div class="row">
+        <select id="mon-loot-item"></select>
+      </div>
+      <div class="row">
+        <div><label>Drop chance %</label><input type="number" id="mon-loot-chance" value="10" min="0.001" max="100" step="0.1" /></div>
+      </div>
+      <div class="row">
+        <div><label>Min qty</label><input type="number" id="mon-loot-min" value="1" min="1" step="1" /></div>
+        <div><label>Max qty</label><input type="number" id="mon-loot-max" value="1" min="1" step="1" /></div>
+      </div>
+      <label>Only drops during a quest (optional)</label>
+      <div class="row">
+        <div><select id="mon-loot-quest"><option value="">— always drops —</option></select></div>
+        <div><select id="mon-loot-quest-phase">
+          <option value="active">while it is active</option>
+          <option value="ready">once its objective is met</option>
+          <option value="done">after it is finished</option>
+        </select></div>
+      </div>
+      <p class="hint">A quest-gated entry isn't even rolled for a player outside that phase, so the same monster hands the Sealed Letter to whoever is on the quest and nothing extra to everyone else.</p>
+      <button type="button" id="mon-loot-add-btn" style="width:100%">+ Add Drop</button>
+      <p class="hint">Applies to the next monster(s) you place with the form above, or to the selected monster after "Apply stats above to selected".</p>
+
+      <button id="place-monster-btn" style="width:100%; margin-top:8px;">Click floor to place</button>
+
+      <h3>Scatter</h3>
+      <p style="opacity:0.75; font-size:0.85em; margin:0 0 6px;">
+        Click+drag to stamp multiple monsters using the stats above (Max HP, Damage, quest group,
+        Friendly, etc. — everything in the form above applies to each one). Shift+drag erases.
+      </p>
+      <label><input type="checkbox" id="mon-scatter-active" /> Scatter mode (click+drag instead of single click)</label>
+      <div class="row">
+        <div><label>Brush radius: <span id="mon-scatter-radius-out">4</span></label>
+          <input type="range" id="mon-scatter-radius" min="1" max="20" step="0.5" value="4" /></div>
+        <div><label>Density: <span id="mon-scatter-density-out">2</span>/tick</label>
+          <input type="range" id="mon-scatter-density" min="1" max="10" step="1" value="2" /></div>
+      </div>
+      <label>Min spacing (world units, avoids stacking)</label>
+      <input type="number" id="mon-scatter-min-spacing" min="0" step="0.25" value="1.5" />
+      <label><input type="checkbox" id="mon-scatter-erase-any" /> Erase any type (not just the selected one)</label>
+      <div>Placed this session: <span id="mon-scatter-count">0</span></div>
+
+      <h3>Selected Monster</h3>
+      <div id="mon-selected-info" class="hint">Nothing selected. Click a placed monster.</div>
+      <div id="mon-selected-controls" style="display:none">
+        <button id="apply-monster-btn" style="width:100%; margin-top:6px;">Apply stats above to selected</button>
+        <button id="delete-monster-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete</button>
+      </div>
+
+      <h3><span id="mon-list-heading">Monsters On This Floor</span> (<span id="mon-count">0</span>)</h3>
+      <div id="mon-list" class="hint"></div>
+
+      <button id="save-floor-btn" style="width:100%; margin-top:12px; background:#3f8850; border-color:#3f8850;">💾 Save Floor to Server</button>
+    </div>
+
+    <!-- ITEMS MODE -->
+    <div id="mode-items" class="mode-panel" style="display:none">
+      <h3>Item</h3>
+      <p class="hint">Authoring only for now — items aren't grantable/equippable in-game yet (no loot system, no equip slots). This defines the catalog for when those exist.</p>
+      <label>Id</label>
+      <input type="text" id="item-id" placeholder="e.g. iron-sword" />
+      <label>Name</label>
+      <input type="text" id="item-name" placeholder="e.g. Iron Sword" />
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select id="item-type">
+            <option value="weapon">Weapon</option>
+            <option value="armor">Armor</option>
+            <option value="consumable">Consumable</option>
+            <option value="quest">Quest</option>
+            <option value="misc">Misc</option>
+          </select>
+        </div>
+        <div>
+          <label>Rarity</label>
+          <select id="item-rarity">
+            <option value="common">Common</option>
+            <option value="uncommon">Uncommon</option>
+            <option value="rare">Rare</option>
+            <option value="epic">Epic</option>
+            <option value="legendary">Legendary</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="item-armor-section" style="display:none">
+        <label>Armor type</label>
+        <select id="item-armor-type"></select>
+        <p class="hint">Three starter looks below (tint color only — gear doesn't render on the character model yet). Load one, tweak it, save under a new id.</p>
+        <div class="row">
+          <button type="button" id="item-preset-cloth" style="width:100%">Load: Cloth</button>
+          <button type="button" id="item-preset-leather" style="width:100%">Load: Leather</button>
+          <button type="button" id="item-preset-plate" style="width:100%">Load: Plate</button>
+        </div>
+      </div>
+
+      <div id="item-weapon-section" style="display:none">
+        <label>Weapon type</label>
+        <select id="item-weapon-type"></select>
+      </div>
+
+      <div id="item-slot-section" style="display:none">
+        <label>Equip slot</label>
+        <select id="item-slot"></select>
+      </div>
+
+      <div id="item-tint-section" style="display:none">
+        <label>Tint color (starting point for future gear rendering, unused today)</label>
+        <input type="color" id="item-tint-color" value="#8a5a3a" />
+      </div>
+
+      <label>Description</label>
+      <textarea id="item-description" rows="3" placeholder="Shown in tooltips once inventory UI reads this."></textarea>
+      <label>Sell price</label>
+      <input type="number" id="item-sellPrice" value="0" min="0" />
+      <label style="display:flex; align-items:center; gap:6px; margin-top:6px;">
+        <input type="checkbox" id="item-quest-locked" style="width:auto" /> Quest-locked (no sell/trade/drop, once inventory enforces it)
+      </label>
+
+      <div id="item-stats-section" style="display:none">
+        <h3>Stat Modifiers</h3>
+        <div id="item-statmod-list" class="hint"></div>
+        <div class="row">
+          <select id="item-statmod-stat"></select>
+          <input type="number" id="item-statmod-value" placeholder="value" step="0.1" style="width:70px" />
+        </div>
+        <label style="display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="item-statmod-pct" style="width:auto" /> Percentage
+        </label>
+        <button type="button" id="item-statmod-add-btn" style="width:100%">+ Add Stat Modifier</button>
+      </div>
+
+      <div id="item-consumable-section" style="display:none">
+        <h3>Usage</h3>
+        <label>Usage mode</label>
+        <select id="item-usage-mode"></select>
+        <label id="item-charges-label" style="display:none">Charges</label>
+        <input type="number" id="item-usage-charges" min="1" step="1" style="display:none" />
+        <label>Cooldown (seconds)</label>
+        <input type="number" id="item-usage-cooldown" min="0" step="0.5" value="0" />
+        <label>Effect trigger (optional)</label>
+        <select id="item-effect-kind">
+          <option value="">— none —</option>
+          <option value="restoreHealth">Restores Health</option>
+          <option value="restoreMana">Restores Mana</option>
+          <option value="buff">Apply Stat Buff</option>
+        </select>
+        <div id="item-effect-stat-section" style="display:none">
+          <label>Buff stat</label>
+          <select id="item-effect-stat"></select>
+        </div>
+        <div class="row">
+          <div><label id="item-effect-amount-label">Amount</label><input type="number" id="item-effect-amount" placeholder="amount" step="1" /></div>
+          <div id="item-effect-duration-section" style="display:none"><label>Duration (s)</label><input type="number" id="item-effect-duration" placeholder="duration (s)" step="1" /></div>
+        </div>
+      </div>
+
+      <h3>Craftable</h3>
+      <label style="display:flex; align-items:center; gap:6px;">
+        <input type="checkbox" id="item-craftable-enabled" style="width:auto" /> This item can be crafted from materials
+      </label>
+      <p class="hint">Prep work for a future crafting UI — not consumed by anything in-game yet.</p>
+      <div id="item-craft-section" style="display:none">
+        <div id="item-craft-list" class="hint"></div>
+        <div class="row">
+          <select id="item-craft-material"></select>
+          <input type="number" id="item-craft-qty" value="1" min="1" step="1" style="width:60px" />
+        </div>
+        <button type="button" id="item-craft-add-btn" style="width:100%">+ Add Material</button>
+      </div>
+
+      <label>Icon</label>
+      <img id="item-icon-preview" src="" alt="" style="display:none" />
+      <input type="file" id="item-icon-file" accept="image/*" />
+      <p class="hint" id="item-icon-status"></p>
+
+      <button id="save-item-btn" style="width:100%; margin-top:10px;">💾 Save Item to Catalog</button>
+      <button id="new-item-btn" style="width:100%; margin-top:6px;">＋ New Item</button>
+
+      <h3>Item Catalog (<span id="item-count">0</span>)</h3>
+      <div id="item-list" class="hint"></div>
+    </div>
+
+    <!-- NPCS MODE -->
+    <div id="mode-npcs" class="mode-panel" style="display:none">
+      <h3>Town NPC</h3>
+      <p class="hint">Fields below place a new NPC and edit the selected one. Wandering NPCs mill about near where you place them.</p>
+      <label>Name</label>
+      <input type="text" id="npc-name" placeholder="e.g. Elder Rowan" />
+
+      <label>Body</label>
+      <select id="npc-body"></select>
+      <p class="hint">The townsfolk prefabs (villager, town-guard, merchant, hooded-stranger) or any of the 5 player classes — same catalog the Character &amp; NPC Builder authors.</p>
+
+      <label>Appearance</label>
+      <div class="row">
+        <select id="npc-gender">
+          <option value="random">Random look</option>
+          <option value="masc">Masculine</option>
+          <option value="fem">Feminine</option>
+        </select>
+        <button id="npc-randomize-btn" style="flex:0 0 auto;">🎲 Reroll</button>
+      </div>
+      <p class="hint">Hair/colors are derived from a random seed — reroll until you like the look shown after placing.</p>
+
+      <label>Dialog</label>
+      <div class="row">
+        <button id="npc-dialog-mode-simple" class="active" style="flex:1;">Simple</button>
+        <button id="npc-dialog-mode-tree" style="flex:1;">Branching</button>
+      </div>
+
+      <div id="npc-dialog-simple-controls">
+        <label>Lines (one line per row, 2–4 lines)</label>
+        <textarea id="npc-dialog" rows="4" placeholder="Welcome, traveler.&#10;The tower has been restless lately.&#10;Mind the upper floors."></textarea>
+      </div>
+
+      <div id="npc-dialog-tree-controls" style="display:none">
+        <p class="hint">The first node below is where dialog starts. A choice with "— end dialog —" as its next node closes the dialog when clicked.</p>
+        <div id="npc-dialog-node-list"></div>
+        <button id="npc-dialog-add-node-btn" style="width:100%; margin-top:4px;">+ Add Dialog Node</button>
+
+        <div id="npc-dialog-node-editor" style="display:none; border-top:1px solid #2f6fb0; margin-top:10px; padding-top:8px;">
+          <label>Node text</label>
+          <textarea id="npc-dialog-node-text" rows="2"></textarea>
+          <label>Choices (leave empty for a plain "click to continue")</label>
+          <div id="npc-dialog-choice-list"></div>
+          <button id="npc-dialog-add-choice-btn" style="width:100%; margin-top:4px;">+ Add Choice</button>
+        </div>
+      </div>
+
+      <label><input type="checkbox" id="npc-wander" checked /> Wanders about</label>
+      <div class="row">
+        <div><label>Wander radius</label><input type="number" id="npc-wanderRadius" value="8" min="1" step="0.5" /></div>
+        <div><label>Speed</label><input type="number" id="npc-speed" value="1.2" min="0" step="0.1" /></div>
+      </div>
+      <button id="place-npc-btn" style="width:100%; margin-top:8px;">Click ground to place</button>
+
+      <h3>Selected NPC</h3>
+      <div id="npc-selected-info" class="hint">Nothing selected. Click a placed NPC.</div>
+      <div id="npc-selected-controls" style="display:none">
+        <p class="hint">Drag a placed NPC to move it. Facing only shows in-game for NPCs that don't wander (a wanderer turns to face wherever it's walking).</p>
+        <div class="row">
+          <div><label>Facing (°)</label><input type="number" id="npc-facing" value="0" step="15" /></div>
+          <div><label>Height offset</label><input type="number" id="npc-height" value="0" step="0.1" /></div>
+        </div>
+        <button id="apply-npc-btn" style="width:100%; margin-top:6px;">Apply fields above to selected</button>
+        <button id="delete-npc-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete</button>
+      </div>
+
+      <h3>NPCs In The Overworld (<span id="npc-count">0</span>)</h3>
+      <div id="npc-list" class="hint"></div>
+      <p class="hint">NPCs save with the main Save World button.</p>
+    </div>
+
+    <!-- QUESTS MODE -->
+    <div id="mode-quests" class="mode-panel" style="display:none">
+      <h3>Quest</h3>
+      <p class="hint">Quests are offered and turned in by an NPC. Kill-quests target a monster's Quest group (set in Monsters mode).</p>
+      <label>Id</label>
+      <input type="text" id="quest-id" placeholder="e.g. slay-slimes" />
+      <label>Name</label>
+      <input type="text" id="quest-name" placeholder="e.g. Slime Trouble" />
+      <label>Description</label>
+      <textarea id="quest-description" rows="2" placeholder="Shown when the NPC offers the quest."></textarea>
+      <label>Giver NPC</label>
+      <select id="quest-giver"></select>
+
+      <h3>Objective</h3>
+      <label>Type</label>
+      <select id="quest-obj-type">
+        <option value="kill">Kill monster group</option>
+        <option value="gather">Bring items</option>
+        <option value="talk">Talk to NPC</option>
+      </select>
+      <div id="quest-target-kill">
+        <label>Monster group tag</label>
+        <input type="text" id="quest-target-group" placeholder="e.g. tower-f1-slimes" />
+      </div>
+      <div id="quest-target-gather" style="display:none">
+        <label>Item to bring</label>
+        <select id="quest-target-item"></select>
+      </div>
+      <div id="quest-target-talk" style="display:none">
+        <label>NPC to talk to</label>
+        <select id="quest-target-npc"></select>
+        <label><input type="checkbox" id="quest-turnin-at-target" /> That NPC also hands over the reward</label>
+        <p class="hint">On: the giver's job ends the moment you accept (its head icon clears and it goes back to its normal dialog), and the NPC above pays out. Off: walk back to the giver to turn in.</p>
+      </div>
+      <div id="quest-count-row">
+        <label>Count</label>
+        <input type="number" id="quest-count" value="10" min="1" />
+      </div>
+
+      <label>Requires Quest (optional)</label>
+      <select id="quest-requires"><option value="">— none —</option></select>
+      <p class="hint">Not offered by the giver NPC until this prerequisite quest is turned in — for questlines.</p>
+
+      <label>Minimum Level</label>
+      <input type="number" id="quest-min-level" value="1" min="1" />
+      <p class="hint">The giver NPC only shows a yellow ! for this quest once the player reaches this level.</p>
+
+      <h3>Rewards</h3>
+      <div class="row">
+        <div><label>XP</label><input type="number" id="quest-reward-xp" value="50" min="0" /></div>
+        <div><label>Gold</label><input type="number" id="quest-reward-gold" value="20" min="0" /></div>
+      </div>
+      <label>Item Rewards (optional)</label>
+      <div id="quest-reward-items"></div>
+      <button id="quest-add-reward-item-btn" style="width:100%; margin-top:4px;">+ Add Reward Item</button>
+
+      <button id="save-quest-btn" style="width:100%; margin-top:10px;">💾 Save Quest to Catalog</button>
+      <button id="new-quest-btn" style="width:100%; margin-top:6px;">＋ New Quest</button>
+      <p class="hint" id="quest-status"></p>
+
+      <h3>Quest Catalog (<span id="quest-count-label">0</span>)</h3>
+      <div id="quest-list" class="hint"></div>
+    </div>
+
+    <div id="mode-recipes" class="mode-panel" style="display:none">
+      <h3>Recipe</h3>
+      <p class="hint">Recipes are crafted at a Crafting Station prop (Place mode's "Crafting Stations" category) with an attached Event (Events mode) whose sheet runs "Open Crafting Station." Reagents/output can be raw materials or authored items (Items mode).</p>
+      <label>Id</label>
+      <input type="text" id="recipe-id" placeholder="e.g. iron-ingot" />
+      <label>Name</label>
+      <input type="text" id="recipe-name" placeholder="e.g. Iron Ingot" />
+      <label>Category (optional, groups recipes in the in-game list)</label>
+      <input type="text" id="recipe-category" placeholder="e.g. Materials" />
+      <label>Profession</label>
+      <select id="recipe-profession"></select>
+      <label>Required Station</label>
+      <select id="recipe-station"></select>
+      <div class="row">
+        <div><label>Required Level</label><input type="number" id="recipe-required-level" value="1" min="1" /></div>
+        <div><label>Crafting Time (s)</label><input type="number" id="recipe-craft-time" value="2" min="0" step="0.5" /></div>
+      </div>
+      <label>EXP Reward</label>
+      <input type="number" id="recipe-exp-reward" value="10" min="0" />
+
+      <h3>Reagents</h3>
+      <div id="recipe-reagent-list"></div>
+      <button id="recipe-add-reagent-btn" style="width:100%; margin-top:4px;">+ Add Reagent</button>
+
+      <h3>Output</h3>
+      <label>Output Item</label>
+      <select id="recipe-output-item"></select>
+      <div class="row">
+        <div><label>Yield Min</label><input type="number" id="recipe-yield-min" value="1" min="1" /></div>
+        <div><label>Yield Max</label><input type="number" id="recipe-yield-max" value="1" min="1" /></div>
+      </div>
+      <div class="row">
+        <div><label>Success %</label><input type="number" id="recipe-success-pct" value="100" min="0" max="100" /></div>
+        <div><label>Crit %</label><input type="number" id="recipe-crit-pct" value="0" min="0" max="100" /></div>
+      </div>
+      <label>Crit Output (optional — replaces output entirely on crit instead of doubling yield)</label>
+      <select id="recipe-crit-output-item"><option value="">— none, double yield on crit —</option></select>
+
+      <h3>On Failure</h3>
+      <label>Fail Action</label>
+      <select id="recipe-fail-action">
+        <option value="DESTROY_ALL_MATERIALS">Destroy all reagents</option>
+        <option value="DESTROY_PERCENTAGE">Destroy a percentage of reagents</option>
+        <option value="KEEP_MATERIALS_LOSS_ENERGY">Keep reagents (lose crafting time only)</option>
+      </select>
+      <div id="recipe-fail-pct-row" style="display:none">
+        <label>Destroy %</label>
+        <input type="number" id="recipe-fail-pct" value="50" min="0" max="100" />
+      </div>
+
+      <button id="save-recipe-btn" style="width:100%; margin-top:10px;">💾 Save Recipe to Catalog</button>
+      <button id="new-recipe-btn" style="width:100%; margin-top:6px;">＋ New Recipe</button>
+      <p class="hint" id="recipe-status"></p>
+
+      <h3>Recipe Catalog (<span id="recipe-count-label">0</span>)</h3>
+      <div id="recipe-list" class="hint"></div>
+    </div>
+
+    <!-- OBJECT BUILDER MODE -->
+    <div id="mode-object-builder" class="mode-panel" style="display:none">
+      <h3>Shapes</h3>
+      <p class="hint">Click a shape to add it to the workspace, then click a shape to select and edit it.</p>
+      <div class="palette">
+        <button data-builder-shape="box">🧊 Box</button>
+        <button data-builder-shape="cylinder">🥫 Cylinder</button>
+        <button data-builder-shape="sphere">⚪ Sphere</button>
+        <button data-builder-shape="cone">🔺 Cone</button>
+        <button data-builder-shape="capsule">💊 Capsule</button>
+        <button data-builder-shape="pyramid">⛰️ Pyramid</button>
+        <button data-builder-shape="wedge">📐 Wedge</button>
+        <button data-builder-shape="log-wall">🪵 Log Wall</button>
+        <button data-builder-shape="shingle-roof-panel">🏠 Shingle Roof</button>
+      </div>
+      <p class="hint">Log Wall and Shingle Roof size from their scale X/Y(/Z) sliders directly — widening one adds more posts/shingles instead of stretching them.</p>
+      <label><input type="checkbox" id="builder-grid-snap" checked /> Grid snap</label>
+      <label>Snap size</label>
+      <input type="number" id="builder-snap-size" value="0.25" min="0.05" step="0.05" />
+
+      <h3>Selected Shape</h3>
+      <div id="builder-shape-selected-info" class="hint">Nothing selected. Click a shape in the workspace.</div>
+      <div id="builder-shape-controls" style="display:none">
+        <label>Position (local X / Y / Z)</label>
+        <div class="row">
+          <input type="number" id="bs-pos-x" step="0.25" />
+          <input type="number" id="bs-pos-y" step="0.25" />
+          <input type="number" id="bs-pos-z" step="0.25" />
+        </div>
+        <label>Rotation (deg, Y axis)</label>
+        <input type="number" id="bs-rotation" value="0" step="5" />
+        <label>Scale (X / Y / Z)</label>
+        <div class="row">
+          <input type="number" id="bs-scale-x" value="1" min="0.05" step="0.05" />
+          <input type="number" id="bs-scale-y" value="1" min="0.05" step="0.05" />
+          <input type="number" id="bs-scale-z" value="1" min="0.05" step="0.05" />
+        </div>
+        <label>Color</label>
+        <input type="color" id="bs-color" value="#cccccc" style="height:28px; padding:2px;" />
+        <label>Opacity <output id="bs-opacity-out">1.00</output></label>
+        <input type="range" id="bs-opacity" min="0.05" max="1" step="0.05" value="1" />
+        <button id="duplicate-builder-shape" style="width:100%; margin-top:8px;">⧉ Duplicate Shape</button>
+        <button id="delete-builder-shape" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Shape</button>
+      </div>
+
+      <h3>Shapes In This Object (<span id="builder-shape-count">0</span>)</h3>
+      <div id="builder-shape-list"></div>
+
+      <h3>Object</h3>
+      <label>Id</label>
+      <input type="text" id="builder-object-id" placeholder="e.g. wooden-crate" />
+      <label>Name</label>
+      <input type="text" id="builder-object-name" placeholder="e.g. Wooden Crate" />
+      <button id="save-builder-object-btn" style="width:100%; margin-top:10px;">💾 Save Object to Catalog</button>
+      <button id="new-builder-object-btn" style="width:100%; margin-top:6px;">＋ New Object</button>
+      <button id="export-builder-object-btn" style="width:100%; margin-top:6px;">⬇ Export as Shareable File</button>
+      <p class="hint" id="builder-object-status"></p>
+
+      <h3>Object Catalog (<span id="builder-object-count">0</span>)</h3>
+      <div id="builder-object-list" class="hint"></div>
+      <p class="hint">Saved objects appear in Place mode's palette. <b>⬇</b> exports one as a <code>.json</code> file — drop that file into anyone's <code>src/generators/environment/import/</code> folder and it shows up in their palette's 📥 Imported tab, no other setup. Assets that arrived that way are listed here too, read-only; use <b>⧉</b> to copy one into your own catalog to adapt it.</p>
+    </div>
+
+    <!-- PATHS MODE -->
+    <div id="mode-path" class="mode-panel" style="display:none">
+      <h3>Draw Path</h3>
+      <p class="hint">Click to place points. "Finish Path" (or Enter) saves it; "Cancel" (or Escape) discards the draft.</p>
+
+      <label><input type="checkbox" id="path-straight" checked /> Straight segments</label>
+      <p class="hint">On: each click fixes one point — shown as a dot, with a dashed line to where the next click would land. The solid ribbon is the part that's committed and it does not move again. <b>Double-click</b> (or Enter) finishes the path. Off: click-drag sketches a freehand stroke, for a winding trail.</p>
+      <label><input type="checkbox" id="path-angle-snap" checked /> Snap angle to <span id="path-angle-step-label">15</span>°</label>
+      <p class="hint">Locks each new segment's direction to a multiple of the step, measured from the previous point — how you get a road that's exactly straight, or turns at an exact right angle. Hold <b>Shift</b> to force it on while the box is off. Hold <b>Alt</b> to drop a point exactly under the cursor, ignoring both this and path-to-path snapping. Straight segments only.</p>
+      <label>Angle step <output id="path-angle-step-out">15</output>°</label>
+      <input type="range" id="path-angle-step" min="5" max="90" step="5" value="15" />
+      <label>Theme</label>
+      <div id="path-theme-palette" class="palette"></div>
+
+      <label>Upload custom texture</label>
+      <input type="file" id="pathtex-upload-file" accept="image/*" />
+      <input type="text" id="pathtex-upload-name" placeholder="Texture name (optional)" />
+      <button id="pathtex-upload-btn" style="width:100%; margin-top:4px;">⬆ Upload</button>
+      <p class="hint" id="pathtex-upload-status"></p>
+
+      <label>Colour</label>
+      <p class="hint">Recolours the theme's texture. Applies to the draft you're drawing and to every path you draw after it, until you change it back.</p>
+      <div class="row">
+        <input type="color" id="path-tint" value="#ffffff" style="width:100%; height:28px; padding:2px;" />
+        <button id="path-color-reset" style="width:100%;">Reset</button>
+      </div>
+      <label>Colourfulness <output id="path-saturation-out">1.00x</output></label>
+      <input type="range" id="path-saturation" min="0" max="2" step="0.05" value="1" />
+      <label>Brightness <output id="path-brightness-out">1.00x</output></label>
+      <input type="range" id="path-brightness" min="0.2" max="2" step="0.05" value="1" />
+
+      <label>Width <output id="path-width-out">3</output></label>
+      <input type="range" id="path-width" min="1" max="10" step="0.5" value="3" />
+      <label><input type="checkbox" id="path-snap" checked /> Snap to nearby paths</label>
+      <p class="hint">While on, a point dropped near an existing path's end (or dragged onto one) jumps exactly onto it, so the two ribbons meet with no seam or gap. Snapping also matches the other path's width, so the join doesn't step. Hold <b>Alt</b> to place a point without snapping. Turn this off if you're drawing alongside an existing road and don't want new points pulled onto it.</p>
+      <label>Snap distance <output id="path-snap-distance-out">2.5</output></label>
+      <input type="range" id="path-snap-distance" min="0.5" max="8" step="0.5" value="2.5" />
+      <div class="row">
+        <button id="path-finish-btn" style="width:100%;">✓ Finish Path</button>
+        <button id="path-cancel-btn" style="width:100%; background:#883f3f; border-color:#883f3f;">✕ Cancel</button>
+      </div>
+
+      <h3>Selected Path</h3>
+      <div id="path-selected-info" class="hint">Nothing selected. Click a drawn path.</div>
+      <div id="path-selected-controls" style="display:none">
+        <label>Theme</label>
+        <div id="path-selected-theme-palette" class="palette"></div>
+        <label>Colour</label>
+        <div class="row">
+          <input type="color" id="path-selected-tint" value="#ffffff" style="width:100%; height:28px; padding:2px;" />
+          <button id="path-selected-color-reset" style="width:100%;">Reset</button>
+        </div>
+        <label>Colourfulness <output id="path-selected-saturation-out">1.00x</output></label>
+        <input type="range" id="path-selected-saturation" min="0" max="2" step="0.05" value="1" />
+        <label>Brightness <output id="path-selected-brightness-out">1.00x</output></label>
+        <input type="range" id="path-selected-brightness" min="0.2" max="2" step="0.05" value="1" />
+        <label>Width <output id="path-selected-width-out">3</output></label>
+        <input type="range" id="path-selected-width" min="1" max="10" step="0.5" value="3" />
+        <p class="hint">Drag a control-point sphere to move it. Click a point then press Delete/Backspace to remove it (min 2 points).</p>
+        <button id="delete-path-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Path</button>
+      </div>
+
+      <h3>Paths (<span id="path-count">0</span>)</h3>
+      <div id="path-list" class="hint"></div>
+    </div>
+
+    <!-- MOUNTAINS MODE -->
+    <div id="mode-mountains" class="mode-panel" style="display:none">
+      <h3>Draw Mountain Ridge</h3>
+      <p class="hint">Click to place points along a ridge, or click-drag to sketch a stroke. "Finish Ridge" (or Enter) saves it AND permanently raises the terrain underneath — a solid rock-textured mesh instead of a painted texture, so there's no green showing through between strokes. "Cancel" (or Escape) discards the draft.</p>
+      <label>Theme</label>
+      <div id="mountain-theme-palette" class="palette"></div>
+      <label>Width <output id="mountain-width-out">20</output></label>
+      <input type="range" id="mountain-width" min="5" max="60" step="1" value="20" />
+      <label>Peak height <output id="mountain-peak-height-out">8</output></label>
+      <input type="range" id="mountain-peak-height" min="2" max="30" step="0.5" value="8" />
+      <div class="row">
+        <button id="mountain-finish-btn" style="width:100%;">✓ Finish Ridge</button>
+        <button id="mountain-cancel-btn" style="width:100%; background:#883f3f; border-color:#883f3f;">✕ Cancel</button>
+      </div>
+
+      <h3>Selected Ridge</h3>
+      <div id="mountain-selected-info" class="hint">Nothing selected. Click a drawn mountain ridge.</div>
+      <div id="mountain-selected-controls" style="display:none">
+        <label>Theme</label>
+        <div id="mountain-selected-theme-palette" class="palette"></div>
+        <label>Width <output id="mountain-selected-width-out">20</output></label>
+        <input type="range" id="mountain-selected-width" min="5" max="60" step="1" value="20" />
+        <label>Peak height <output id="mountain-selected-peak-height-out">8</output></label>
+        <input type="range" id="mountain-selected-peak-height" min="2" max="30" step="0.5" value="8" />
+        <p class="hint">Width/peak height changes re-raise the terrain when you release the slider. A ridge's drawn shape can't be reshaped after finishing — delete and redraw instead. Deleting a ridge removes its mesh but does NOT flatten the terrain it already raised (use Terrain mode's "Clear All Terrain" for that).</p>
+        <button id="delete-mountain-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Ridge</button>
+      </div>
+
+      <h3>Mountain Ridges (<span id="mountain-count">0</span>)</h3>
+      <div id="mountain-list" class="hint"></div>
+    </div>
+
+    <!-- GROUND TEXTURES MODE -->
+    <div id="mode-groundtex" class="mode-panel" style="display:none">
+      <h3>Ground Texture Painting</h3>
+      <p class="hint">Click-drag to paint the selected texture onto the ground. Shift + drag erases it. Paths always render above ground textures, regardless of paint order.</p>
+      <label>Texture</label>
+      <div id="groundtex-palette" class="palette"></div>
+
+      <label>Upload custom texture</label>
+      <input type="file" id="groundtex-upload-file" accept="image/*" />
+      <input type="text" id="groundtex-upload-name" placeholder="Texture name (optional)" />
+      <button id="groundtex-upload-btn" style="width:100%; margin-top:4px;">⬆ Upload</button>
+      <p class="hint" id="groundtex-upload-status"></p>
+
+      <label>Brush radius</label>
+      <input type="range" id="groundtex-radius" min="2" max="60" step="1" value="14" />
+      <label>Brush softness (edge falloff — higher = smoother transition into other textures)</label>
+      <input type="range" id="groundtex-softness" min="0.05" max="1" step="0.05" value="0.5" />
+
+      <label>Colour of selected texture</label>
+      <p class="hint">Recolours the texture itself, for the whole painted layer. Every ground texture is generated from code rather than loaded from an image, so this is how one texture gives you a dozen shades — a bleached summer meadow, red desert sand, mossy grey cobbles — without a new texture per shade.</p>
+      <div class="row">
+        <input type="color" id="groundtex-tint" value="#ffffff" style="width:100%; height:28px; padding:2px;" />
+        <button id="groundtex-color-reset" style="width:100%;">Reset</button>
+      </div>
+      <label>Colourfulness <output id="groundtex-saturation-out">1.00x</output></label>
+      <input type="range" id="groundtex-saturation" min="0" max="2" step="0.05" value="1" />
+      <label>Brightness <output id="groundtex-brightness-out">1.00x</output></label>
+      <input type="range" id="groundtex-brightness" min="0.2" max="2" step="0.05" value="1" />
+      <p class="hint">Colourfulness runs first, then brightness, then the tint multiplies what's left — so to force a texture to one flat colour, pull Colourfulness to 0 and then pick the tint.</p>
+
+      <label>Ambient particles for selected texture</label>
+      <select id="groundtex-particle">
+        <option value="">None</option>
+        <option value="dust">Dust</option>
+        <option value="snow">Snow</option>
+        <option value="wind">Wind</option>
+        <option value="rain">Rain</option>
+        <option value="storm">Storm</option>
+        <option value="sand">Sand</option>
+        <option value="fireflies">Fireflies</option>
+        <option value="miasma">Miasma</option>
+      </select>
+      <label>Particle size <output id="groundtex-particle-size-out">1.00x</output></label>
+      <input type="range" id="groundtex-particle-size" min="0.25" max="4" step="0.05" value="1" disabled />
+      <label>Particle density <output id="groundtex-particle-density-out">1.00x</output></label>
+      <input type="range" id="groundtex-particle-density" min="0.25" max="4" step="0.05" value="1" disabled />
+      <p class="hint">Size/density only take effect once a particle type above is selected (not "None").</p>
+      <p class="hint">Particles render in the live game only — the editor stays a static blockout view, same as it skipping shadows/toon shading.</p>
+
+      <h3>Painted Layers (<span id="groundtex-count">0</span>)</h3>
+      <div id="groundtex-list" class="hint"></div>
+    </div>
+
+    <!-- MAPS MODE -->
+    <div id="mode-maps" class="mode-panel" style="display:none">
+      <h3>Maps</h3>
+      <p class="hint">Every map is its own JSON file. "Save World to Server" (top right) always saves whichever map is currently loaded here — check the status line if you're not sure which one that is.</p>
+      <div id="maps-list"></div>
+
+      <h3>New Map</h3>
+      <label>Name</label>
+      <input type="text" id="map-new-name" placeholder="e.g. Blacksmith Interior" />
+      <label>Category</label>
+      <select id="map-new-type">
+        <option value="overworld">Overworld</option>
+        <option value="building">Building</option>
+        <option value="dungeon">Dungeon</option>
+      </select>
+      <label>Width</label>
+      <input type="number" id="map-new-width" value="200" min="10" step="10" />
+      <label>Depth</label>
+      <input type="number" id="map-new-height" value="200" min="10" step="10" />
+      <button id="map-create-btn" style="width:100%; margin-top:8px;">Create Map</button>
+
+      <div id="map-current-props"></div>
+    </div>
+
+    <!-- TELEPORTERS MODE -->
+    <div id="mode-teleporters" class="mode-panel" style="display:none">
+      <h3>Teleporters</h3>
+      <p class="hint">One placeable links to another — same map or a different one. This is also how a building gets an entrance/exit and (for now, until party-instanced dungeons land) how a dungeon map is reached: it's the same object either way, it just depends what's on the other end of the link.</p>
+      <button id="place-teleporter-btn" style="width:100%;">Click ground to place</button>
+
+      <h4>Placed Here (<span id="tp-count">0</span>)</h4>
+      <div id="tp-list" class="hint"></div>
+
+      <div id="tp-selected-controls" style="display:none; margin-top:10px;">
+        <h4>Selected Teleporter</h4>
+        <label>ID</label>
+        <input type="text" id="tp-id" />
+        <label>Linked teleporter</label>
+        <select id="tp-linked"><option value="">— unlinked —</option></select>
+        <label>Trigger mode</label>
+        <select id="tp-mode">
+          <option value="instant">Instant (fires on proximity)</option>
+          <option value="confirm">Confirm (Press E)</option>
+        </select>
+        <label><input type="checkbox" id="tp-visible" checked /> Visible in-game</label>
+        <button id="tp-delete-btn" style="width:100%; margin-top:8px; background:#883f3f; border-color:#883f3f;">Delete Teleporter</button>
+      </div>
+    </div>
+
+    <!-- PARTICLES MODE (see src/sim/particleEmitters.js + src/render/vfx/worldEffects.js) -->
+    <div id="mode-particles" class="mode-panel" style="display:none">
+      <h3>Particle Emitters</h3>
+      <p class="hint">Drop a looping effect straight into the world — a campfire, glitter over a shrine, a tornado out in the fields. Pick one below, then click the ground. Emitters only run when the camera is within their activation radius, so you can place plenty of them.</p>
+
+      <label>Effect</label>
+      <select id="pe-effect-picker"></select>
+      <div id="pe-palette" class="hint" style="max-height:190px; overflow-y:auto; margin-top:6px;"></div>
+      <button id="place-particle-btn" style="width:100%; margin-top:8px;">Click ground to place</button>
+
+      <h4>Placed Here (<span id="pe-count">0</span>)</h4>
+      <div id="pe-list" class="hint"></div>
+
+      <div id="pe-selected-controls" style="display:none; margin-top:10px;">
+        <h4>Selected Emitter</h4>
+        <label>Name</label>
+        <input type="text" id="pe-label" placeholder="e.g. Tavern hearth" />
+        <label>Effect</label>
+        <select id="pe-effect"></select>
+        <label>Size <span id="pe-scale-out">1.0</span>x</label>
+        <input type="range" id="pe-scale" min="0.1" max="6" step="0.1" value="1" />
+        <label>Density <span id="pe-intensity-out">1.0</span>x</label>
+        <input type="range" id="pe-intensity" min="0.1" max="4" step="0.1" value="1" />
+        <label>Colour A</label>
+        <input type="color" id="pe-colorA" />
+        <label>Colour B</label>
+        <input type="color" id="pe-colorB" />
+        <button id="pe-reset-colors-btn" style="width:100%; margin-top:4px;">Reset to effect's own colours</button>
+        <label>Height offset <span id="pe-y-out">0.0</span>m</label>
+        <input type="range" id="pe-y" min="-5" max="15" step="0.1" value="0" />
+        <label>Tilt X <span id="pe-rot-x-out">0</span>°</label>
+        <input type="range" id="pe-rot-x" min="-180" max="180" step="1" value="0" />
+        <label>Spin Y <span id="pe-rot-y-out">0</span>°</label>
+        <input type="range" id="pe-rot-y" min="-180" max="180" step="1" value="0" />
+        <label>Tilt Z <span id="pe-rot-z-out">0</span>°</label>
+        <input type="range" id="pe-rot-z" min="-180" max="180" step="1" value="0" />
+        <button id="pe-reset-rotation-btn" style="width:100%; margin-top:4px;">Reset rotation</button>
+        <p class="hint">Every effect is authored pointing up, so tilt is how you get a wall torch's sideways spill, a beam down a corridor, or mist blowing off a cliff. Spin Y only shows on effects that aren't radially symmetric.</p>
+        <label>Activation radius <span id="pe-radius-out">55</span>m</label>
+        <input type="range" id="pe-radius" min="10" max="300" step="5" value="55" />
+        <label><input type="checkbox" id="pe-light" checked /> Cast dynamic light (if the effect has one)</label>
+        <p class="hint">Only a few dynamic lights exist across the whole game (they're pooled — see src/render/vfx/lights.js), so the nearest effects win. Turn this off on decorative emitters so the important ones keep their light.</p>
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button id="pe-move-btn" style="flex:1;">Move (click ground)</button>
+          <button id="pe-duplicate-btn" style="flex:1;">Duplicate</button>
+        </div>
+        <button id="pe-delete-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Emitter</button>
+      </div>
+    </div>
+
+    <!-- LIGHTS MODE (see src/sim/lightSources.js + src/render/worldLights.js) -->
+    <div id="mode-lights" class="mode-panel" style="display:none">
+      <h3>Light Sources</h3>
+      <p class="hint">The map's sun lights the outdoors and nothing else — anything enclosed (a cave, a cell, a cellar, the inside of a cage) needs its own lights. Pick a preset below, then click the ground; everything about it stays editable afterwards.</p>
+
+      <label>Preset</label>
+      <select id="ls-preset-picker"></select>
+      <div id="ls-palette" class="hint" style="max-height:190px; overflow-y:auto; margin-top:6px;"></div>
+      <button id="place-light-btn" style="width:100%; margin-top:8px;">Click ground to place</button>
+
+      <h4>Placed Here (<span id="ls-count">0</span>)</h4>
+      <div id="ls-list" class="hint"></div>
+
+      <div id="ls-selected-controls" style="display:none; margin-top:10px;">
+        <h4>Selected Light</h4>
+        <label>Name</label>
+        <input type="text" id="ls-label" placeholder="e.g. Cell block torch" />
+        <label>Type</label>
+        <select id="ls-type">
+          <option value="point">Point (glows in every direction)</option>
+          <option value="spot">Spot (a cone, aimed)</option>
+        </select>
+        <label>Colour</label>
+        <input type="color" id="ls-color" />
+        <label>Strength <span id="ls-intensity-out">12</span></label>
+        <input type="range" id="ls-intensity" min="0" max="80" step="0.5" value="12" />
+        <label>Area of effect <span id="ls-distance-out">12</span>m</label>
+        <input type="range" id="ls-distance" min="0.5" max="60" step="0.5" value="12" />
+        <p class="hint">A hard cutoff, not a suggestion: past this radius the light contributes nothing. That's what keeps a torch inside its own cell instead of glowing through the wall behind it — the shading model has no idea walls exist.</p>
+        <label>Falloff <span id="ls-decay-out">2.0</span></label>
+        <input type="range" id="ls-decay" min="0" max="4" step="0.1" value="2" />
+        <p class="hint">2 is physically correct (bright at the source, dark fast). Drop toward 1 for a flatter fill that keeps a whole room readable corner to corner.</p>
+        <label>Height <span id="ls-y-out">1.5</span>m</label>
+        <input type="range" id="ls-y" min="-10" max="40" step="0.1" value="1.5" />
+        <p class="hint">Absolute world height, so a hanging lantern can sit at the ceiling. Placing sets it to the ground you clicked plus 1.5m.</p>
+        <label>Flicker <span id="ls-flicker-out">0.00</span></label>
+        <input type="range" id="ls-flicker" min="0" max="1" step="0.01" value="0" />
+        <label>Flicker speed <span id="ls-flicker-speed-out">9.0</span></label>
+        <input type="range" id="ls-flicker-speed" min="0.2" max="20" step="0.1" value="9" />
+
+        <div id="ls-spot-fields" style="display:none">
+          <label>Cone width <span id="ls-angle-out">35</span>°</label>
+          <input type="range" id="ls-angle" min="5" max="85" step="1" value="35" />
+          <label>Edge softness <span id="ls-penumbra-out">0.50</span></label>
+          <input type="range" id="ls-penumbra" min="0" max="1" step="0.01" value="0.5" />
+          <label>Aim — turn <span id="ls-yaw-out">0</span>°</label>
+          <input type="range" id="ls-yaw" min="-180" max="180" step="1" value="0" />
+          <label>Aim — tilt <span id="ls-pitch-out">-90</span>°</label>
+          <input type="range" id="ls-pitch" min="-90" max="90" step="1" value="-90" />
+          <p class="hint">Tilt -90° is straight down (a ceiling spot), 0° is horizontal. The cone is drawn in the 3D view so you can see where it lands.</p>
+        </div>
+
+        <label>Activation radius <span id="ls-radius-out">70</span>m</label>
+        <input type="range" id="ls-radius" min="10" max="300" step="5" value="70" />
+        <p class="hint">Only lights within this distance of the camera are lit at all — the pool is small on purpose (8 point + 4 spot at once), and the nearest ones win.</p>
+        <label><input type="checkbox" id="ls-shadow" /> Cast shadows (expensive)</label>
+        <p class="hint">A shadow-casting point light is six full render passes; at most two lights across the whole map get shadows no matter how many you tick. Worth it for the one signature light in a room, never for ambience.</p>
+
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button id="ls-move-btn" style="flex:1;">Move (click ground)</button>
+          <button id="ls-duplicate-btn" style="flex:1;">Duplicate</button>
+        </div>
+        <button id="ls-delete-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Light</button>
+      </div>
+    </div>
+
+    <!-- EVENTS MODE (v1 — see src/sim/events.js) -->
+    <div id="mode-events" class="mode-panel" style="display:none">
+      <h3>Event Object</h3>
+      <p class="hint">Any object can run a scripted command sequence on a trigger — talk/interact, walking into a zone, or a switch turning on. Attach one to an existing NPC, or place a standalone invisible trigger.</p>
+      <button id="place-event-btn" style="width:100%;">Click ground to place a standalone trigger</button>
+
+      <h3>Selected Event</h3>
+      <div id="event-selected-info" class="hint">Nothing selected. Click a placed event marker, or one in the list below.</div>
+      <div id="event-selected-controls" style="display:none">
+        <label>Name</label>
+        <input type="text" id="event-name" placeholder="e.g. Moonflower Quest" />
+
+        <label>Attached to</label>
+        <select id="event-attached"><option value="">— standalone trigger —</option></select>
+        <button id="event-pick-attached-btn" style="width:100%; margin-top:4px;">🎯 Click to pick target in scene</button>
+        <p class="hint">Attaching to an NPC replaces its normal dialog with this script entirely. The current target (if any) is outlined in gold in the 3D view — useful when several objects share a name (e.g. two "Treasure Chest" props).</p>
+
+        <div id="event-quest-toggle-row">
+          <label><input type="checkbox" id="event-quest-toggle" /> Give a Quest</label>
+          <p class="hint">Replaces the Sheets editor below with the full quest form — talking to this NPC will offer/track/turn in a real quest (same engine and same quests.json as Quests mode), with a dialog line per phase. Turns "Start condition" into a fixed Talk trigger.</p>
+          <p class="hint" id="event-quest-needs-npc" style="display:none; color:#d99;">A quest needs a giver, so this event has to be attached to an NPC first — pick one under "Attached to" above. (Place an NPC in NPCs mode if there isn't one yet.)</p>
+        </div>
+
+        <div id="event-range-row">
+          <label><input type="checkbox" id="event-range-toggle" /> Custom interaction range (a box)</label>
+          <p class="hint">Off: a 5m circle around the event, which is all a single NPC or chest needs. On: a box centred on the event, standing on the ground — for a doorway you trigger by walking through, a long market counter, a plate you have to stand on. Shown as a wireframe box in the 3D view.</p>
+          <div id="event-range-fields" style="display:none">
+            <div class="row">
+              <div><label>Width (X, m)</label><input type="number" id="event-range-width" min="0.5" step="0.5" value="5" /></div>
+              <div><label>Length (Z, m)</label><input type="number" id="event-range-length" min="0.5" step="0.5" value="5" /></div>
+              <div><label>Height (Y, m)</label><input type="number" id="event-range-height" min="0.5" step="0.5" value="3" /></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="event-non-quest-fields">
+          <label>Start condition</label>
+          <select id="event-start-type">
+            <option value="talk">Talk (NPC dialog, Press E)</option>
+            <option value="interact">Interact (Press E — objects, chests, ...)</option>
+            <option value="enterArea">Enter Area (a zone)</option>
+            <option value="switchOn">Switch turns on</option>
+          </select>
+          <div id="event-start-zone-row">
+            <label>Zone</label>
+            <select id="event-start-zone"></select>
+          </div>
+          <div id="event-start-switch-row" style="display:none">
+            <label>Switch id</label>
+            <input type="text" id="event-start-switch" placeholder="e.g. metQuestGiver" />
+          </div>
+          <div id="event-start-prompt-row">
+            <label>Prompt text (optional)</label>
+            <input type="text" id="event-start-prompt" placeholder="Press E to Fish" />
+            <p class="hint">What the player sees when they're in range. Leave empty for the default ("Press E to talk" / "Press E to interact"). Write the whole line, including "Press E".</p>
+          </div>
+
+          <h4>Sheets</h4>
+          <p class="hint">The FIRST sheet (top to bottom) whose condition passes (or has none) is the one that runs when this object is triggered — put an unconditional fallback sheet LAST. This is how one object's behavior can change over time (e.g. an NPC's line before vs. after you've done something), without nesting branches.</p>
+          <div id="event-sheet-list"></div>
+          <button id="event-add-sheet-btn" style="width:100%; margin-top:6px;">+ Add Sheet</button>
+        </div>
+
+        <div id="event-quest-fields" style="display:none">
+          <h4>Quest Catalog (<span id="event-quest-catalog-count">0</span>)</h4>
+          <p class="hint">Every authored quest, the same list Quests mode shows — pick one to load it into the form below (and attach it to this NPC), or leave it alone and fill in a new id to author a fresh one.</p>
+          <div id="event-quest-list" class="hint"></div>
+
+          <h4>Quest</h4>
+          <label>Quest Id</label>
+          <input type="text" id="event-quest-id" placeholder="e.g. moonflower-quest" />
+          <label>Name</label>
+          <input type="text" id="event-quest-name" placeholder="e.g. The Moonflower" />
+          <label>Description (shown when the quest is offered)</label>
+          <textarea id="event-quest-description" rows="2"></textarea>
+
+          <h4>Objective</h4>
+          <label>Type</label>
+          <select id="event-quest-obj-type">
+            <option value="kill">Kill monster group</option>
+            <option value="gather">Bring items</option>
+            <option value="talk">Talk to NPC</option>
+          </select>
+          <div id="event-quest-target-kill">
+            <label>Monster group tag</label>
+            <input type="text" id="event-quest-target-group" placeholder="e.g. tower-f1-slimes" />
+          </div>
+          <div id="event-quest-target-gather" style="display:none">
+            <label>Item to bring</label>
+            <select id="event-quest-target-item"></select>
+          </div>
+          <div id="event-quest-target-talk" style="display:none">
+            <label>NPC to talk to</label>
+            <select id="event-quest-target-npc"></select>
+            <label><input type="checkbox" id="event-quest-turnin-at-target" /> That NPC also hands over the reward</label>
+            <p class="hint">On: this event's NPC is done the moment you accept — its head icon clears and it goes back to its normal dialog — and the NPC above pays out. Off: walk back here to turn in.</p>
+          </div>
+          <div id="event-quest-count-row">
+            <label>Count</label>
+            <input type="number" id="event-quest-count" value="10" min="1" />
+          </div>
+
+          <label>Minimum Level (optional)</label>
+          <input type="number" id="event-quest-min-level" value="1" min="1" />
+
+          <label>Requires quest (prerequisite chain)</label>
+          <select id="event-quest-requires"><option value="">— none —</option></select>
+
+          <label>Switch Requirement (optional)</label>
+          <div class="row">
+            <div><input type="text" id="event-quest-switch-id" placeholder="switch id — blank = none" /></div>
+            <div>
+              <select id="event-quest-switch-state">
+                <option value="true">Must be ON</option>
+                <option value="false">Must be OFF</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint">Gates the offer: this quest isn't offered at all until the named switch is in the chosen state. Reads the same global switches the two below write.</p>
+
+          <label>Set Switch when the quest is ACCEPTED (optional)</label>
+          <div class="row">
+            <div><input type="text" id="event-quest-switch-accept-id" placeholder="switch id — blank = none" /></div>
+            <div>
+              <select id="event-quest-switch-accept-state">
+                <option value="true">Turn ON</option>
+                <option value="false">Turn OFF</option>
+              </select>
+            </div>
+          </div>
+
+          <label>Set Switch when the quest is COMPLETED (optional)</label>
+          <div class="row">
+            <div><input type="text" id="event-quest-switch-complete-id" placeholder="switch id — blank = none" /></div>
+            <div>
+              <select id="event-quest-switch-complete-state">
+                <option value="true">Turn ON</option>
+                <option value="false">Turn OFF</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint">Written the moment the player accepts / turns the quest in, on every path that can do it — including a "turn in at the target NPC" quest, which the server closes with no dialog script running. Put the same id in another quest's <b>Switch Requirement</b> above to chain them, in an event sheet's condition to change what an NPC says, or in an event's <b>Switch On</b> start type to make finishing this quest trigger something.</p>
+
+          <h4>Dialog</h4>
+          <label>While quest is active (not yet ready)</label>
+          <textarea id="event-quest-dialog-active" rows="2"></textarea>
+          <label>When requirements are met (turn-in happens here)</label>
+          <textarea id="event-quest-dialog-ready" rows="2"></textarea>
+          <label>After the quest is finished</label>
+          <textarea id="event-quest-dialog-complete" rows="2"></textarea>
+          <label>Before this quest can be offered (prerequisite / level / switch not met yet)</label>
+          <textarea id="event-quest-dialog-locked" rows="2"></textarea>
+          <p class="hint">A follow-up quest's giver sits here for most of the game. Leave it empty and this NPC falls back to its own ordinary dialog line — it will never stand silent.</p>
+
+          <h4>Rewards</h4>
+          <div class="row">
+            <div><label>XP</label><input type="number" id="event-quest-reward-xp" value="50" min="0" /></div>
+            <div><label>Gold</label><input type="number" id="event-quest-reward-gold" value="20" min="0" /></div>
+          </div>
+          <label>Item Rewards (optional)</label>
+          <div id="event-quest-reward-items"></div>
+          <button id="event-quest-add-reward-item-btn" style="width:100%; margin-top:4px;">+ Add Reward Item</button>
+
+          <button id="save-event-quest-btn" style="width:100%; margin-top:10px;">💾 Save Quest to Catalog</button>
+          <p class="hint" id="event-quest-status"></p>
+        </div>
+
+        <button id="apply-event-btn" style="width:100%; margin-top:10px;">Apply fields above to selected</button>
+        <button id="delete-event-btn" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Event</button>
+      </div>
+
+      <h3>Events (<span id="event-count">0</span>)</h3>
+      <div id="event-list" class="hint"></div>
+      <p class="hint">Events save with the main Save World button.</p>
+    </div>
+  </div>
+
+  <!-- Bottom icon toolbar: primary mode switcher, hotkeys 1-9 + 0 -->
+  <div id="bottom-toolbar" class="rb-toolbar">
+    <button class="toolbar-btn rb-slot active" data-mode="place">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">1</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-place" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff8a65"/><stop offset="100%" stop-color="#c62828"/></linearGradient></defs>
+          <path d="M24 4c-8 0-14 6-14 14 0 10 14 26 14 26s14-16 14-26c0-8-6-14-14-14z" fill="url(#g-place)" stroke="#3a0f0f" stroke-width="1.5"/>
+          <circle cx="24" cy="18" r="5.5" fill="#2a0e0e" opacity="0.85"/><circle cx="24" cy="18" r="5.5" fill="none" stroke="#ffe0b2" stroke-width="1"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Place</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="scatter">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">2</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-scatter" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ba68c8"/><stop offset="100%" stop-color="#4a148c"/></linearGradient></defs>
+          <path d="M14 40l4-10 18-18 6 6-18 18-10 4z" fill="url(#g-scatter)" stroke="#2a0a3a" stroke-width="1.5"/>
+          <path d="M36 8l4 4" stroke="#f3e5f5" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="2" fill="#e1bee7"/><circle cx="8" cy="22" r="1.6" fill="#e1bee7"/><circle cx="18" cy="8" r="1.6" fill="#e1bee7"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Scatter</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="terrain">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">3</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-terrain" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#81c784"/><stop offset="100%" stop-color="#1b5e20"/></linearGradient></defs>
+          <path d="M4 36l12-18 7 9 5-7 16 16z" fill="url(#g-terrain)" stroke="#0b2e0d" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M23 27l4-5 3 3-4.5 6z" fill="#a5d6a7" opacity="0.7"/><path d="M12 36l4-6 3 3-3 3z" fill="#c8e6c9" opacity="0.6"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Terrain</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="water">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">4</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-water" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4fc3f7"/><stop offset="100%" stop-color="#01579b"/></linearGradient></defs>
+          <path d="M24 5c6 9 12 16 12 23a12 12 0 1 1-24 0c0-7 6-14 12-23z" fill="url(#g-water)" stroke="#023e5e" stroke-width="1.5"/>
+          <path d="M16 28c1 4 3 6 6 7" stroke="#e1f5fe" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.8"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Water</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="zones">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">5</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-zones" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4dd0e1"/><stop offset="100%" stop-color="#00695c"/></linearGradient></defs>
+          <path d="M8 12l16-8 16 8-16 8z" fill="url(#g-zones)" stroke="#00332b" stroke-width="1.3"/>
+          <path d="M8 22l16 8 16-8" fill="none" stroke="#b2ebf2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 32l16 8 16-8" fill="none" stroke="#4dd0e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Zones</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="buildings">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">6</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-buildings" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffb74d"/><stop offset="100%" stop-color="#8d4a12"/></linearGradient></defs>
+          <rect x="12" y="20" width="24" height="18" fill="url(#g-buildings)" stroke="#4a2b0a" stroke-width="1.5"/>
+          <path d="M8 22l16-12 16 12z" fill="#a63d1f" stroke="#4a1608" stroke-width="1.5" stroke-linejoin="round"/>
+          <rect x="21" y="27" width="6" height="11" fill="#4a2b0a"/>
+          <rect x="14" y="24" width="4" height="4" fill="#fff3e0" opacity="0.8"/><rect x="30" y="24" width="4" height="4" fill="#fff3e0" opacity="0.8"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Buildings</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="monsters">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">7</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-monsters" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f06292"/><stop offset="100%" stop-color="#880e4f"/></linearGradient></defs>
+          <path d="M24 8c-8 0-13 6-13 14 0 6 3 10 3 10h20s3-4 3-10c0-8-5-14-13-14z" fill="url(#g-monsters)" stroke="#4a0625" stroke-width="1.5"/>
+          <path d="M14 12l-4-6 6 2z" fill="#c2185b" stroke="#4a0625" stroke-width="1"/><path d="M34 12l4-6-6 2z" fill="#c2185b" stroke="#4a0625" stroke-width="1"/>
+          <circle cx="19" cy="21" r="2.2" fill="#fff59d"/><circle cx="29" cy="21" r="2.2" fill="#fff59d"/>
+          <path d="M18 28q6 4 12 0" stroke="#4a0625" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Monsters</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="items">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">8</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-items" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff176"/><stop offset="100%" stop-color="#f57f17"/></linearGradient></defs>
+          <path d="M20 6h8v7l6 10a9 9 0 0 1-20 0l6-10z" fill="url(#g-items)" stroke="#7a4a00" stroke-width="1.5" stroke-linejoin="round"/>
+          <rect x="19" y="4" width="10" height="4" rx="1" fill="#8d5a1a" stroke="#5a3610" stroke-width="1"/>
+          <path d="M15.5 27a8.5 8.5 0 0 0 17 0z" fill="#ffe0b2" opacity="0.55"/>
+          <circle cx="24" cy="24" r="1.6" fill="#fff59d"/><circle cx="27" cy="30" r="1.1" fill="#fff59d"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Items</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="npcs">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">9</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-npcs" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4fc3f7"/><stop offset="100%" stop-color="#1a237e"/></linearGradient></defs>
+          <circle cx="24" cy="16" r="7" fill="url(#g-npcs)" stroke="#0d1642" stroke-width="1.3"/>
+          <path d="M10 40c0-9 6-14 14-14s14 5 14 14z" fill="url(#g-npcs)" stroke="#0d1642" stroke-width="1.3"/>
+          <path d="M17 12c2-4 12-4 14 0" stroke="#ffd54f" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">NPCs</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="quests">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">0</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-quests" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f5deb3"/><stop offset="100%" stop-color="#8a6423"/></linearGradient></defs>
+          <rect x="12" y="6" width="24" height="36" rx="2" fill="url(#g-quests)" stroke="#5a3f14" stroke-width="1.5"/>
+          <line x1="17" y1="14" x2="31" y2="14" stroke="#5a3f14" stroke-width="1.6"/><line x1="17" y1="20" x2="31" y2="20" stroke="#5a3f14" stroke-width="1.6"/><line x1="17" y1="26" x2="26" y2="26" stroke="#5a3f14" stroke-width="1.6"/>
+          <path d="M28 30l2 2 4-4" stroke="#2e7d32" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Quests</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="path">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">P</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-paths" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#dce775"/><stop offset="100%" stop-color="#33691e"/></linearGradient></defs>
+          <rect x="6" y="6" width="36" height="36" rx="4" fill="#2e7d32" opacity="0.35"/>
+          <path d="M9 38c8-4 8-14 16-18s10-10 18-12" fill="none" stroke="url(#g-paths)" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 7"/>
+          <circle cx="9" cy="38" r="2.6" fill="#fff59d"/><circle cx="43" cy="8" r="2.6" fill="#fff59d"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Paths</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="mountains">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">M</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-mountains" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#cfd8dc"/><stop offset="100%" stop-color="#455a64"/></linearGradient></defs>
+          <path d="M4 38l11-20 6 8 8-14 15 26z" fill="url(#g-mountains)" stroke="#1c2a2e" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M29 12l4 7-3 4-4-3z" fill="#eceff1"/><path d="M15 18l3 5-2 3-3-2z" fill="#eceff1" opacity="0.9"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Mountains</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="groundtex">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">G</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#a1887f"/><stop offset="100%" stop-color="#4e342e"/></linearGradient></defs>
+          <rect x="6" y="8" width="22" height="11" rx="5" transform="rotate(-24 17 13.5)" fill="url(#g-ground)" stroke="#2e1a12" stroke-width="1.5"/>
+          <line x1="26" y1="19" x2="37" y2="32" stroke="#5a3f28" stroke-width="3.2" stroke-linecap="round"/>
+          <rect x="34.5" y="29.5" width="4.5" height="4.5" rx="1" transform="rotate(45 36.75 31.75)" fill="#3e2723"/>
+          <rect x="6" y="30" width="7" height="7" rx="1.5" fill="#a1887f" stroke="#2e1a12" stroke-width="1"/><rect x="14" y="35" width="7" height="7" rx="1.5" fill="#6d4c41" stroke="#2e1a12" stroke-width="1"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Ground Tex</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="object-builder">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">B</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-builder" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffca28"/><stop offset="100%" stop-color="#5d4037"/></linearGradient></defs>
+          <rect x="20" y="6" width="8" height="8" rx="1" fill="url(#g-builder)" stroke="#3e2723" stroke-width="1.3"/>
+          <rect x="8" y="20" width="8" height="8" rx="1" fill="url(#g-builder)" stroke="#3e2723" stroke-width="1.3"/>
+          <rect x="32" y="20" width="8" height="8" rx="1" fill="url(#g-builder)" stroke="#3e2723" stroke-width="1.3"/>
+          <rect x="20" y="34" width="8" height="8" rx="1" fill="url(#g-builder)" stroke="#3e2723" stroke-width="1.3"/>
+          <path d="M20 10h-6a4 4 0 0 0-4 4v2M28 10h6a4 4 0 0 1 4 4v2M20 38h-6a4 4 0 0 1-4-4v-2M28 38h6a4 4 0 0 0 4-4v-2" fill="none" stroke="#ffe082" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Builder</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="maps">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">L</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-maps" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#90caf9"/><stop offset="100%" stop-color="#0d47a1"/></linearGradient></defs>
+          <path d="M8 12l12-4 8 4 12-4v28l-12 4-8-4-12 4z" fill="url(#g-maps)" stroke="#062a5c" stroke-width="1.5" stroke-linejoin="round"/>
+          <line x1="20" y1="8" x2="20" y2="36" stroke="#062a5c" stroke-width="1.2" opacity="0.6"/><line x1="28" y1="12" x2="28" y2="40" stroke="#062a5c" stroke-width="1.2" opacity="0.6"/>
+          <circle cx="17" cy="20" r="2" fill="#ffca28" stroke="#7a4a00" stroke-width="0.8"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Maps</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="teleporters">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">T</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-teleport" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ce93d8"/><stop offset="100%" stop-color="#4a148c"/></linearGradient></defs>
+          <ellipse cx="24" cy="24" rx="17" ry="17" fill="none" stroke="url(#g-teleport)" stroke-width="2" opacity="0.35"/>
+          <path d="M24 8a16 16 0 0 1 16 16 12 12 0 0 1-12 12 8 8 0 0 1-8-8 4 4 0 0 1 4-4" fill="none" stroke="url(#g-teleport)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="24" cy="24" r="3.4" fill="#f3e5f5"/><circle cx="10" cy="14" r="1.6" fill="#ce93d8"/><circle cx="38" cy="34" r="1.3" fill="#ce93d8"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Teleport</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="events">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">E</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-events" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffd54f"/><stop offset="100%" stop-color="#e65100"/></linearGradient></defs>
+          <path d="M26 4 10 26h10l-4 18 20-24H26z" fill="url(#g-events)" stroke="#4a2000" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Events</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="recipes">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">R</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-recipes" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#b0bec5"/><stop offset="100%" stop-color="#37474f"/></linearGradient></defs>
+          <rect x="20" y="6" width="8" height="20" rx="2" fill="url(#g-recipes)" stroke="#1c2529" stroke-width="1.3" transform="rotate(45 24 16)"/>
+          <path d="M14 30l6-6 8 8-6 6c-3 3-8 3-11 0-3-3-3-8 0-11z" fill="url(#g-recipes)" stroke="#1c2529" stroke-width="1.3"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Recipes</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="particles">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">V</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><linearGradient id="g-particles" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff3c4"/><stop offset="100%" stop-color="#ff8f00"/></linearGradient></defs>
+          <path d="M24 5l3.4 8.6L36 17l-8.6 3.4L24 29l-3.4-8.6L12 17l8.6-3.4z" fill="url(#g-particles)" stroke="#5c3200" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M36 28l1.7 4.3L42 34l-4.3 1.7L36 40l-1.7-4.3L30 34l4.3-1.7z" fill="url(#g-particles)" stroke="#5c3200" stroke-width="1.1" stroke-linejoin="round"/>
+          <circle cx="12" cy="33" r="2.6" fill="#ffe082" stroke="#5c3200" stroke-width="1"/>
+          <circle cx="18" cy="41" r="1.6" fill="#ffe082" stroke="#5c3200" stroke-width="0.9"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Particles</span>
+    </button>
+    <button class="toolbar-btn rb-slot" data-mode="lights">
+      <span class="rb-slot-frame">
+        <span class="rb-rivet tl"></span><span class="rb-rivet tr"></span><span class="rb-rivet bl"></span><span class="rb-rivet br"></span>
+        <span class="rb-badge">I</span>
+        <svg class="rb-slot-icon" viewBox="0 0 48 48"><defs><radialGradient id="g-lights" cx="0.5" cy="0.4" r="0.6"><stop offset="0%" stop-color="#fff8d6"/><stop offset="100%" stop-color="#ff9800"/></radialGradient></defs>
+          <circle cx="24" cy="20" r="13" fill="#ffcc66" opacity="0.18"/>
+          <path d="M24 7a10 10 0 0 1 6 18v4H18v-4a10 10 0 0 1 6-18z" fill="url(#g-lights)" stroke="#5c3200" stroke-width="1.5" stroke-linejoin="round"/>
+          <rect x="18" y="31" width="12" height="4" rx="1.5" fill="#b0860b" stroke="#5c3200" stroke-width="1.2"/>
+          <rect x="20" y="36" width="8" height="4" rx="1.5" fill="#8d6708" stroke="#5c3200" stroke-width="1.2"/>
+          <path d="M6 12l4 2M42 12l-4 2M5 26h4M43 26h-4" stroke="#ffcc66" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="rb-slot-label">Lights</span>
+    </button>
+  </div>
+
+  <!-- MONSTER BUILDER MODAL (World Editor roadmap section E) -->
+  <div id="monster-builder-modal" class="modal-overlay" style="display:none">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span>Monster Type Editor</span>
+        <button id="mb-close-btn">✕</button>
+      </div>
+      <div class="modal-tabstrip">
+        <button class="modal-tab active" data-tab="general">General</button>
+        <button class="modal-tab" data-tab="abilities">Abilities</button>
+        <button class="modal-tab" data-tab="model">Model Editor</button>
+        <button class="modal-tab" data-tab="prefabs">Prefabs</button>
+      </div>
+
+      <div id="monster-builder-modal-tab-general" class="modal-tab-panel">
+        <label>Id</label>
+        <input type="text" id="mb-id" placeholder="e.g. cave-troll" />
+        <label>Name</label>
+        <input type="text" id="mb-name" placeholder="e.g. Cave Troll" />
+        <h3>Base Stats <span class="hint">(defaults for new spawns of this type — a placed spawn can still override them individually)</span></h3>
+        <div class="row">
+          <div><label>Max HP</label><input type="number" id="mb-maxHealth" value="30" min="1" /></div>
+          <div><label>Damage</label><input type="number" id="mb-damage" value="5" min="0" /></div>
+        </div>
+        <div class="row">
+          <div><label>Speed</label><input type="number" id="mb-speed" value="1.6" min="0" step="0.1" /></div>
+          <div><label>Attack CD (ms)</label><input type="number" id="mb-attackCooldownMs" value="1400" min="100" step="50" /></div>
+        </div>
+        <div class="row">
+          <div><label>Aggro range</label><input type="number" id="mb-aggroRange" value="8" min="1" step="0.5" /></div>
+          <div><label>Attack range</label><input type="number" id="mb-attackRange" value="1.6" min="0.5" step="0.1" /></div>
+        </div>
+
+        <h3>Loot Table <span class="hint">(dropped by EVERY spawn of this type, including ones already placed — each entry rolls independently)</span></h3>
+        <div id="mb-loot-list" class="hint"></div>
+        <div class="row">
+          <select id="mb-loot-item"></select>
+        </div>
+        <div class="row">
+          <div><label>Drop chance %</label><input type="number" id="mb-loot-chance" value="10" min="0.001" max="100" step="0.1" /></div>
+        </div>
+        <div class="row">
+          <div><label>Min qty</label><input type="number" id="mb-loot-min" value="1" min="1" step="1" /></div>
+          <div><label>Max qty</label><input type="number" id="mb-loot-max" value="1" min="1" step="1" /></div>
+        </div>
+        <label>Only drops during a quest (optional)</label>
+        <div class="row">
+          <div><select id="mb-loot-quest"><option value="">— always drops —</option></select></div>
+          <div><select id="mb-loot-quest-phase">
+            <option value="active">while it is active</option>
+            <option value="ready">once its objective is met</option>
+            <option value="done">after it is finished</option>
+          </select></div>
+        </div>
+        <p class="hint">A quest-gated entry isn't even rolled for a player outside that phase, so the same monster hands the Sealed Letter to whoever is on the quest and nothing extra to everyone else.</p>
+        <button type="button" id="mb-loot-add-btn" style="width:100%">+ Add Drop</button>
+        <p class="hint">A single placed monster can add its own extra drops in Monsters mode — those roll on top of these, they don't replace them.</p>
+      </div>
+
+      <div id="monster-builder-modal-tab-abilities" class="modal-tab-panel" style="display:none">
+        <label>Configured level <span class="hint">(authoring dial, not a runtime stat — abilities below unlock up to this level)</span></label>
+        <input type="number" id="mb-configured-level" value="2" min="2" max="20" step="2" />
+        <h3>Moveset</h3>
+        <div id="mb-ability-ladder"></div>
+      </div>
+
+      <div id="monster-builder-modal-tab-model" class="modal-tab-panel" style="display:none">
+        <div class="mb-model-layout">
+          <div class="mb-preview-pane">
+            <canvas id="mb-workspace-canvas"></canvas>
+          </div>
+          <div class="mb-editor-pane">
+            <div id="mb-part-tabstrip"></div>
+            <div id="mb-part-content">
+
+              <!-- Shown for any body-part tab (head/torso/tail/armL/armR/legL/legR/...) -->
+              <div id="mb-part-body-content">
+                <h3>Presets</h3>
+                <div class="preset-grid" id="mb-preset-grid"></div>
+                <h3>Recolor Whole Part</h3>
+                <div class="color-swatch-row" id="mb-color-swatches"></div>
+                <button id="mb-adjust-toggle">🔧 Adjust manually ▾</button>
+                <div id="mb-adjust-body">
+                  <label>Slot anchor <span class="hint">(pivot position relative to the monster's root — auto-filled with a sensible default when you first pick this body part, fine-tune here)</span></label>
+                  <div class="row">
+                    <input type="number" id="mb-anchor-x" step="0.05" />
+                    <input type="number" id="mb-anchor-y" step="0.05" />
+                    <input type="number" id="mb-anchor-z" step="0.05" />
+                  </div>
+                  <label>Add a shape</label>
+                  <div class="palette" style="grid-template-columns: repeat(4, 1fr);">
+                    <button data-mb-shape="box">🧊 Box</button>
+                    <button data-mb-shape="cylinder">🥫 Cylinder</button>
+                    <button data-mb-shape="sphere">⚪ Sphere</button>
+                    <button data-mb-shape="cone">🔺 Cone</button>
+                    <button data-mb-shape="capsule">💊 Capsule</button>
+                    <button data-mb-shape="pyramid">⛰️ Pyramid</button>
+                    <button data-mb-shape="wedge">📐 Wedge</button>
+                  </div>
+
+                  <h3>Selected Shape</h3>
+                  <div id="mb-shape-selected-info" class="hint">Nothing selected. Click a shape in the preview.</div>
+                  <div id="mb-shape-controls" style="display:none">
+                    <label>Position (local X / Y / Z)</label>
+                    <div class="row">
+                      <input type="number" id="mbs-pos-x" step="0.05" />
+                      <input type="number" id="mbs-pos-y" step="0.05" />
+                      <input type="number" id="mbs-pos-z" step="0.05" />
+                    </div>
+                    <label>Rotation (deg, X / Y / Z)</label>
+                    <div class="row">
+                      <input type="number" id="mbs-rot-x" value="0" step="5" />
+                      <input type="number" id="mbs-rot-y" value="0" step="5" />
+                      <input type="number" id="mbs-rot-z" value="0" step="5" />
+                    </div>
+                    <label>Scale (X / Y / Z)</label>
+                    <div class="row">
+                      <input type="number" id="mbs-scale-x" value="1" min="0.02" step="0.02" />
+                      <input type="number" id="mbs-scale-y" value="1" min="0.02" step="0.02" />
+                      <input type="number" id="mbs-scale-z" value="1" min="0.02" step="0.02" />
+                    </div>
+                    <label>Color</label>
+                    <input type="color" id="mbs-color" value="#cccccc" style="height:28px; padding:2px;" />
+                    <label>Opacity <output id="mbs-opacity-out">1.00</output></label>
+                    <input type="range" id="mbs-opacity" min="0.05" max="1" step="0.05" value="1" />
+                    <button id="mb-duplicate-shape" style="width:100%; margin-top:8px;">⧉ Duplicate Shape</button>
+                    <button id="mb-delete-shape" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Shape</button>
+                  </div>
+
+                  <h3>Shapes In This Slot (<span id="mb-shape-count">0</span>)</h3>
+                  <div id="mb-shape-list"></div>
+                </div>
+              </div>
+
+              <!-- Shown only for the Settings tab -->
+              <div id="mb-part-settings-content" style="display:none">
+                <label>Stance</label>
+                <select id="mb-stance">
+                  <option value="humanoid">Humanoid (2 legs, 2 arms)</option>
+                  <option value="quadruped">Quadruped (4 legs)</option>
+                </select>
+                <label>Preview animation</label>
+                <select id="mb-preview-anim">
+                  <option value="idle">Idle</option>
+                  <option value="walk">Walk</option>
+                  <option value="attack">Attack</option>
+                  <option value="walk-clip">Walk Clip</option>
+                  <option value="idle-clip">Idle Clip</option>
+                  <option value="attack-clip">Attack Clip</option>
+                </select>
+                <p class="warn-text" id="mb-weapon-warning" style="display:none">⚠ Cannot use weapons: not humanoid</p>
+
+                <h3>Walk Animation</h3>
+                <p class="hint">Each body part swings as a sine wave while the monster walks. Amplitude 0 = the part stays still. Phase 180° puts a part exactly opposite another (that's how legs alternate). Switch Preview animation to <em>Walk</em> to see it live.</p>
+                <div id="mb-anim-rows"></div>
+                <button id="mb-anim-reset" style="width:100%; margin-top:8px;">↺ Reset to default gait for this stance</button>
+
+                <h3>Keyframe Animation <span class="hint">(advanced)</span></h3>
+                <p class="hint">Hand-pose exact frames instead of a sine wave — a start pose, an end pose, optional poses in between. A clip here overrides the sine gait above for that state (Walk/Idle) or plays alongside the attack flash (Attack) while it exists. Pick Preview animation → <em>Walk/Idle/Attack Clip</em> below to watch it loop.</p>
+                <div class="row">
+                  <button id="kf-clip-walk" class="active" style="flex:1;">Walk</button>
+                  <button id="kf-clip-idle" style="flex:1;">Idle</button>
+                  <button id="kf-clip-attack" style="flex:1;">Attack</button>
+                </div>
+
+                <div id="kf-clip-empty" class="hint" style="margin-top:8px;">No <span id="kf-clip-empty-label">walk</span> clip yet.</div>
+                <button id="kf-clip-create" style="width:100%; margin-top:6px;">+ Create Clip</button>
+
+                <div id="kf-clip-editor" style="display:none">
+                  <label>Duration (ms)</label>
+                  <input type="number" id="kf-duration" value="1000" min="50" step="50" />
+                  <label><input type="checkbox" id="kf-loop" /> Loop</label>
+                  <button id="kf-clip-clear" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete This Clip</button>
+
+                  <h4 style="margin-bottom:4px;">Tracks <span class="hint">(one per body part)</span></h4>
+                  <div class="row">
+                    <select id="kf-add-track-part" style="flex:1;"></select>
+                    <button id="kf-add-track">+ Add Track</button>
+                  </div>
+                  <div id="kf-track-list" style="margin-top:6px;"></div>
+
+                  <div id="kf-keyframe-section" style="display:none; margin-top:10px; border-top: 1px solid #1c2838; padding-top: 10px;">
+                    <h4 style="margin-bottom:4px;">Keyframes for "<span id="kf-track-part-label"></span>"</h4>
+                    <button id="kf-add-keyframe" style="width:100%;">+ Add Keyframe (midpoint)</button>
+                    <div id="kf-keyframe-list" style="margin-top:6px;"></div>
+
+                    <div id="kf-keyframe-controls" style="display:none">
+                      <label>t <span class="hint">(0 = start, 1 = end; first/last are fixed)</span></label>
+                      <input type="number" id="kf-t" min="0" max="1" step="0.05" />
+                      <label>Position offset (local X / Y / Z)</label>
+                      <div class="row">
+                        <input type="number" id="kf-pos-x" step="0.02" />
+                        <input type="number" id="kf-pos-y" step="0.02" />
+                        <input type="number" id="kf-pos-z" step="0.02" />
+                      </div>
+                      <label>Rotation offset (deg, X / Y / Z)</label>
+                      <div class="row">
+                        <input type="number" id="kf-rot-x" step="5" />
+                        <input type="number" id="kf-rot-y" step="5" />
+                        <input type="number" id="kf-rot-z" step="5" />
+                      </div>
+                      <label>Scale multiplier (X / Y / Z)</label>
+                      <div class="row">
+                        <input type="number" id="kf-scale-x" min="0.02" step="0.02" />
+                        <input type="number" id="kf-scale-y" min="0.02" step="0.02" />
+                        <input type="number" id="kf-scale-z" min="0.02" step="0.02" />
+                      </div>
+                      <button id="kf-delete-keyframe" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Keyframe</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="monster-builder-modal-tab-prefabs" class="modal-tab-panel" style="display:none">
+        <p class="hint">Pick a starter creature to replace this monster type's whole body (all slots + stance) with — then customize it in the Model Editor. Built-in, not saved/editable.</p>
+        <div class="preset-grid" id="mb-body-preset-grid"></div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="row">
+          <button id="mb-save-btn" style="flex:1;">💾 Save Monster Type</button>
+          <button id="mb-new-btn" style="flex:0 0 auto;">＋ New</button>
+        </div>
+        <p class="hint" id="mb-status"></p>
+        <h3>Monster Type Catalog (<span id="mb-catalog-count">0</span>)</h3>
+        <div id="mb-catalog-list" class="hint" style="max-height:100px; overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRAPHICS SETTINGS MODAL (per-map profile; see src/sim/graphicsSettings.js) -->
+  <div id="graphics-settings-modal" class="modal-overlay" style="display:none">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span>Graphics Settings <span class="hint" style="margin-left:6px;">— this map only</span></span>
+        <button id="gfx-close-btn">✕</button>
+      </div>
+      <div class="modal-tabstrip">
+        <button class="modal-tab active" data-tab="postfx">Post-Processing</button>
+        <button class="modal-tab" data-tab="lighting">Lighting &amp; Fog</button>
+        <button class="modal-tab" data-tab="ambient">Ambient &amp; Sound</button>
+        <button class="modal-tab" data-tab="environment">Environment</button>
+        <button class="modal-tab" data-tab="playercamera">Camera</button>
+      </div>
+
+      <div id="graphics-settings-modal-tab-postfx" class="modal-tab-panel">
+        <div class="gfx-subhead">Exposure &amp; Color</div>
+        <div class="gfx-row"><label>Exposure</label><input type="range" id="gfx-exposure" min="0.2" max="2.5" step="0.05" /><output id="gfx-exposure-out"></output></div>
+        <div class="gfx-row"><label>Saturation</label><input type="range" id="gfx-saturation" min="-1" max="1" step="0.05" /><output id="gfx-saturation-out"></output></div>
+        <div class="gfx-row"><label>Colorfulness Strength</label><input type="range" id="gfx-colorfulness" min="0" max="1" step="0.05" /><output id="gfx-colorfulness-out"></output></div>
+
+        <div class="gfx-subhead">Bloom</div>
+        <div class="gfx-row"><label>Enabled</label><input type="checkbox" id="gfx-bloom-enabled" /></div>
+        <div class="gfx-row"><label>Strength</label><input type="range" id="gfx-bloom-strength" min="0" max="2" step="0.05" /><output id="gfx-bloom-strength-out"></output></div>
+        <div class="gfx-row"><label>Radius</label><input type="range" id="gfx-bloom-radius" min="0" max="1" step="0.05" /><output id="gfx-bloom-radius-out"></output></div>
+        <div class="gfx-row"><label>Threshold</label><input type="range" id="gfx-bloom-threshold" min="0" max="1" step="0.05" /><output id="gfx-bloom-threshold-out"></output></div>
+
+        <div class="gfx-subhead">FXAA</div>
+        <div class="gfx-row"><label>Enabled</label><input type="checkbox" id="gfx-fxaa-enabled" /></div>
+
+        <div class="gfx-subhead">Sharpen</div>
+        <div class="gfx-row"><label>Enabled</label><input type="checkbox" id="gfx-sharpen-enabled" /></div>
+        <div class="gfx-row"><label>Strength</label><input type="range" id="gfx-sharpen-strength" min="0" max="1" step="0.05" /><output id="gfx-sharpen-strength-out"></output></div>
+
+        <div class="gfx-subhead">SSAO (Ambient Occlusion)</div>
+        <div class="gfx-row"><label>Enabled</label><input type="checkbox" id="gfx-ssao-enabled" /></div>
+        <div class="gfx-row"><label>Intensity</label><input type="range" id="gfx-ssao-intensity" min="0" max="4" step="0.1" /><output id="gfx-ssao-intensity-out"></output></div>
+
+        <div class="gfx-subhead">Depth of Field</div>
+        <div class="gfx-row"><label>Enabled</label><input type="checkbox" id="gfx-dof-enabled" /></div>
+        <div class="gfx-row"><label>Focus Distance</label><input type="range" id="gfx-dof-focus" min="2" max="120" step="1" /><output id="gfx-dof-focus-out"></output></div>
+        <div class="gfx-row"><label>Aperture</label><input type="range" id="gfx-dof-aperture" min="0" max="0.0002" step="0.000005" /><output id="gfx-dof-aperture-out"></output></div>
+        <div class="gfx-row"><label>Max Blur</label><input type="range" id="gfx-dof-maxblur" min="0" max="0.03" step="0.001" /><output id="gfx-dof-maxblur-out"></output></div>
+
+        <div class="gfx-subhead">Cloud Shadows <span class="hint">(scrolling ground-darkening, not a real shadow cast)</span></div>
+        <div class="gfx-row"><label>Enabled</label><input type="checkbox" id="gfx-cloudshadows-enabled" /></div>
+        <div class="gfx-row"><label>Strength</label><input type="range" id="gfx-cloudshadows-strength" min="0" max="1" step="0.05" /><output id="gfx-cloudshadows-strength-out"></output></div>
+        <div class="gfx-row"><label>Speed</label><input type="range" id="gfx-cloudshadows-speed" min="0" max="0.1" step="0.005" /><output id="gfx-cloudshadows-speed-out"></output></div>
+        <p class="hint">Live in both editor and game — only affects the ground-texture overlay (painted layers), not the bare terrain on a map with nothing painted yet.</p>
+      </div>
+
+      <div id="graphics-settings-modal-tab-lighting" class="modal-tab-panel" style="display:none">
+        <div class="gfx-subhead">Sun Light</div>
+        <div class="gfx-row"><label>Color</label><input type="color" id="gfx-light-color" /></div>
+        <div class="gfx-row"><label>Intensity</label><input type="range" id="gfx-light-intensity" min="0" max="4" step="0.05" /><output id="gfx-light-intensity-out"></output></div>
+        <div class="gfx-row"><label>Shadow Angle — Elevation</label><input type="range" id="gfx-light-elevation" min="5" max="90" step="1" /><output id="gfx-light-elevation-out"></output></div>
+        <div class="gfx-row"><label>Shadow Angle — Azimuth</label><input type="range" id="gfx-light-azimuth" min="0" max="360" step="1" /><output id="gfx-light-azimuth-out"></output></div>
+        <div class="gfx-row"><label>Shadow Range</label><input type="range" id="gfx-light-shadowrange" min="50" max="800" step="10" /><output id="gfx-light-shadowrange-out"></output></div>
+        <div class="gfx-row"><label>Shadow Resolution</label><select id="gfx-light-shadowmapsize"></select></div>
+        <div class="gfx-row"><label>Shadow Detail</label><output id="gfx-shadow-texel-out" style="flex:1; text-align:left;"></output></div>
+        <div class="gfx-row"><label>Shadow Bias</label><input type="range" id="gfx-light-shadowbias" min="-0.01" max="0.01" step="0.0002" /><output id="gfx-light-shadowbias-out"></output></div>
+        <div class="gfx-row"><label>Shadow Normal Bias</label><input type="range" id="gfx-light-shadownormalbias" min="0" max="0.2" step="0.005" /><output id="gfx-light-shadownormalbias-out"></output></div>
+
+        <div class="gfx-subhead">Fog</div>
+        <div class="gfx-row"><label>Density</label><input type="range" id="gfx-fog-density" min="0" max="0.02" step="0.0001" /><output id="gfx-fog-density-out"></output></div>
+        <div class="gfx-row"><label>Color</label><input type="color" id="gfx-fog-color" /></div>
+        <p class="hint">No fog "Start Distance" — this project's exponential-squared fog has no such control (see the plan's skip-list); Intensity and Density would be the same slider twice, so only Density is exposed.</p>
+      </div>
+
+      <div id="graphics-settings-modal-tab-ambient" class="modal-tab-panel" style="display:none">
+        <div class="gfx-subhead">Ambient Light</div>
+        <div class="gfx-row"><label>Sky Color</label><input type="color" id="gfx-ambient-sky" /></div>
+        <div class="gfx-row"><label>Ground Color</label><input type="color" id="gfx-ambient-ground" /></div>
+        <div class="gfx-row"><label>Intensity</label><input type="range" id="gfx-ambient-intensity" min="0" max="2" step="0.05" /><output id="gfx-ambient-intensity-out"></output></div>
+
+        <div class="gfx-subhead">Sound — plays outside every zone</div>
+        <div class="gfx-row"><label>Default Music</label><select id="gfx-sound-music"><option value="">— none —</option></select></div>
+        <div class="gfx-row"><label>Default Ambient Sound</label><select id="gfx-sound-ambient"><option value="">— none —</option></select></div>
+        <p class="hint">Live in the game client (crossfades in whenever you're outside every zone) — not audible from the editor itself, which stays a static blockout view like ambient particles already do.</p>
+      </div>
+
+      <div id="graphics-settings-modal-tab-environment" class="modal-tab-panel" style="display:none">
+        <div class="gfx-subhead">Environmental Effect</div>
+        <div class="gfx-row"><label>Type</label>
+          <select id="gfx-env-type">
+            <option value="">— none —</option>
+            <option value="rain">Rain</option>
+            <option value="snow">Snow</option>
+            <option value="dust">Dust</option>
+            <option value="wind">Wind</option>
+            <option value="sunrays">Sunrays</option>
+          </select>
+        </div>
+        <div class="gfx-row"><label>Intensity</label><input type="range" id="gfx-env-intensity" min="0" max="2" step="0.05" /><output id="gfx-env-intensity-out"></output></div>
+        <p class="hint">Sunrays (a sun-glow boost, not real volumetric light shafts — see the plan's skip-list) is live in both editor and game. Rain/Snow/Dust/Wind are map-wide particle effects, live in the game only — the editor stays a static blockout view for those, same as zone/ground-texture particleType already.</p>
+
+        <div class="gfx-subhead">Texture Quality</div>
+        <div class="gfx-row"><label>Anisotropic Filtering</label>
+          <select id="gfx-anisotropy">
+            <option value="1">Off (1x)</option>
+            <option value="2">2x</option>
+            <option value="4">4x</option>
+            <option value="8">8x</option>
+            <option value="16">16x</option>
+          </select>
+        </div>
+        <p class="hint">Applies to ground/path/mountain textures created from here on — themes are cached per id and read this only at creation time, so an already-placed layer picks it up on reload/map switch, not instantly.</p>
+      </div>
+
+      <!-- Player Camera: the live game's third-person orbit camera on this map.
+           Editor-side these are numbers only (the editor's own camera is a
+           free-fly one) — "👁 Preview from spawn point" flies it to the same
+           framing so you can see what you're authoring. -->
+      <div id="graphics-settings-modal-tab-playercamera" class="modal-tab-panel" style="display:none">
+        <div class="gfx-subhead">Default View <span class="hint">(what players get on arriving in this map)</span></div>
+        <div class="gfx-row"><label>Distance</label><input type="range" id="gfx-cam-distance" min="3" max="200" step="1" /><output id="gfx-cam-distance-out"></output></div>
+        <div class="gfx-row"><label>Pitch <span class="hint">(0° = behind, 89° = overhead)</span></label><input type="range" id="gfx-cam-pitch" min="5" max="89" step="1" /><output id="gfx-cam-pitch-out"></output></div>
+
+        <div class="gfx-subhead">Zoom Range <span class="hint">(how far players may scroll in / out)</span></div>
+        <div class="gfx-row"><label>Closest (Zoom In)</label><input type="range" id="gfx-cam-mindistance" min="1" max="100" step="0.5" /><output id="gfx-cam-mindistance-out"></output></div>
+        <div class="gfx-row"><label>Furthest (Zoom Out)</label><input type="range" id="gfx-cam-maxdistance" min="5" max="400" step="1" /><output id="gfx-cam-maxdistance-out"></output></div>
+
+        <div class="gfx-row"><label>Preview</label><button id="gfx-cam-preview-btn">👁 Preview from spawn point</button></div>
+        <p class="hint">Live in the game only — the editor's own camera is a free-fly one, so nothing here changes how the editor looks. Distance and Pitch apply on arrival (login, teleport into this map, respawn); players may zoom and pitch away from them afterwards, within the Zoom Range. The two zoom limits push each other apart — Closest can never exceed Furthest.</p>
+        <p class="hint">Preview moves the editor camera to the same distance/pitch behind the spawn beacon, facing the way the spawn point faces. Building interiors have no spawn point, so it uses the map centre there.</p>
+      </div>
+
+      <div class="modal-footer">
+        <p class="hint">Changes apply live where wired (Post-Processing, Lighting &amp; Fog, Ambient tabs) and always save with the map via the regular "💾 Save World to Server" button.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMERA CONTROLS MODAL (editor preference, saved in this browser — see src/editor/main.js's cameraPrefs) -->
+  <div id="camera-settings-modal" class="modal-overlay" style="display:none">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span>Camera Controls <span class="hint" style="margin-left:6px;">— this browser only</span></span>
+        <button id="cam-close-btn">✕</button>
+      </div>
+
+      <div class="modal-tab-panel">
+        <div class="gfx-subhead">Mouse</div>
+        <div class="gfx-row"><label>Rotate Sensitivity <span class="hint">(right-drag)</span></label><input type="range" id="cam-rotate-speed" min="0.2" max="5" step="0.05" /><output id="cam-rotate-speed-out"></output></div>
+        <div class="gfx-row"><label>Pan Sensitivity <span class="hint">(middle-drag)</span></label><input type="range" id="cam-pan-speed" min="0.2" max="5" step="0.05" /><output id="cam-pan-speed-out"></output></div>
+        <div class="gfx-row"><label>Zoom Sensitivity <span class="hint">(wheel)</span></label><input type="range" id="cam-zoom-speed" min="0.2" max="5" step="0.05" /><output id="cam-zoom-speed-out"></output></div>
+        <div class="gfx-row"><label>Smoothing <span class="hint">(0 = instant)</span></label><input type="range" id="cam-damping" min="0" max="0.4" step="0.01" /><output id="cam-damping-out"></output></div>
+        <div class="gfx-row"><label>Invert Rotate <span class="hint">(both axes)</span></label><input type="checkbox" id="cam-invert-rotate" /></div>
+        <div class="gfx-row"><label>Zoom Toward Cursor</label><input type="checkbox" id="cam-zoom-to-cursor" /></div>
+
+        <div class="gfx-subhead">Fly (WASD / QE)</div>
+        <div class="gfx-row"><label>Fly Speed</label><input type="range" id="cam-fly-speed" min="5" max="400" step="5" /><output id="cam-fly-speed-out"></output></div>
+        <div class="gfx-row"><label>Fly Speed — Shift</label><input type="range" id="cam-fly-speed-fast" min="20" max="1200" step="10" /><output id="cam-fly-speed-fast-out"></output></div>
+
+        <div class="gfx-subhead">Ground</div>
+        <div class="gfx-row"><label>Keep Camera Above Ground</label><input type="checkbox" id="cam-clamp-ground" /></div>
+        <div class="gfx-row"><label>Clearance</label><input type="range" id="cam-ground-clearance" min="0.5" max="20" step="0.5" /><output id="cam-ground-clearance-out"></output></div>
+        <p class="hint">Stops right-drag and Q from dropping you under the terrain and leaving you staring at the underside of the map. Turn it off if you need to inspect a map from below.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="cam-reset-btn">↺ Reset to defaults</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/editor/main.js"></script>
+</body>
+</html>

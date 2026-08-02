@@ -1,0 +1,67 @@
+{
+  "floorNumber": 1,
+  "isBossFloor": false,
+  "bounds": {
+    "minX": -20,
+    "maxX": 20,
+    "minZ": -20,
+    "maxZ": 20
+  },
+  "spawnPoint": {
+    "x": 0,
+    "y": 0,
+    "z": -16
+  },
+  "exitPoint": {
+    "x": 0,
+    "y": 0,
+    "z": 16
+  },
+  "monsterSpawns": [
+    {
+      "id": "f1-slime-1",
+      "type": "slime",
+      "position": {
+        "x": -6,
+        "y": 0,
+        "z": -2
+      },
+      "maxHealth": 30,
+      "damage": 4,
+      "speed": 1.6,
+      "aggroRange": 8,
+      "attackRange": 1.6,
+      "attackCooldownMs": 1500
+    },
+    {
+      "id": "f1-slime-2",
+      "type": "slime",
+      "position": {
+        "x": 6,
+        "y": 0,
+        "z": 2
+      },
+      "maxHealth": 30,
+      "damage": 4,
+      "speed": 1.6,
+      "aggroRange": 8,
+      "attackRange": 1.6,
+      "attackCooldownMs": 1500
+    },
+    {
+      "id": "f1-slime-3",
+      "type": "slime",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 8
+      },
+      "maxHealth": 30,
+      "damage": 4,
+      "speed": 1.6,
+      "aggroRange": 8,
+      "attackRange": 1.6,
+      "attackCooldownMs": 1500
+    }
+  ]
+}

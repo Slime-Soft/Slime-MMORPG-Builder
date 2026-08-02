@@ -1,0 +1,180 @@
+{
+  "bow": {
+    "grip": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0.06
+      },
+      "rotationDeg": {
+        "x": 85,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "hold": {
+      "armR": {
+        "x": -4,
+        "y": 0,
+        "z": 0,
+        "swingScale": 0.9
+      },
+      "armL": {
+        "x": -10,
+        "y": 0,
+        "z": -4,
+        "swingScale": 0.4
+      }
+    }
+  },
+  "greatsword": {
+    "grip": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0.12
+      },
+      "rotationDeg": {
+        "x": -83,
+        "y": -89,
+        "z": 0
+      }
+    },
+    "hold": {
+      "armR": {
+        "x": -12,
+        "y": 0,
+        "z": 0,
+        "swingScale": 0.3
+      },
+      "armL": {
+        "x": -16,
+        "y": 0,
+        "z": -4,
+        "swingScale": 0.4
+      }
+    }
+  },
+  "sword": {
+    "grip": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0.1
+      },
+      "rotationDeg": {
+        "x": -85,
+        "y": 89,
+        "z": 0
+      }
+    },
+    "hold": {
+      "armR": {
+        "x": -10,
+        "y": 0,
+        "z": 0,
+        "swingScale": 0.55
+      }
+    }
+  },
+  "staff": {
+    "grip": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0.12
+      },
+      "rotationDeg": {
+        "x": 85,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "hold": {
+      "armR": {
+        "x": -12,
+        "y": 0,
+        "z": 0,
+        "swingScale": 0.35
+      },
+      "armL": {
+        "x": -14,
+        "y": 0,
+        "z": -4,
+        "swingScale": 0.45
+      }
+    }
+  },
+  "spear": {
+    "grip": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0.12
+      },
+      "rotationDeg": {
+        "x": 91,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "hold": {
+      "armR": {
+        "x": -10,
+        "y": 0,
+        "z": 0,
+        "swingScale": 0.35
+      },
+      "armL": {
+        "x": -14,
+        "y": 0,
+        "z": -4,
+        "swingScale": 0.45
+      }
+    }
+  },
+  "dagger": {
+    "grip": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0.08
+      },
+      "rotationDeg": {
+        "x": -91,
+        "y": 95,
+        "z": 0
+      }
+    },
+    "hold": {
+      "armR": {
+        "x": -4,
+        "y": 0,
+        "z": 0,
+        "swingScale": 0.8
+      }
+    }
+  },
+  "shield": {
+    "grip": {
+      "position": {
+        "x": -0.08,
+        "y": 0.06,
+        "z": 0.04
+      },
+      "rotationDeg": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "hold": {
+      "armL": {
+        "x": -34,
+        "y": 0,
+        "z": -10,
+        "swingScale": 0.2
+      }
+    }
+  }
+}

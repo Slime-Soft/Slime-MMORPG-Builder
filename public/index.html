@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fantasy MMO — Foundation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/theme.css" />
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+    #game-canvas { display: block; width: 100%; height: 100%; }
+    #status {
+      position: fixed; top: 8px; left: 8px; z-index: 10; font-size: 14px;
+      font-family: 'Lusitana', serif; color: var(--rb-parchment, #e8d9b5); background: rgba(27,20,13,0.75);
+      border: 1px solid var(--rb-gold-dim, #8a6423); padding: 4px 8px; border-radius: 4px;
+    }
+    #hint {
+      position: fixed; bottom: 96px; left: 8px; z-index: 10;
+      font-family: 'Lusitana', serif; color: var(--rb-parchment, #e8d9b5); background: rgba(27,20,13,0.75);
+      border: 1px solid var(--rb-gold-dim, #8a6423); padding: 5px 10px; border-radius: 4px; font-size: 14px;
+    }
+    /* --- Window bar (bottom-left): one button per full-screen panel, so every
+       window is reachable without knowing its hotkey. The hotkeys still work
+       and are printed on each button, which is how anyone learns them. Kept
+       clear of the centred hotbar/bars stack, and of the bottom-left #hint,
+       which now sits above it. --- */
+    #window-bar {
+      position: fixed; bottom: 16px; left: 12px; z-index: 11;
+      display: flex; gap: 6px;
+      padding: 8px; background: linear-gradient(180deg, #241a10, #150f09);
+      border: 3px solid var(--rb-gold-dim, #8a6423); border-radius: 12px;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.25), inset 0 2px 8px rgba(0,0,0,0.6), 0 8px 30px rgba(0,0,0,0.7);
+    }
+    .window-btn {
+      position: relative; width: 46px; height: 46px; padding: 0; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+      border-radius: 8px; border: 2px solid var(--rb-gold-dim, #8a6423);
+      background: radial-gradient(circle at 30% 25%, var(--rb-wood-light, #4a3620), #241a0f 75%);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6), inset 0 2px 4px rgba(0,0,0,0.7);
+      font-family: 'Lusitana', serif; color: var(--rb-parchment, #e8d9b5);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .window-btn:hover { border-color: var(--rb-gold, #d9a441); box-shadow: 0 0 10px 2px rgba(244,215,138,0.35); }
+    .window-btn.open { border-color: var(--rb-gold-bright, #f4d78a); box-shadow: 0 0 12px 3px rgba(244,215,138,0.5); }
+    .window-btn .wb-glyph { font-size: 20px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9)); }
+    .window-btn .wb-key {
+      position: absolute; top: -6px; right: -6px; width: 17px; height: 17px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #5a4326, #2a1d10 75%);
+      border: 1.5px solid var(--rb-gold, #d9a441); color: var(--rb-gold-bright, #f4d78a);
+      font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.6);
+    }
+    .window-btn .wb-label {
+      font-size: 8px; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+    #target-panel {
+      position: fixed; top: 40px; left: 8px; z-index: 10; display: none;
+      min-width: 150px; font-family: 'Lusitana', serif; background: rgba(27,20,13,0.85);
+      border: 1px solid var(--rb-gold-dim, #8a6423); border-radius: 5px; padding: 6px 8px;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.15), 0 2px 6px rgba(0,0,0,0.5);
+    }
+    #target-name {
+      color: var(--rb-gold-bright, #f4d78a); font-size: 14px; margin-bottom: 4px;
+      text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #target-hp-wrap {
+      width: 100%; height: 9px; background: #1b140d; border: 1px solid var(--rb-gold-dim, #8a6423);
+      border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.7);
+    }
+    #target-hp-fill { height: 100%; width: 100%; background: #c23b3b; transition: width 0.15s linear; }
+    #target-hp-text {
+      margin-top: 2px; font-size: 12px; color: var(--rb-parchment, #e8d9b5); opacity: 0.8;
+      text-align: right; text-shadow: 0 1px 2px #000;
+    }
+    #resource-bar-wrap {
+      position: fixed; bottom: 106px; left: 50%; transform: translateX(-50%);
+      width: 260px; height: 12px; z-index: 10;
+      background: #1b140d; border: 2px solid var(--rb-gold-dim, #8a6423); border-radius: 5px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    #resource-bar-fill { height: 100%; width: 100%; background: linear-gradient(180deg, #6fa8dc, #1f5a8a); transition: width 0.15s linear; }
+    #resource-label {
+      position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+      font-family: 'Lusitana', serif; color: var(--rb-parchment, #e8d9b5); font-size: 13px; z-index: 10; text-shadow: 0 1px 2px #000;
+    }
+    #hotbar {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; z-index: 10;
+      padding: 10px; background: linear-gradient(180deg, #241a10, #150f09);
+      border: 3px solid var(--rb-gold-dim, #8a6423); border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.25), inset 0 2px 8px rgba(0,0,0,0.6), 0 8px 30px rgba(0,0,0,0.7);
+    }
+    .hotbar-slot {
+      width: 56px; height: 56px; border-radius: 8px;
+      border: 2px solid var(--rb-gold-dim, #8a6423);
+      background: radial-gradient(circle at 30% 25%, #4a3620, #241a0f 75%);
+      position: relative; overflow: hidden;
+      font-family: 'Lusitana', serif; color: var(--rb-parchment, #e8d9b5);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6), inset 0 2px 4px rgba(0,0,0,0.7);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .hotbar-slot .key {
+      position: absolute; top: -6px; left: -6px; width: 18px; height: 18px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #5a4326, #2a1d10 75%);
+      border: 1.5px solid var(--rb-gold, #d9a441); color: var(--rb-gold-bright, #f4d78a);
+      font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.6); z-index: 2;
+    }
+    .hotbar-slot .ability-icon { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hotbar-slot .name {
+      position: absolute; bottom: 2px; left: 0; right: 0; font-size: 10px; text-align: center;
+      color: var(--rb-parchment, #e8d9b5); text-transform: uppercase; padding: 0 2px; line-height: 1.1;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+    .hotbar-slot .cooldown-overlay {
+      position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.72);
+      height: 0%; transition: height 0.1s linear;
+    }
+    .hotbar-slot .cooldown-text {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000;
+    }
+    .hotbar-slot.denied { border-color: #c65b2e; box-shadow: 0 0 10px 2px rgba(198,91,46,0.5); }
+    .hotbar-slot.flash-effect { border-color: var(--rb-gold-bright, #f4d78a); box-shadow: 0 0 14px 3px rgba(244,215,138,0.55); }
+    .hotbar-slot .lock-overlay { display: none; }
+    .hotbar-slot.locked { filter: grayscale(0.85) brightness(0.55); }
+    .hotbar-slot.locked .lock-overlay {
+      display: flex; position: absolute; inset: 0; z-index: 3; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2px; background: rgba(0,0,0,0.55);
+      font-size: 16px;
+    }
+    .hotbar-slot.locked .lock-level { font-size: 9px; color: var(--rb-gold-bright, #f4d78a); font-weight: 700; }
+    #event-fade-overlay {
+      position: fixed; inset: 0; background: #000; opacity: 0;
+      pointer-events: none; z-index: 30; transition: opacity linear;
+    }
+    #interact-prompt {
+      position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%);
+      font-family: system-ui, sans-serif; color: #fff; background: rgba(0,0,0,0.65);
+      padding: 10px 20px; border-radius: 6px; font-size: 17px; z-index: 10; display: none;
+    }
+    /* The NPC dialog, quest log and party panels were the last of the old flat
+       blue chrome (rgba(14,20,32,0.94) + #3f88c5). They wear the shared
+       wood/gold .rb-panel skin now, like the merchant/tower/crafting windows,
+       so nothing in the HUD reads as belonging to a different game. Type sizes
+       went up 2-3px across the whole HUD in the same pass — most of this was
+       authored at 10-12px, which is genuinely hard to read at a normal
+       monitor distance. */
+    #npc-dialog {
+      position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+      width: min(560px, 80vw); border-radius: 10px; padding: 16px 20px;
+      z-index: 12; display: none;
+    }
+    #npc-dialog-name { font-size: 18px; font-weight: 700; color: var(--rb-gold-bright, #f4d78a); margin-bottom: 6px; text-shadow: 0 1px 2px #000; }
+    #npc-dialog-text { font-size: 16px; line-height: 1.55; min-height: 2.6em; }
+    #npc-dialog-quests:not(:empty) { margin-top: 10px; border-top: 1px solid rgba(217,164,65,0.25); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+    #npc-dialog-choices:not(:empty) { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    #npc-dialog-choices button { padding: 7px 12px; font-size: 15px; text-align: left; }
+    .quest-offer { font-size: 14px; }
+    .quest-offer .q-title { font-weight: 600; color: var(--rb-gold-bright, #f4d78a); }
+    .quest-offer .q-obj { color: rgba(232,217,181,0.7); margin: 2px 0 4px; }
+    .quest-offer button { padding: 5px 12px; font-size: 14px; }
+    .quest-offer button.turn-in { border-color: var(--rb-gold, #d9a441); color: var(--rb-gold-bright, #f4d78a); }
+    #npc-dialog-hint { font-size: 13px; color: rgba(232,217,181,0.55); margin-top: 8px; text-align: right; }
+    #quest-log {
+      position: fixed; top: 232px; right: 12px; width: 290px; max-height: 60vh; overflow-y: auto;
+      border-radius: 10px; padding: 12px 14px; z-index: 11; display: none; font-size: 14px;
+    }
+    #party-panel {
+      position: fixed; top: 80px; left: 8px; width: 210px;
+      border-radius: 8px; padding: 10px 12px; z-index: 11; display: none; font-size: 14px;
+    }
+    #party-panel h4 { margin: 0 0 8px; font-size: 14px; color: var(--rb-gold-bright, #f4d78a); text-transform: uppercase; letter-spacing: 0.04em; }
+    .party-member { padding: 4px 0; border-bottom: 1px solid rgba(217,164,65,0.2); }
+    .party-member .pm-name { display: flex; justify-content: space-between; }
+    .party-member .pm-leader { color: var(--rb-gold-bright, #f4d78a); }
+    .pm-hp-wrap { height: 5px; background: rgba(0,0,0,0.5); border-radius: 3px; margin-top: 3px; overflow: hidden; }
+    .pm-hp-fill { height: 100%; background: #c23b3b; }
+    #party-leave-btn { width: 100%; margin-top: 8px; padding: 5px; font-size: 13px; }
+    #party-invite-prompt {
+      position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%);
+      border-radius: 8px; padding: 12px 18px; z-index: 13; display: none; font-size: 15px;
+    }
+    #quest-log h4 { margin: 0 0 8px; font-size: 15px; color: var(--rb-gold-bright, #f4d78a); }
+    .quest-log-entry { border-bottom: 1px solid rgba(217,164,65,0.2); padding: 6px 0; }
+    .quest-log-entry .q-title { font-weight: 600; color: var(--rb-parchment, #e8d9b5); }
+    .quest-log-entry .q-progress { color: rgba(232,217,181,0.7); font-size: 13px; margin-top: 2px; }
+    .quest-log-entry.ready .q-progress { color: #8fd18f; }
+    /* A finished event-quest that left a closing line — kept in the log,
+       dimmed, so the story it told is still readable. */
+    .quest-log-entry.done { opacity: 0.6; }
+    .quest-log-entry.done .q-title { color: rgba(232,217,181,0.7); }
+    #floor-indicator {
+      position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+      font-family: system-ui, sans-serif; color: #ffd27a; background: rgba(0,0,0,0.5);
+      padding: 5px 14px; border-radius: 4px; font-size: 16px; z-index: 10; display: none;
+    }
+    #health-bar-wrap {
+      position: fixed; bottom: 144px; left: 50%; transform: translateX(-50%);
+      width: 260px; height: 14px; background: #1b140d; border-radius: 6px;
+      border: 2px solid var(--rb-gold-dim, #8a6423); overflow: hidden; z-index: 10;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5);
+    }
+    #status-effect-row {
+      position: fixed; bottom: 179px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 4px; z-index: 10;
+    }
+    #cast-bar-wrap {
+      position: fixed; bottom: 122px; left: 50%; transform: translateX(-50%);
+      width: 200px; height: 8px; background: #1b140d; border-radius: 4px;
+      border: 2px solid var(--rb-gold-dim, #8a6423); overflow: hidden; z-index: 10; display: none;
+      box-shadow: inset 0 2px 3px rgba(0,0,0,0.7);
+    }
+    #cast-bar-fill { height: 100%; width: 0%; background: linear-gradient(180deg, var(--rb-gold-bright, #f4d78a), var(--rb-gold, #d9a441)); }
+    #cast-bar-wrap.interrupted #cast-bar-fill { background: var(--rb-ember, #c65b2e); }
+    #status-effect-row .status-icon {
+      font-family: system-ui, sans-serif; font-size: 13px; color: #fff;
+      background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 4px;
+      padding: 2px 5px; white-space: nowrap; text-shadow: 0 1px 2px #000;
+    }
+    #health-bar-fill { height: 100%; width: 100%; background: #c23b3b; transition: width 0.15s linear; }
+    #health-label {
+      position: fixed; bottom: 159px; left: 50%; transform: translateX(-50%);
+      font-family: monospace; color: #ffb0b0; font-size: 13px; z-index: 10; text-shadow: 0 1px 2px #000;
+    }
+    #death-overlay {
+      position: fixed; inset: 0; background: rgba(80,0,0,0.35); z-index: 20; display: none;
+      align-items: center; justify-content: center; flex-direction: column;
+      font-family: system-ui, sans-serif; color: #fff;
+    }
+    #death-overlay .title { font-size: 32px; font-weight: 700; text-shadow: 0 2px 8px #000; }
+    #death-overlay .sub { font-size: 16px; margin-top: 8px; text-shadow: 0 1px 4px #000; }
+    #boss-banner {
+      position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%);
+      font-family: system-ui, sans-serif; color: #ffd27a; font-size: 28px; font-weight: 700;
+      text-shadow: 0 2px 8px #000; z-index: 15; display: none;
+    }
+    #level-up-banner {
+      position: fixed; top: 38%; left: 50%; transform: translate(-50%, -50%);
+      font-family: system-ui, sans-serif; color: #a0e0ff; font-size: 26px; font-weight: 700;
+      text-shadow: 0 2px 8px #000; z-index: 15; display: none;
+    }
+    #level-label {
+      position: fixed; bottom: 182px; left: 50%; transform: translateX(-50%);
+      font-family: monospace; color: #a0e0ff; font-size: 13px; z-index: 10; text-shadow: 0 1px 2px #000;
+    }
+    #xp-bar-wrap {
+      position: fixed; bottom: 174px; left: 50%; transform: translateX(-50%);
+      width: 260px; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px;
+      border: 1px solid #444; overflow: hidden; z-index: 10;
+    }
+    #xp-bar-fill { height: 100%; width: 0%; background: #5fc8f0; transition: width 0.2s linear; }
+    /* The minimap now owns the top-right corner (the old inventory/gold
+       widgets that used to sit there are gone); the quest log starts below it. */
+    #minimap-wrap {
+      position: fixed; top: 8px; right: 12px; z-index: 10;
+      width: 192px; height: 192px; border-radius: 50%;
+      border: 3px solid var(--rb-gold-dim, #8a6423);
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.25), inset 0 2px 8px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.6);
+    }
+    #minimap-canvas { width: 100%; height: 100%; border-radius: 50%; }
+    #minimap-hint {
+      position: fixed; top: 204px; right: 12px; z-index: 10; width: 192px; text-align: center;
+      font-family: 'Lusitana', serif; color: var(--rb-parchment, #e8d9b5); opacity: 0.7; font-size: 12px;
+    }
+    #map-overlay {
+      position: fixed; inset: 0; z-index: 25; display: none;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.55);
+    }
+    #map-overlay-canvas {
+      width: min(80vw, 80vh); height: min(80vw, 80vh);
+      border: 3px solid var(--rb-gold-dim, #8a6423); border-radius: 8px;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.25), 0 8px 32px rgba(0,0,0,0.6);
+    }
+    #gather-toasts {
+      position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 10;
+      pointer-events: none;
+    }
+    .gather-toast {
+      font-family: system-ui, sans-serif; color: #d1f0a0; font-size: 17px; font-weight: 600;
+      text-shadow: 0 1px 4px #000; animation: gather-toast-rise 1.4s ease-out forwards;
+    }
+    @keyframes gather-toast-rise {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-30px); }
+    }
+    #vendor-panel {
+      position: fixed; bottom: 16px; right: 8px; z-index: 12;
+      border-radius: 8px; padding: 12px 14px; width: 260px; display: none; font-size: 14px;
+    }
+    /* Crafting — centered like the Merchant window (it's a full-attention
+       screen you stand still to use, not a HUD readout), in the same
+       wood/gold rb-panel skin. */
+    #craft-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 20; font-family: system-ui, sans-serif; color: var(--rb-parchment, #e8d9b5);
+      width: min(320px, 90vw); max-height: 72vh; overflow-y: auto;
+      padding: 16px 18px; display: none;
+    }
+    #craft-panel h3 {
+      margin: 0 0 10px; font-size: 17px; letter-spacing: 0.5px;
+      color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000;
+    }
+    #close-craft { color: var(--rb-gold-dim, #8a6423); font-size: 16px; }
+    #close-craft:hover { color: var(--rb-gold-bright, #f4d78a); }
+    #vendor-panel h3 { margin: 0 0 8px; font-size: 15px; color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000; }
+    .vendor-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; border-bottom: 1px solid rgba(217,164,65,0.2); font-size: 14px;
+    }
+    .craft-recipe {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid rgba(217,164,65,0.2); font-size: 14px;
+    }
+    .craft-recipe .cost { color: rgba(232,217,181,0.6); }
+    .craft-recipe button, .vendor-row button {
+      background: #3f8850; border: none; color: #fff; border-radius: 4px;
+      padding: 4px 10px; font-size: 13px; cursor: pointer;
+    }
+    .craft-recipe button:disabled, .vendor-row button:disabled { background: #444; cursor: not-allowed; }
+    .craft-recipe .cost { color: #999; font-size: 10px; }
+    .craft-recipe .reagent-short { color: #d96060; }
+    #craft-batch-btn {
+      width: 100%; margin-top: 8px; background: #3f8850; border: none; color: #fff;
+      border-radius: 4px; padding: 6px 0; font-size: 13px; cursor: pointer;
+    }
+    #craft-professions { margin-top: 10px; border-top: 1px solid rgba(217,164,65,0.25); padding-top: 8px; }
+    .profession-bar-row { font-size: 12px; color: var(--rb-parchment, #e8d9b5); margin-bottom: 4px; }
+    .profession-bar-track { background: rgba(0,0,0,0.45); border-radius: 3px; height: 6px; overflow: hidden; }
+    .profession-bar-fill { background: #ffd27a; height: 100%; }
+    /* Sits directly above #cast-bar-wrap (bottom:122px, height:8px) — a
+       separate element rather than restructuring the existing wrap/fill
+       pair, so the skill-cast path (startCastBar/updateCastBar) is untouched.
+       Only used for gathering/crafting waits (see main.js's showCastBar);
+       a skill cast has no label today. */
+    #cast-bar-label {
+      position: fixed; z-index: 15; font-family: system-ui, sans-serif;
+      color: #eee; font-size: 13px; text-align: center; text-shadow: 0 1px 3px #000;
+      bottom: 133px; left: 50%; transform: translateX(-50%); display: none; width: 200px;
+    }
+    #close-craft, #close-vendor, #close-skillbook, #close-merchant, #close-equipment {
+      position: absolute; top: 8px; right: 10px; background: none; border: none;
+      color: #999; font-size: 17px; cursor: pointer;
+    }
+    /* Merchant (event-authored openMerchantStore) — wood/gold theme, centered like a real shop window, not tucked in a HUD corner. */
+    #merchant-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: min(380px, 90vw); max-height: 72vh; overflow-y: auto;
+      padding: 16px 18px; z-index: 20; display: none; font-size: 14px;
+    }
+    #merchant-panel h3 {
+      margin: 0 0 10px; font-size: 17px; letter-spacing: 0.5px;
+      color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000;
+    }
+    /* Tower Dungeon (event-authored openTowerDungeon) — the floor list a
+       player gets when they interact with a tower event, the run HUD while
+       inside a floor, and the "proceed to the next floor?" prompt. Same
+       wood/gold panel language as the merchant window above. */
+    #tower-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: min(420px, 92vw); max-height: 72vh; overflow-y: auto;
+      padding: 16px 18px; z-index: 20; display: none; font-size: 14px;
+    }
+    #tower-panel h3, #tower-prompt h3 {
+      margin: 0 0 10px; font-size: 17px; letter-spacing: 0.5px;
+      color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000;
+    }
+    #close-tower {
+      position: absolute; top: 8px; right: 10px; background: none; border: none;
+      cursor: pointer; color: var(--rb-gold-dim, #8a6423); font-size: 16px;
+    }
+    #close-tower:hover { color: var(--rb-gold-bright, #f4d78a); }
+    .tower-floor-row {
+      display: flex; align-items: center; gap: 10px; padding: 7px 0;
+      border-bottom: 1px solid rgba(217,164,65,0.2);
+    }
+    .tower-floor-row .tower-floor-name { flex: 1; color: var(--rb-parchment, #e8d9b5); }
+    .tower-floor-row .tower-floor-req { font-size: 12px; color: var(--rb-gold-dim, #8a6423); display: block; }
+    .tower-floor-row.locked .tower-floor-name { color: #7d7057; }
+    .tower-floor-row button { min-width: 84px; }
+    .tower-floor-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .tower-floor-row.cleared .tower-floor-name::after { content: ' ✓'; color: var(--rb-gold, #d9a441); }
+    /* Sits just under #floor-indicator (top:8px) so the map name and the run
+       state read as one stacked header, not two competing badges. */
+    #tower-run-hud {
+      position: fixed; top: 38px; left: 50%; transform: translateX(-50%);
+      display: none; align-items: center; gap: 10px; z-index: 12;
+      padding: 6px 12px; font-size: 14px; border-radius: 8px;
+    }
+    #tower-run-label { color: var(--rb-parchment, #e8d9b5); }
+    #tower-run-label b { color: var(--rb-gold-bright, #f4d78a); }
+    #tower-run-hud button { font-size: 13px; padding: 4px 10px; }
+    #tower-prompt {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: min(360px, 90vw); padding: 16px 18px; z-index: 21; display: none;
+      font-size: 14px; text-align: center;
+    }
+    #tower-prompt-text { color: var(--rb-parchment, #e8d9b5); margin-bottom: 12px; }
+    .tower-prompt-actions { display: flex; gap: 8px; justify-content: center; }
+    .tower-prompt-actions button { min-width: 110px; }
+    #close-merchant {
+      color: var(--rb-gold-dim, #8a6423); font-size: 16px;
+    }
+    #close-merchant:hover { color: var(--rb-gold-bright, #f4d78a); }
+    .merchant-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+    .merchant-tabs button {
+      flex: 1; padding: 6px 0; font-size: 13px;
+    }
+    .merchant-tabs button.active {
+      background: linear-gradient(180deg, #5a4326, var(--rb-wood-dark, #1b140d));
+      border-color: var(--rb-gold, #d9a441); color: var(--rb-gold-bright, #f4d78a);
+    }
+    .merchant-row {
+      display: flex; align-items: center; gap: 8px; padding: 6px 0;
+      border-bottom: 1px solid rgba(217,164,65,0.2); font-size: 14px;
+    }
+    .merchant-row .merchant-icon, .merchant-row .merchant-icon-placeholder {
+      width: 28px; height: 28px; flex: none; border-radius: 4px; object-fit: cover;
+      border: 1px solid var(--rb-gold-dim, #8a6423); background: var(--rb-wood-dark, #1b140d);
+    }
+    .merchant-row .merchant-name { flex: 1; color: var(--rb-parchment, #e8d9b5); }
+    .merchant-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Equipment & Gear panel — matches Dennis's own mockup: gear slots
+       left/right (tight, no title bar), 3D preview center with a level/class
+       overlay in its corner, a two-column stat readout under the weapon
+       slots, and a distinct bordered Inventory section (its own header +
+       gold display, a dense fixed-size slot grid) on the right — reskinned
+       into this project's wood/gold theme, not that mockup's exact chrome. */
+    #equipment-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: max-content; max-width: 96vw; max-height: 96vh; overflow: hidden;
+      padding: 16px 20px; z-index: 20; display: none; font-size: 14px;
+    }
+    #close-equipment { color: var(--rb-gold-dim, #8a6423); font-size: 16px; }
+    #close-equipment:hover { color: var(--rb-gold-bright, #f4d78a); }
+    .equip-body { display: flex; gap: 14px; align-items: flex-start; }
+    .equip-col-side { display: flex; flex-direction: column; gap: 8px; width: 78px; flex: none; }
+    .equip-col-center { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 320px; flex: none; }
+    /* Width is the grid's own natural size (8 cells + 7 gaps), not a flex
+       stretch into whatever's left of the panel — that's what was leaving a
+       huge blank strip to the right of a narrow grid. */
+    .equip-col-inventory { width: 366px; flex: none; border-left: 1px solid rgba(217,164,65,0.25); padding-left: 16px; }
+    .equip-slot-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .equip-slot-wrap label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--rb-parchment, #e8d9b5); opacity: 0.75; text-align: center;
+    }
+    .equip-slot {
+      width: 48px; height: 48px; padding: 0; cursor: pointer;
+      background: radial-gradient(circle at 30% 25%, var(--rb-wood-light, #4a3620), #241a0f 75%);
+      border: 2px solid var(--rb-gold-dim, #8a6423); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6), inset 0 2px 4px rgba(0,0,0,0.7);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .equip-slot:hover { border-color: var(--rb-gold, #d9a441); }
+    .equip-slot.filled { border-color: var(--rb-gold, #d9a441); box-shadow: 0 0 8px 2px rgba(244,215,138,0.3); }
+    .equip-slot img { width: 38px; height: 38px; object-fit: cover; border-radius: 5px; }
+    .equip-slot-fallback { font-size: 12px; font-weight: 700; color: var(--rb-gold-bright, #f4d78a); }
+    .equip-slot-wide { width: 110px; }
+    .equip-weapon-row { display: flex; gap: 18px; margin-top: 4px; }
+    .equip-preview-wrap {
+      position: relative; width: 100%; height: 230px; border-radius: 8px; overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #3a2c1c, var(--rb-wood-dark, #1b140d) 80%);
+      border: 2px solid var(--rb-gold-dim, #8a6423);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    }
+    .equip-preview-level {
+      position: absolute; top: 6px; right: 10px; z-index: 1;
+      font-size: 14px; color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000;
+    }
+    #equipment-preview-canvas { width: 100%; height: 100%; display: block; }
+    .equip-stats-readout {
+      width: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(217,164,65,0.25);
+      display: flex; gap: 28px; color: var(--rb-parchment, #e8d9b5); font-size: 14px;
+    }
+    .equip-stats-col { display: flex; flex-direction: column; gap: 3px; }
+    .equip-inventory-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .equip-inventory-header h2 {
+      margin: 0; font-size: 20px; letter-spacing: 1px;
+      color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000;
+    }
+    .equip-gold-display { font-size: 14px; color: var(--rb-gold-bright, #f4d78a); margin-top: 14px; }
+    .equip-grid {
+      display: grid; grid-template-columns: repeat(8, 40px); gap: 6px;
+    }
+    .equip-grid-cell {
+      position: relative; aspect-ratio: 1; border-radius: 6px;
+      background: radial-gradient(circle at 30% 25%, var(--rb-wood-light, #4a3620), #241a0f 75%);
+      border: 2px solid var(--rb-gold-dim, #8a6423);
+      display: flex; align-items: center; justify-content: center; cursor: default;
+    }
+    .equip-grid-cell.equippable { cursor: pointer; }
+    .equip-grid-cell.equippable:hover { border-color: var(--rb-gold-bright, #f4d78a); box-shadow: 0 0 6px rgba(244,215,138,0.4); }
+    .equip-grid-cell img { width: 78%; height: 78%; object-fit: cover; border-radius: 4px; }
+    .equip-grid-fallback { font-size: 12px; font-weight: 700; color: var(--rb-gold-bright, #f4d78a); }
+    .equip-grid-qty {
+      position: absolute; bottom: 1px; right: 3px; font-size: 11px; color: var(--rb-gold-bright, #f4d78a);
+      text-shadow: 0 1px 1px #000;
+    }
+    #skillbook-panel {
+      position: fixed; top: 80px; right: 12px; width: 320px; max-height: 70vh; overflow-y: auto;
+      background: linear-gradient(180deg, #2b1e12 0%, #1b140d 100%); color: var(--rb-parchment, #e8d9b5);
+      border: 3px solid var(--rb-gold-dim, #8a6423); border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.2), inset 0 2px 8px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.6);
+      padding: 12px 14px; font-family: 'Lusitana', serif; z-index: 12; display: none; font-size: 14px;
+    }
+    #skillbook-panel h3 { margin: 0 0 8px; font-size: 16px; color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000; }
+    .skillbook-row {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px 0; border-bottom: 1px solid rgba(217,164,65,0.2);
+    }
+    .skillbook-row.locked { opacity: 0.55; }
+    .skillbook-icon { font-size: 22px; width: 32px; text-align: center; flex: none; }
+    .skillbook-row .ability-icon { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; flex: none; }
+    .skillbook-name { font-weight: 600; color: var(--rb-gold-bright, #f4d78a); }
+    .skillbook-desc { color: var(--rb-parchment, #e8d9b5); opacity: 0.85; margin: 2px 0; }
+    .skillbook-meta { color: var(--rb-parchment, #e8d9b5); opacity: 0.6; font-size: 13px; }
+    .skillbook-row.locked .skillbook-meta { color: var(--rb-gold, #d9a441); opacity: 1; }
+    #stats-panel {
+      position: fixed; top: 80px; right: 12px; width: 300px; max-height: 70vh; overflow-y: auto;
+      background: linear-gradient(180deg, #2b1e12 0%, #1b140d 100%); color: var(--rb-parchment, #e8d9b5);
+      border: 3px solid var(--rb-gold-dim, #8a6423); border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(217,164,65,0.2), inset 0 2px 8px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.6);
+      padding: 12px 14px; font-family: 'Lusitana', serif; z-index: 12; display: none; font-size: 14px;
+    }
+    #stats-panel h3 { margin: 0 0 2px; font-size: 16px; color: var(--rb-gold-bright, #f4d78a); text-shadow: 0 1px 2px #000; }
+    #stats-points-available { margin: 0 0 8px; font-size: 13px; color: var(--rb-parchment, #e8d9b5); opacity: 0.8; }
+    .stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0; border-bottom: 1px solid rgba(217,164,65,0.2);
+    }
+    .stat-row .stat-name { font-weight: 600; color: var(--rb-gold-bright, #f4d78a); flex: 1; }
+    .stat-row .stat-value { width: 70px; text-align: right; color: var(--rb-parchment, #e8d9b5); }
+    .stat-row .stat-value .stat-pending { color: #8fd18f; }
+    .stat-row .stat-btns { display: flex; gap: 4px; margin-left: 8px; }
+    .stat-row button {
+      width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--rb-gold-dim, #8a6423);
+      background: rgba(217,164,65,0.15); color: var(--rb-gold-bright, #f4d78a); cursor: pointer; font-size: 12px; line-height: 1;
+    }
+    .stat-row button:disabled { opacity: 0.35; cursor: not-allowed; }
+    #stats-derived { margin: 10px 0; font-size: 13px; color: var(--rb-parchment, #e8d9b5); opacity: 0.85; line-height: 1.6; }
+    #stats-panel-actions { display: flex; gap: 8px; margin-top: 8px; }
+    #stats-panel-actions button {
+      flex: 1; padding: 6px 0; border-radius: 6px; border: 1px solid var(--rb-gold-dim, #8a6423);
+      background: rgba(217,164,65,0.15); color: var(--rb-gold-bright, #f4d78a); cursor: pointer; font-family: 'Lusitana', serif; font-size: 13px;
+    }
+    #stats-panel-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #stats-panel-actions #stats-apply-btn { background: rgba(90,150,90,0.35); }
+    #stats-respec-btn { margin-top: 6px; width: 100%; padding: 5px 0; border-radius: 6px; border: 1px solid #7a3a3a;
+      background: rgba(150,60,60,0.2); color: #e8b5b5; cursor: pointer; font-family: 'Lusitana', serif; font-size: 12px; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/",
+        "three.quarks": "https://cdn.jsdelivr.net/npm/three.quarks@0.17.1/dist/three.quarks.esm.js",
+        "quarks.core": "https://cdn.jsdelivr.net/npm/quarks.core@0.17.1/dist/quarks.core.esm.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="status">Connecting…</div>
+  <div id="hint"><a href="/character-creation.html" style="color: var(--rb-gold-bright, #f4d78a);">Change character</a></div>
+  <!-- One button per window; `data-window` is what main.js's WINDOW_TOGGLES
+       table keys off, so adding a panel here means adding one entry there. -->
+  <div id="window-bar">
+    <button class="window-btn" data-window="inventory" title="Inventory &amp; Equipment (I)"><span class="wb-key">I</span><span class="wb-glyph">🎒</span><span class="wb-label">Bag</span></button>
+    <button class="window-btn" data-window="quests" title="Quest Log (J)"><span class="wb-key">J</span><span class="wb-glyph">📜</span><span class="wb-label">Quests</span></button>
+    <button class="window-btn" data-window="skills" title="Skill Book (K)"><span class="wb-key">K</span><span class="wb-glyph">✨</span><span class="wb-label">Skills</span></button>
+    <button class="window-btn" data-window="stats" title="Character Stats (T)"><span class="wb-key">T</span><span class="wb-glyph">🛡️</span><span class="wb-label">Stats</span></button>
+    <button class="window-btn" data-window="map" title="World Map (M)"><span class="wb-key">M</span><span class="wb-glyph">🗺️</span><span class="wb-label">Map</span></button>
+  </div>
+  <div id="target-panel">
+    <div id="target-name"></div>
+    <div id="target-hp-wrap"><div id="target-hp-fill"></div></div>
+    <div id="target-hp-text"></div>
+  </div>
+  <canvas id="game-canvas"></canvas>
+  <div id="event-fade-overlay"></div>
+
+  <div id="resource-label"></div>
+  <div id="resource-bar-wrap"><div id="resource-bar-fill"></div></div>
+  <div id="hotbar"></div>
+  <div id="floor-indicator"></div>
+  <div id="interact-prompt"></div>
+  <div id="minimap-wrap"><canvas id="minimap-canvas" width="192" height="192"></canvas></div>
+  <div id="minimap-hint">M: full map</div>
+  <div id="map-overlay"><canvas id="map-overlay-canvas" width="800" height="800"></canvas></div>
+  <div id="npc-dialog" class="rb-panel">
+    <div id="npc-dialog-name"></div>
+    <div id="npc-dialog-text"></div>
+    <div id="npc-dialog-choices"></div>
+    <div id="npc-dialog-quests"></div>
+    <div id="npc-dialog-hint">Press E to continue</div>
+  </div>
+  <div id="quest-log" class="rb-panel">
+    <h4>Quests (J to close)</h4>
+    <div id="quest-log-list"></div>
+  </div>
+  <div id="party-panel" class="rb-panel">
+    <h4>Party</h4>
+    <div id="party-members"></div>
+    <button id="party-leave-btn" class="rb-btn rb-danger">Leave party</button>
+  </div>
+  <div id="party-invite-prompt" class="rb-panel"></div>
+  <div id="health-label"></div>
+  <div id="health-bar-wrap"><div id="health-bar-fill"></div></div>
+  <div id="status-effect-row"></div>
+  <div id="cast-bar-wrap"><div id="cast-bar-fill"></div></div>
+  <div id="level-label"></div>
+  <div id="xp-bar-wrap"><div id="xp-bar-fill"></div></div>
+  <div id="boss-banner"></div>
+  <div id="level-up-banner"></div>
+  <div id="gather-toasts"></div>
+
+  <div id="craft-panel" class="rb-panel">
+    <button id="close-craft">✕</button>
+    <h3>Crafting (C to close)</h3>
+    <div id="craft-list"></div>
+    <button id="craft-batch-btn">Craft All</button>
+    <div id="craft-professions"></div>
+  </div>
+
+  <div id="cast-bar-label"></div>
+
+  <div id="vendor-panel" class="rb-panel">
+    <button id="close-vendor">✕</button>
+    <h3>Sell to Vendor (V to close)</h3>
+    <div id="vendor-list"></div>
+  </div>
+
+  <div id="merchant-panel" class="rb-panel">
+    <button id="close-merchant">✕</button>
+    <h3>Merchant</h3>
+    <div class="merchant-tabs">
+      <button id="merchant-tab-buy" class="rb-btn active">Buy</button>
+      <button id="merchant-tab-sell" class="rb-btn">Sell</button>
+    </div>
+    <div id="merchant-buy-list"></div>
+    <div id="merchant-sell-list" style="display:none"></div>
+  </div>
+
+  <div id="tower-panel" class="rb-panel">
+    <button id="close-tower">✕</button>
+    <h3 id="tower-panel-title">Tower</h3>
+    <div id="tower-floor-list"></div>
+  </div>
+
+  <div id="tower-run-hud" class="rb-panel">
+    <span id="tower-run-label"></span>
+    <button id="tower-leave-btn" class="rb-btn">Leave Tower</button>
+  </div>
+
+  <div id="tower-prompt" class="rb-panel">
+    <h3 id="tower-prompt-title">Floor cleared!</h3>
+    <div id="tower-prompt-text"></div>
+    <div class="tower-prompt-actions">
+      <button id="tower-prompt-yes" class="rb-btn">Proceed</button>
+      <button id="tower-prompt-no" class="rb-btn">Stay</button>
+    </div>
+  </div>
+
+  <div id="skillbook-panel">
+    <button id="close-skillbook">✕</button>
+    <h3>Skills (K to close)</h3>
+    <div id="skillbook-list"></div>
+  </div>
+
+  <div id="stats-panel">
+    <button id="close-stats">✕</button>
+    <h3>Character Stats (T to close)</h3>
+    <div id="stats-points-available"></div>
+    <div id="stats-list"></div>
+    <div id="stats-derived"></div>
+    <div id="stats-panel-actions">
+      <button id="stats-reset-btn">Reset Preview</button>
+      <button id="stats-apply-btn">Apply / Save</button>
+    </div>
+    <button id="stats-respec-btn">Respec (50g / Scroll of Oblivion)</button>
+  </div>
+
+  <div id="equipment-panel" class="rb-panel">
+    <button id="close-equipment">✕</button>
+    <div class="equip-body">
+      <div class="equip-col equip-col-side">
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-head" data-slot="head"></button><label>Head</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-neck" data-slot="neck"></button><label>Neck</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-chest" data-slot="chest"></button><label>Chest</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-gloves" data-slot="gloves"></button><label>Gloves</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-pants" data-slot="pants"></button><label>Pants</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-shoes" data-slot="shoes"></button><label>Shoes</label></div>
+      </div>
+      <div class="equip-col equip-col-center">
+        <div class="equip-preview-wrap">
+          <div class="equip-preview-level">Lv. <span id="equip-level">1</span> <span id="equip-classname"></span></div>
+          <canvas id="equipment-preview-canvas"></canvas>
+        </div>
+        <div class="equip-weapon-row">
+          <div class="equip-slot-wrap"><button class="equip-slot equip-slot-wide" id="equip-slot-mainHand" data-slot="mainHand"></button><label>Main Hand</label></div>
+          <div class="equip-slot-wrap"><button class="equip-slot equip-slot-wide" id="equip-slot-offHand" data-slot="offHand"></button><label>Off Hand</label></div>
+        </div>
+        <div id="equipment-stats-readout" class="equip-stats-readout"></div>
+      </div>
+      <div class="equip-col equip-col-side">
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-ring1" data-slot="ring1"></button><label>Ring 1</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-ring2" data-slot="ring2"></button><label>Ring 2</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-earring1" data-slot="earring1"></button><label>Earring 1</label></div>
+        <div class="equip-slot-wrap"><button class="equip-slot" id="equip-slot-earring2" data-slot="earring2"></button><label>Earring 2</label></div>
+      </div>
+      <div class="equip-col equip-col-inventory">
+        <div class="equip-inventory-header">
+          <h2>Inventory</h2>
+          <span id="equip-gold-display" class="equip-gold-display"></span>
+        </div>
+        <div id="equipment-grid" class="equip-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="death-overlay">
+    <div class="title">You Died</div>
+    <div class="sub" id="death-sub"></div>
+  </div>
+
+  <!-- Served automatically by the socket.io server -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

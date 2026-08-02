@@ -1,0 +1,258 @@
+/* public/theme.css
+   Shared fantasy "carved wood & gold" UI theme — hotbar/toolbar slots, panels,
+   buttons and inputs across the live game (index.html) and the authoring
+   tools (editor.html, skills.html, characters.html). One stylesheet so all of
+   them stay visually consistent; each page still keeps its own layout rules,
+   this only owns the ornamentation (colors, borders, fonts, the slot/panel
+   look) via classes prefixed `rb-` (Realm Builder). */
+/* Lusitana is served from local files (public/assets/fonts) so the UI font is
+   available offline and never flashes a fallback while Google Fonts loads. */
+@font-face {
+  font-family: 'Lusitana';
+  src: url('/assets/fonts/Lusitana-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lusitana';
+  src: url('/assets/fonts/Lusitana-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --rb-wood-dark: #1b140d;
+  --rb-wood: #2b1e12;
+  --rb-wood-light: #4a3620;
+  --rb-leather: #3a2717;
+  --rb-gold: #d9a441;
+  --rb-gold-bright: #f4d78a;
+  --rb-gold-dim: #8a6423;
+  --rb-parchment: #e8d9b5;
+  --rb-ember: #c65b2e;
+  --rb-font: 'Lusitana', serif;
+  --rb-font-deco: 'Lusitana', serif;
+}
+
+.rb-heading {
+  font-family: var(--rb-font-deco);
+  color: var(--rb-gold-bright);
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 14px rgba(244, 215, 138, 0.3), 0 2px 0 #000;
+}
+
+.rb-subheading {
+  font-family: var(--rb-font);
+  color: var(--rb-gold-dim);
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+/* --- Toolbar / hotbar: a wood belt holding a row of gold-rimmed slots --- */
+.rb-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(180deg, #241a10, #150f09);
+  border: 3px solid var(--rb-gold-dim);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(217, 164, 65, 0.25),
+    inset 0 2px 8px rgba(0, 0, 0, 0.6),
+    0 8px 30px rgba(0, 0, 0, 0.7);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.rb-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: var(--rb-font);
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.rb-slot-frame {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: radial-gradient(circle at 30% 25%, var(--rb-wood-light), #241a0f 75%);
+  border: 2px solid var(--rb-gold-dim);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 2px 4px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  overflow: hidden;
+}
+
+.rb-slot-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 40%);
+  pointer-events: none;
+}
+
+.rb-slot.active .rb-slot-frame,
+.rb-slot:hover .rb-slot-frame {
+  border-color: var(--rb-gold-bright);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 0 14px 3px rgba(244, 215, 138, 0.5),
+    0 0 0 2px var(--rb-gold-bright);
+}
+
+.rb-rivet {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--rb-gold-bright), var(--rb-gold-dim) 70%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.rb-rivet.tl { top: 3px; left: 3px; }
+.rb-rivet.tr { top: 3px; right: 3px; }
+.rb-rivet.bl { bottom: 3px; left: 3px; }
+.rb-rivet.br { bottom: 3px; right: 3px; }
+
+.rb-badge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5a4326, #2a1d10 75%);
+  border: 1.5px solid var(--rb-gold);
+  color: var(--rb-gold-bright);
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+  font-family: var(--rb-font);
+}
+
+.rb-slot-icon {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+  object-fit: contain;
+}
+
+.rb-slot-label {
+  margin-top: 4px;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--rb-parchment);
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  max-width: 66px;
+  line-height: 1.15;
+}
+
+/* --- Panels: the ornate wood-and-leather side/HUD panel --- */
+.rb-panel {
+  background: linear-gradient(180deg, var(--rb-wood) 0%, var(--rb-wood-dark) 100%);
+  border: 2px solid var(--rb-gold-dim);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 0 0 1px rgba(217, 164, 65, 0.2),
+    inset 0 2px 10px rgba(0, 0, 0, 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.6);
+  color: var(--rb-parchment);
+  font-family: var(--rb-font);
+}
+
+.rb-panel h1, .rb-panel h2 {
+  font-family: var(--rb-font-deco);
+  color: var(--rb-gold-bright);
+}
+.rb-panel h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rb-gold-dim);
+  border-bottom: 1px solid rgba(217, 164, 65, 0.25);
+  padding-bottom: 4px;
+}
+
+.rb-panel label {
+  color: var(--rb-parchment);
+  opacity: 0.85;
+}
+
+.rb-panel select,
+.rb-panel input[type="text"],
+.rb-panel input[type="number"],
+.rb-panel textarea {
+  background: var(--rb-leather);
+  color: var(--rb-parchment);
+  border: 1px solid var(--rb-gold-dim);
+  border-radius: 5px;
+  font-family: var(--rb-font);
+}
+.rb-panel select:focus,
+.rb-panel input:focus,
+.rb-panel textarea:focus {
+  outline: none;
+  border-color: var(--rb-gold-bright);
+  box-shadow: 0 0 6px rgba(244, 215, 138, 0.4);
+}
+
+.rb-btn {
+  font-family: var(--rb-font);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: linear-gradient(180deg, var(--rb-wood-light), var(--rb-leather));
+  color: var(--rb-gold-bright);
+  border: 1px solid var(--rb-gold-dim);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.rb-btn:hover {
+  border-color: var(--rb-gold);
+  box-shadow: 0 0 8px rgba(244, 215, 138, 0.35);
+}
+.rb-btn.rb-primary {
+  background: linear-gradient(180deg, #5a4326, var(--rb-wood-dark));
+  border-color: var(--rb-gold);
+  color: var(--rb-gold-bright);
+}
+.rb-btn.rb-danger:hover { border-color: var(--rb-ember); box-shadow: 0 0 8px rgba(198, 91, 46, 0.5); }
+
+/* --- HUD bars (health/resource/cast) --- */
+.rb-bar-wrap {
+  position: relative;
+  height: 16px;
+  border-radius: 5px;
+  background: var(--rb-wood-dark);
+  border: 2px solid var(--rb-gold-dim);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7), 0 1px 2px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.rb-bar-fill {
+  height: 100%;
+  transition: width 0.15s linear;
+}

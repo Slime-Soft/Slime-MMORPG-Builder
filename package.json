@@ -1,0 +1,31 @@
+{
+  "name": "fantasy-mmo",
+  "version": "0.1.0",
+  "description": "Browser-based fantasy MMO \u2014 Phase 1: Foundation (sim/render/net split, server authority, fixed JSON world loading)",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "check:prefabs": "node scripts/check-prefabs.mjs",
+    "check:arch": "node scripts/check-architecture.mjs",
+    "check": "npm run check:arch && npm run check:imports && npm run check:prefabs && npm run check:props && npm run check:parts && npm run check:embedded && npm run check:vfx",
+    "check:vfx": "node scripts/check-vfx.mjs",
+    "check:props": "node scripts/check-props.mjs",
+    "check:imports": "node scripts/check-imports.mjs",
+    "check:zfight": "node scripts/check-zfight.mjs",
+    "check:parts": "node scripts/check-parts.mjs",
+    "check:embedded": "node scripts/check-embedded.mjs",
+    "sheet:ground": "node scripts/ground-texture-sheet.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.2.0",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "quarks.core": "^0.17.1",
+    "socket.io-client": "^4.7.5",
+    "three": "^0.185.1",
+    "three.quarks": "^0.17.1"
+  }
+}

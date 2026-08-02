@@ -1,0 +1,76 @@
+{
+  "id": "goblin-scout",
+  "name": "Goblin Scout",
+  "stance": "humanoid",
+  "configuredLevel": 2,
+  "baseStats": {
+    "maxHealth": 28,
+    "damage": 4,
+    "speed": 1.9,
+    "aggroRange": 9,
+    "attackRange": 1.4,
+    "attackCooldownMs": 1200
+  },
+  "abilitySlots": [
+    {
+      "id": "claw-swipe",
+      "name": "Claw Swipe",
+      "unlockLevel": 2,
+      "kind": "melee",
+      "cooldownMs": 1200,
+      "windupMs": 250,
+      "effectMs": 150,
+      "recoveryMs": 300,
+      "power": 4,
+      "description": "A quick clawed swipe."
+    }
+  ],
+  "slots": [
+    {
+      "role": "head",
+      "anchor": { "x": 0, "y": 1.0, "z": 0 },
+      "shapes": [
+        { "id": "h1", "kind": "sphere", "position": { "x": 0, "y": 0, "z": 0 }, "rotationDeg": 0, "scale": { "x": 0.28, "y": 0.26, "z": 0.28 }, "color": 6989898 },
+        { "id": "h2", "kind": "cone", "position": { "x": -0.16, "y": 0.08, "z": 0 }, "rotationDeg": -90, "scale": { "x": 0.06, "y": 0.14, "z": 0.06 }, "color": 6989898 },
+        { "id": "h3", "kind": "cone", "position": { "x": 0.16, "y": 0.08, "z": 0 }, "rotationDeg": 90, "scale": { "x": 0.06, "y": 0.14, "z": 0.06 }, "color": 6989898 }
+      ]
+    },
+    {
+      "role": "torso",
+      "anchor": { "x": 0, "y": 0.62, "z": 0 },
+      "shapes": [
+        { "id": "t1", "kind": "box", "position": { "x": 0, "y": 0, "z": 0 }, "rotationDeg": 0, "scale": { "x": 0.3, "y": 0.5, "z": 0.2 }, "color": 5726842 }
+      ]
+    },
+    {
+      "role": "armL",
+      "anchor": { "x": -0.32, "y": 0.85, "z": 0 },
+      "shapes": [
+        { "id": "aL1", "kind": "cylinder", "position": { "x": 0, "y": -0.14, "z": 0 }, "rotationDeg": 0, "scale": { "x": 0.07, "y": 0.28, "z": 0.07 }, "color": 6989898 },
+        { "id": "aL2", "kind": "cone", "position": { "x": 0, "y": -0.3, "z": 0 }, "rotationDeg": 180, "scale": { "x": 0.07, "y": 0.09, "z": 0.07 }, "color": 6989898 }
+      ]
+    },
+    {
+      "role": "armR",
+      "anchor": { "x": 0.32, "y": 0.85, "z": 0 },
+      "shapes": [
+        { "id": "aR1", "kind": "cylinder", "position": { "x": 0, "y": -0.14, "z": 0 }, "rotationDeg": 0, "scale": { "x": 0.07, "y": 0.28, "z": 0.07 }, "color": 6989898 },
+        { "id": "aR2", "kind": "cone", "position": { "x": 0, "y": -0.3, "z": 0 }, "rotationDeg": 180, "scale": { "x": 0.07, "y": 0.09, "z": 0.07 }, "color": 6989898 }
+      ]
+    },
+    {
+      "role": "legL",
+      "anchor": { "x": -0.13, "y": 0.28, "z": 0 },
+      "shapes": [
+        { "id": "lL1", "kind": "cylinder", "position": { "x": 0, "y": -0.14, "z": 0 }, "rotationDeg": 0, "scale": { "x": 0.08, "y": 0.28, "z": 0.08 }, "color": 4218997 }
+      ]
+    },
+    {
+      "role": "legR",
+      "anchor": { "x": 0.13, "y": 0.28, "z": 0 },
+      "shapes": [
+        { "id": "lR1", "kind": "cylinder", "position": { "x": 0, "y": -0.14, "z": 0 }, "rotationDeg": 0, "scale": { "x": 0.08, "y": 0.28, "z": 0.08 }, "color": 4218997 }
+      ]
+    }
+  ]
+}

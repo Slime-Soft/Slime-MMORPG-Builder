@@ -1,0 +1,15 @@
+[
+  {
+    "id": "my-effect",
+    "name": "Frost Burst",
+    "shape": "sparkleBurst",
+    "colorA": "#70e1f0",
+    "colorB": "#f4e5e1",
+    "params": {
+      "count": 20,
+      "size": 1,
+      "speed": 0.2,
+      "life": 1.4
+    }
+  }
+]

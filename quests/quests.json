@@ -1,0 +1,93 @@
+[
+  {
+    "id": "TalkToTheGuildMaster",
+    "name": "Meet the Guild Master",
+    "description": "Welcome, Adventurer! The Guild Master is already waiting for you! You can find him infront of the adventurers guild in the eastern part of the city.",
+    "giverNpcId": "npc-964531375",
+    "objective": {
+      "type": "talk",
+      "target": "npc-guild-master",
+      "count": 1
+    },
+    "turnInAtTarget": true,
+    "dialogActive": "Did you talk to the Guild Master yet?",
+    "dialogReady": "You met the Guild Master? Great! Good luck on your Adventure!",
+    "dialogComplete": "Good luck on your Adventure!",
+    "rewards": {
+      "xp": 50,
+      "gold": 20
+    }
+  },
+  {
+    "id": "wolffang1",
+    "name": "Your first Quest",
+    "description": "Kill the wolves outside of Asteria and bring 10 Wolf Fangs to the Guild Master",
+    "giverNpcId": "npc-guild-master",
+    "objective": {
+      "type": "gather",
+      "target": "wolffang1",
+      "count": 10
+    },
+    "requiresQuestId": "TalkToTheGuildMaster",
+    "dialogActive": "Bring me 10 Wolf Fangs. You can find Wolfes outside of Asteria.",
+    "dialogReady": "Great job!",
+    "rewards": {
+      "xp": 50,
+      "gold": 20
+    }
+  },
+  {
+    "id": "boarproblem",
+    "name": "Boar Problem",
+    "description": "Boars have overrun my farm! Please help me getting rid of them!",
+    "giverNpcId": "npc-961540418",
+    "objective": {
+      "type": "kill",
+      "target": "farmboars",
+      "count": 10
+    },
+    "dialogActive": "Please help me getting rid of the boars!",
+    "dialogReady": "Thank you so much! Now i can get to work!",
+    "dialogComplete": "My back hurts...",
+    "rewards": {
+      "xp": 50,
+      "gold": 20
+    }
+  },
+  {
+    "id": "deerhunt",
+    "name": "Deer Hunt",
+    "description": "Greetings, Adventurer! Show me your hunting Skills and bring me 10x Wild Meat!",
+    "giverNpcId": "npc-292172753",
+    "objective": {
+      "type": "gather",
+      "target": "wildmeat",
+      "count": 10
+    },
+    "dialogActive": "Go bring me 10x Wild Meat!",
+    "dialogReady": "Well done!",
+    "dialogComplete": "True hunters don't hunt for sport, but to keep the balance in the forests!",
+    "rewards": {
+      "xp": 50,
+      "gold": 20
+    }
+  },
+  {
+    "id": "golems",
+    "name": "Heart of Stone",
+    "description": "The Golems are usually our friends and help us in the mine, but ever since finding these cursed stones in the mines, they have gone crazy. We have no other choice but to destroy them.",
+    "giverNpcId": "npc-126130054",
+    "objective": {
+      "type": "kill",
+      "target": "golems",
+      "count": 10
+    },
+    "dialogActive": "Did you destroy the golems yet?",
+    "dialogReady": "Thank you, adventurer. It's a pity, but we have no other choice.",
+    "dialogComplete": "I hope the mines open soon again.",
+    "rewards": {
+      "xp": 50,
+      "gold": 20
+    }
+  }
+]

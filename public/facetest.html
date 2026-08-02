@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Face contact sheet</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+} }
+</script>
+<style>
+  body { background:#2b2b33; color:#ddd; font:13px system-ui; margin:16px }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px }
+  figure { margin:0; text-align:center }
+  canvas { width:110px; height:110px; image-rendering:auto; border-radius:6px }
+  figcaption { font-size:11px; opacity:.75; margin-top:3px }
+  h3 { margin:12px 0 6px; font-size:13px; font-weight:600 }
+</style>
+<h3>Eye styles</h3><div class="row" id="styles"></div>
+<h3>Eye colours (round)</h3><div class="row" id="colors"></div>
+<h3>Brows / mouths</h3><div class="row" id="expr"></div>
+<h3>Skin tones</h3><div class="row" id="skin"></div>
+<script type="module">
+  import { buildFaceTexture, EYE_STYLES, BROW_STYLES, MOUTH_STYLES } from '/src/generators/faceTexture.js';
+  import { EYE_COLORS, SKIN_TONES } from '/src/generators/playerCharacter.js';
+
+  const add = (host, params, label) => {
+    const tex = buildFaceTexture(params);
+    // COPY the canvas: buildFaceTexture caches, so two entries with identical
+    // params share one canvas element and appending it twice would MOVE it.
+    const c = document.createElement('canvas');
+    c.width = tex.image.width; c.height = tex.image.height;
+    c.getContext('2d').drawImage(tex.image, 0, 0);
+    const fig = document.createElement('figure');
+    fig.append(c, Object.assign(document.createElement('figcaption'), { textContent: label }));
+    document.getElementById(host).append(fig);
+  };
+
+  for (const eyeStyle of EYE_STYLES) add('styles', { eyeStyle }, eyeStyle);
+  for (const eyeColor of EYE_COLORS) add('colors', { eyeColor }, '#' + eyeColor.toString(16));
+  for (const browStyle of BROW_STYLES) add('expr', { browStyle }, 'brow:' + browStyle);
+  for (const mouthStyle of MOUTH_STYLES) add('expr', { mouthStyle }, 'mouth:' + mouthStyle);
+  for (const skinTone of SKIN_TONES) add('skin', { skinTone }, '#' + skinTone.toString(16));
+</script>

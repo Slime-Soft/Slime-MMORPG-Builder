@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Body turntable</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+} }
+</script>
+<style>body{background:#3a3a44;margin:0}</style>
+<script type="module">
+  // Offscreen character render, readable as a data URL.
+  //
+  // WHY THIS EXISTS: the Browser pane's screenshot action needs the pane to be
+  // DISPLAYED, because a hidden tab stops compositing frames (and stops rAF).
+  // But an explicit renderer.render() still writes to the canvas backing store,
+  // and toDataURL() reads that store directly — neither needs compositing. So
+  // this page never animates and never relies on rAF; window.__shot() renders
+  // on demand and hands back pixels.
+  import * as THREE from 'three';
+  import { buildPlayerCharacter } from '/src/generators/playerCharacter.js';
+
+  const W = 200, H = 340;
+  const canvas = document.createElement('canvas');
+  canvas.width = W * 2; canvas.height = H;
+  document.body.append(canvas);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setSize(W * 2, H, false);
+  renderer.setScissorTest(true);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x3a3a44);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 1.1));
+  const key = new THREE.DirectionalLight(0xfff2d0, 1.0);
+  key.position.set(3, 6, 4);
+  scene.add(key);
+
+  let mesh = null;
+  const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 100);
+
+  /**
+   * Render front + side into one image.
+   * @param {object} appearance passed straight to buildPlayerCharacter
+   * @param {{zoom?:number, y?:number}} [view] framing; defaults show the whole body
+   */
+  window.__shot = async (appearance = {}, view = {}) => {
+    const catalog = await (await fetch('/api/character-types')).json();
+    if (mesh) scene.remove(mesh);
+    mesh = buildPlayerCharacter(catalog, appearance.classId || 'mage', appearance);
+    scene.add(mesh);
+
+    const dist = view.zoom ?? 4.2;
+    const target = view.y ?? 0.95;
+    // Two viewports on one canvas: front (0 deg) and side (90 deg).
+    const angles = [0, Math.PI / 2];
+    for (let i = 0; i < 2; i++) {
+      renderer.setViewport(i * W, 0, W, H);
+      renderer.setScissor(i * W, 0, W, H);
+      camera.position.set(Math.sin(angles[i]) * dist, target, Math.cos(angles[i]) * dist);
+      camera.lookAt(0, target, 0);
+      renderer.render(scene, camera);
+    }
+    // JPEG, not PNG: this is read back through a tool result, so size is the
+    // constraint. 0.72 is plenty to judge silhouette and shading.
+    return canvas.toDataURL('image/jpeg', 0.72);
+  };
+  window.__ready = true;
+</script>

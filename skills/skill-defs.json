@@ -1,0 +1,1043 @@
+[
+  {
+    "id": "shield-bash",
+    "classId": "guardian",
+    "key": 1,
+    "name": "Shield Bash",
+    "description": "A quick bash that staggers the target.",
+    "resourceCost": 20,
+    "cooldownMs": 4000,
+    "castMs": 150,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 4,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 29,
+        "damageType": "physical"
+      },
+      {
+        "type": "stun",
+        "durationMs": 1000
+      }
+    ],
+    "animation": {
+      "windupMs": 150,
+      "effectMs": 150,
+      "recoveryMs": 200
+    },
+    "vfx": {
+      "castAnchor": "hand",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "melee",
+    "legacyPower": 29
+  },
+  {
+    "id": "taunt",
+    "classId": "guardian",
+    "key": 2,
+    "name": "Taunt",
+    "description": "Forces nearby enemies to target you.",
+    "resourceCost": 15,
+    "cooldownMs": 8000,
+    "castMs": 100,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 8,
+      "shape": "aoe-circle",
+      "radius": 8
+    },
+    "effects": [
+      {
+        "type": "taunt",
+        "durationMs": 4000
+      }
+    ],
+    "animation": {
+      "windupMs": 100,
+      "effectMs": 200,
+      "recoveryMs": 150
+    },
+    "vfx": {
+      "castVfxId": "taunt-mark",
+      "castAnchor": "chest"
+    },
+    "legacyKind": "buff",
+    "legacyPower": 0
+  },
+  {
+    "id": "shield-wall",
+    "classId": "guardian",
+    "key": 3,
+    "name": "Shield Wall",
+    "description": "Greatly reduces incoming damage briefly.",
+    "resourceCost": 35,
+    "cooldownMs": 15000,
+    "castMs": 200,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "self"
+      ],
+      "range": 0,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "buff",
+        "stat": "armor",
+        "amount": 30,
+        "durationMs": 5000
+      }
+    ],
+    "animation": {
+      "windupMs": 200,
+      "effectMs": 100,
+      "recoveryMs": 300
+    },
+    "vfx": {
+      "castVfxId": "buff-aura",
+      "castAnchor": "chest"
+    },
+    "legacyKind": "buff",
+    "legacyPower": 0
+  },
+  {
+    "id": "sweeping-strike",
+    "classId": "guardian",
+    "key": 4,
+    "name": "Sweeping Strike",
+    "description": "Hits all enemies in front of you.",
+    "resourceCost": 25,
+    "cooldownMs": 6000,
+    "castMs": 250,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 4,
+      "shape": "aoe-cone",
+      "angleDeg": 90
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 38,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 250,
+      "effectMs": 200,
+      "recoveryMs": 250
+    },
+    "vfx": {
+      "impactVfxId": "sword-slash-arc",
+      "impactAnchor": "hand"
+    },
+    "legacyKind": "melee",
+    "legacyPower": 38
+  },
+  {
+    "id": "last-stand",
+    "classId": "guardian",
+    "key": 5,
+    "name": "Last Stand",
+    "description": "Survive lethal damage with 1 HP once.",
+    "resourceCost": 50,
+    "cooldownMs": 60000,
+    "castMs": 300,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "self"
+      ],
+      "range": 0,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "shield",
+        "amount": 999999,
+        "durationMs": 10000
+      }
+    ],
+    "animation": {
+      "windupMs": 300,
+      "effectMs": 300,
+      "recoveryMs": 400
+    },
+    "vfx": {
+      "castVfxId": "buff-aura",
+      "castAnchor": "chest"
+    },
+    "legacyKind": "buff",
+    "legacyPower": 0
+  },
+  {
+    "id": "slash",
+    "classId": "warrior",
+    "key": 1,
+    "name": "Slash",
+    "description": "A fast basic strike.",
+    "resourceCost": 15,
+    "cooldownMs": 2500,
+    "castMs": 100,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 4,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 21,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 100,
+      "effectMs": 150,
+      "recoveryMs": 150
+    },
+    "vfx": {
+      "impactVfxId": "sword-slash-arc",
+      "impactAnchor": "hand"
+    },
+    "legacyKind": "melee",
+    "legacyPower": 21
+  },
+  {
+    "id": "rending-cut",
+    "classId": "warrior",
+    "key": 2,
+    "name": "Rending Cut",
+    "description": "Causes the target to bleed over time.",
+    "resourceCost": 25,
+    "cooldownMs": 6000,
+    "castMs": 200,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 4,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 38,
+        "damageType": "physical"
+      },
+      {
+        "type": "dot",
+        "damageType": "physical",
+        "damagePerTick": 6,
+        "tickMs": 1000,
+        "durationMs": 6000
+      }
+    ],
+    "animation": {
+      "windupMs": 200,
+      "effectMs": 150,
+      "recoveryMs": 200
+    },
+    "vfx": {
+      "impactVfxId": "poison-cloud",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "melee",
+    "legacyPower": 38
+  },
+  {
+    "id": "charge",
+    "classId": "warrior",
+    "key": 3,
+    "name": "Charge",
+    "description": "Close the distance and stun briefly.",
+    "resourceCost": 20,
+    "cooldownMs": 10000,
+    "castMs": 100,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 8,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 39,
+        "damageType": "physical"
+      },
+      {
+        "type": "stun",
+        "durationMs": 1000
+      }
+    ],
+    "animation": {
+      "windupMs": 100,
+      "effectMs": 250,
+      "recoveryMs": 200
+    },
+    "vfx": {
+      "castVfxId": "charge-dust-trail",
+      "castAnchor": "ground",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "melee",
+    "legacyPower": 39
+  },
+  {
+    "id": "whirlwind",
+    "classId": "warrior",
+    "key": 4,
+    "name": "Whirlwind",
+    "description": "Spin, hitting everything nearby.",
+    "resourceCost": 35,
+    "cooldownMs": 8000,
+    "castMs": 250,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 5,
+      "shape": "aoe-circle",
+      "radius": 5
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 52,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 250,
+      "effectMs": 250,
+      "recoveryMs": 300
+    },
+    "vfx": {
+      "castVfxId": "whirlwind-spin-blur",
+      "castAnchor": "chest"
+    },
+    "legacyKind": "melee",
+    "legacyPower": 52
+  },
+  {
+    "id": "execute",
+    "classId": "warrior",
+    "key": 5,
+    "name": "Execute",
+    "description": "Massive damage to a low-health target.",
+    "resourceCost": 40,
+    "cooldownMs": 12000,
+    "castMs": 200,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 4,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 64,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 200,
+      "effectMs": 200,
+      "recoveryMs": 250
+    },
+    "vfx": {
+      "impactVfxId": "execute-critical-slash",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "melee",
+    "legacyPower": 64
+  },
+  {
+    "id": "firebolt",
+    "classId": "mage",
+    "key": 1,
+    "name": "Firebolt",
+    "description": "A quick bolt of fire.",
+    "resourceCost": 15,
+    "cooldownMs": 2000,
+    "castMs": 250,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 20,
+        "damageType": "fire"
+      }
+    ],
+    "animation": {
+      "windupMs": 250,
+      "effectMs": 150,
+      "recoveryMs": 150,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 273,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 548,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "cast",
+          "atMs": 50,
+          "vfxId": "fireball-projectile",
+          "anchor": "hand",
+          "anchorOffset": {
+            "x": -0.007,
+            "y": 0.056,
+            "z": 0.672
+          }
+        },
+        {
+          "type": "travel",
+          "atMs": 548,
+          "endAtMs": 848,
+          "vfxId": "firebolt-projectile"
+        },
+        {
+          "type": "impact",
+          "atMs": 548,
+          "vfxId": "impact-fire",
+          "anchor": "target"
+        }
+      ]
+    },
+    "vfx": {
+      "castVfxId": "fire-impact",
+      "castAnchor": "hand",
+      "travelVfxId": "firebolt-projectile",
+      "impactVfxId": "fire-impact",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 20,
+    "requiredLevel": 1,
+    "levelUpgrades": []
+  },
+  {
+    "id": "frost-nova",
+    "classId": "mage",
+    "key": 2,
+    "name": "Frost Nova",
+    "description": "Freezes nearby enemies in place.",
+    "resourceCost": 30,
+    "cooldownMs": 9000,
+    "castMs": 200,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 6,
+      "shape": "aoe-circle",
+      "radius": 6
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 48,
+        "damageType": "frost"
+      },
+      {
+        "type": "freeze",
+        "durationMs": 2000
+      }
+    ],
+    "animation": {
+      "windupMs": 200,
+      "effectMs": 200,
+      "recoveryMs": 250
+    },
+    "vfx": {
+      "castVfxId": "frost-nova-ring",
+      "castAnchor": "ground"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 48
+  },
+  {
+    "id": "fireball",
+    "classId": "mage",
+    "key": 3,
+    "name": "Fireball",
+    "description": "A slow, heavy-hitting fire projectile.",
+    "resourceCost": 35,
+    "cooldownMs": 5000,
+    "castMs": 500,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 47,
+        "damageType": "fire"
+      }
+    ],
+    "animation": {
+      "windupMs": 500,
+      "effectMs": 200,
+      "recoveryMs": 250
+    },
+    "vfx": {
+      "castVfxId": "fire-impact",
+      "castAnchor": "hand",
+      "travelVfxId": "fireball-projectile",
+      "impactVfxId": "fire-impact",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 47
+  },
+  {
+    "id": "arcane-shield",
+    "classId": "mage",
+    "key": 4,
+    "name": "Arcane Shield",
+    "description": "Absorbs incoming damage briefly.",
+    "resourceCost": 25,
+    "cooldownMs": 14000,
+    "castMs": 150,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "self",
+        "ally"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "shield",
+        "amount": 60,
+        "durationMs": 8000
+      }
+    ],
+    "animation": {
+      "windupMs": 150,
+      "effectMs": 100,
+      "recoveryMs": 200
+    },
+    "vfx": {
+      "castVfxId": "arcane-shield-shimmer",
+      "castAnchor": "chest"
+    },
+    "legacyKind": "buff",
+    "legacyPower": 0
+  },
+  {
+    "id": "meteor",
+    "classId": "mage",
+    "key": 5,
+    "name": "Meteor",
+    "description": "Calls down a devastating meteor.",
+    "resourceCost": 60,
+    "cooldownMs": 30000,
+    "castMs": 800,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "aoe-circle",
+      "radius": 7
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 116,
+        "damageType": "fire"
+      }
+    ],
+    "animation": {
+      "windupMs": 800,
+      "effectMs": 300,
+      "recoveryMs": 400
+    },
+    "vfx": {
+      "travelVfxId": "meteor-fall",
+      "impactVfxId": "meteor-crater-burst",
+      "impactAnchor": "ground"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 116
+  },
+  {
+    "id": "quick-shot",
+    "classId": "archer",
+    "key": 1,
+    "name": "Quick Shot",
+    "description": "A fast, low-damage arrow.",
+    "resourceCost": 10,
+    "cooldownMs": 1500,
+    "castMs": 100,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 14,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 100,
+      "effectMs": 100,
+      "recoveryMs": 100
+    },
+    "vfx": {
+      "travelVfxId": "arrow-projectile",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 14
+  },
+  {
+    "id": "aimed-shot",
+    "classId": "archer",
+    "key": 2,
+    "name": "Aimed Shot",
+    "description": "A slow but powerful precision shot.",
+    "resourceCost": 25,
+    "cooldownMs": 5000,
+    "castMs": 400,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 36,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 400,
+      "effectMs": 150,
+      "recoveryMs": 200
+    },
+    "vfx": {
+      "travelVfxId": "arrow-projectile",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 36
+  },
+  {
+    "id": "multi-shot",
+    "classId": "mage",
+    "key": 7,
+    "name": "Multi Shot",
+    "description": "Fires arrows at multiple targets.",
+    "resourceCost": 30,
+    "cooldownMs": 7000,
+    "castMs": 250,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "chain",
+      "chainCount": 2
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 45,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 250,
+      "effectMs": 200,
+      "recoveryMs": 250
+    },
+    "vfx": {
+      "travelVfxId": "multi-shot-arrow-fan",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 45,
+    "requiredLevel": 1
+  },
+  {
+    "id": "evasive-roll",
+    "classId": "archer",
+    "key": 4,
+    "name": "Evasive Roll",
+    "description": "Roll away, briefly untargetable.",
+    "resourceCost": 20,
+    "cooldownMs": 8000,
+    "castMs": 50,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "self"
+      ],
+      "range": 0,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "shield",
+        "amount": 9999,
+        "durationMs": 600
+      }
+    ],
+    "animation": {
+      "windupMs": 50,
+      "effectMs": 200,
+      "recoveryMs": 150
+    },
+    "vfx": {
+      "castVfxId": "evasive-roll-dust-puff",
+      "castAnchor": "ground"
+    },
+    "legacyKind": "buff",
+    "legacyPower": 0
+  },
+  {
+    "id": "rain-of-arrows",
+    "classId": "archer",
+    "key": 5,
+    "name": "Rain of Arrows",
+    "description": "Arrows rain down over an area.",
+    "resourceCost": 45,
+    "cooldownMs": 20000,
+    "castMs": 400,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "aoe-circle",
+      "radius": 6
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 83,
+        "damageType": "physical"
+      }
+    ],
+    "animation": {
+      "windupMs": 400,
+      "effectMs": 300,
+      "recoveryMs": 350
+    },
+    "vfx": {
+      "travelVfxId": "rain-of-arrows-fall",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "ground"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 83
+  },
+  {
+    "id": "heal",
+    "classId": "priest",
+    "key": 1,
+    "name": "Heal",
+    "description": "Restore health to an ally.",
+    "resourceCost": 20,
+    "cooldownMs": 2500,
+    "castMs": 300,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "self",
+        "ally"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "heal",
+        "amount": 24
+      }
+    ],
+    "animation": {
+      "windupMs": 300,
+      "effectMs": 150,
+      "recoveryMs": 150
+    },
+    "vfx": {
+      "impactVfxId": "heal-sparkle",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "heal",
+    "legacyPower": 24
+  },
+  {
+    "id": "renew",
+    "classId": "priest",
+    "key": 2,
+    "name": "Renew",
+    "description": "Heals an ally gradually over time.",
+    "resourceCost": 25,
+    "cooldownMs": 6000,
+    "castMs": 150,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "self",
+        "ally"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "hot",
+        "healPerTick": 6,
+        "tickMs": 1000,
+        "durationMs": 5000
+      }
+    ],
+    "animation": {
+      "windupMs": 150,
+      "effectMs": 100,
+      "recoveryMs": 150
+    },
+    "vfx": {
+      "impactVfxId": "renew-glow",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "heal",
+    "legacyPower": 30
+  },
+  {
+    "id": "smite",
+    "classId": "priest",
+    "key": 3,
+    "name": "Smite",
+    "description": "A bolt of holy damage.",
+    "resourceCost": 15,
+    "cooldownMs": 3000,
+    "castMs": 200,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 22,
+        "damageType": "holy"
+      }
+    ],
+    "animation": {
+      "windupMs": 200,
+      "effectMs": 150,
+      "recoveryMs": 150
+    },
+    "vfx": {
+      "travelVfxId": "holy-smite-beam",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 22
+  },
+  {
+    "id": "shield-of-faith",
+    "classId": "priest",
+    "key": 4,
+    "name": "Shield of Faith",
+    "description": "Shields an ally from damage.",
+    "resourceCost": 30,
+    "cooldownMs": 12000,
+    "castMs": 150,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "self",
+        "ally"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "shield",
+        "amount": 40,
+        "durationMs": 8000
+      }
+    ],
+    "animation": {
+      "windupMs": 150,
+      "effectMs": 100,
+      "recoveryMs": 200
+    },
+    "vfx": {
+      "impactVfxId": "shield-bubble",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "buff",
+    "legacyPower": 0
+  },
+  {
+    "id": "mass-heal",
+    "classId": "priest",
+    "key": 5,
+    "name": "Mass Heal",
+    "description": "Heals all nearby allies.",
+    "resourceCost": 55,
+    "cooldownMs": 25000,
+    "castMs": 600,
+    "canMoveDuringCast": false,
+    "targeting": {
+      "modes": [
+        "self",
+        "ally"
+      ],
+      "range": 10,
+      "shape": "aoe-circle",
+      "radius": 10
+    },
+    "effects": [
+      {
+        "type": "heal",
+        "amount": 66
+      }
+    ],
+    "animation": {
+      "windupMs": 600,
+      "effectMs": 300,
+      "recoveryMs": 400
+    },
+    "vfx": {
+      "castVfxId": "heal-sparkle",
+      "castAnchor": "chest"
+    },
+    "legacyKind": "heal",
+    "legacyPower": 66
+  },
+  {
+    "id": "new-skill",
+    "name": "Frost Arrows",
+    "description": "",
+    "resourceCost": 10,
+    "cooldownMs": 2000,
+    "castMs": 200,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 8,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 10,
+        "damageType": "fire"
+      },
+      {
+        "type": "slow",
+        "durationMs": 10,
+        "slowPercent": 0.3
+      }
+    ],
+    "animation": {
+      "windupMs": 150,
+      "effectMs": 150,
+      "recoveryMs": 150
+    },
+    "vfx": {
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    }
+  }
+]

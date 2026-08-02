@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Building Builder — Fantasy MMO</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; display: flex; font: 13px/1.4 system-ui, sans-serif; background: #14161c; color: #dfe3ea; }
+    #stage { flex: 1; min-width: 0; position: relative; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #panel { width: 320px; flex: none; min-height: 0; overflow-y: auto; padding: 12px; background: #1b1f28; border-left: 1px solid #2c3240; }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    h2 { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #7d879a; margin: 14px 0 6px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+    button { padding: 6px 5px; background: #232936; color: #dfe3ea; border: 1px solid #333b4c; border-radius: 5px; cursor: pointer; font-size: 11px; }
+    button:hover { background: #2b3344; }
+    button.active { background: #2f5fa8; border-color: #4d84d8; }
+    button.danger:hover { background: #6e2f2f; border-color: #a04a4a; }
+    label { display: block; margin-top: 7px; color: #9aa3b4; font-size: 11px; }
+    select, input[type=text], input[type=number] { width: 100%; margin-top: 3px; padding: 5px; background: #232936; color: #dfe3ea; border: 1px solid #333b4c; border-radius: 5px; }
+    .slider { display: grid; grid-template-columns: 30px 1fr 46px; align-items: center; gap: 5px; margin-top: 2px; }
+    .slider span { color: #9aa3b4; font-size: 11px; }
+    .slider input { width: 100%; }
+    .slider output { font-variant-numeric: tabular-nums; text-align: right; font-size: 11px; }
+    .slider input.numbox { width: 100%; padding: 2px 3px; background: #232936; color: #dfe3ea;
+      border: 1px solid #333b4c; border-radius: 4px; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .slider input.numbox::-webkit-outer-spin-button,
+    .slider input.numbox::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .sub { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #6f7a8c; margin-top: 9px; }
+    #part-shape-list, #piece-list, #part-picker { max-height: 120px; overflow-y: auto; border: 1px solid #2c3240; border-radius: 5px; margin-top: 4px; }
+    #part-shape-list div, #piece-list div, #part-picker div.item { padding: 4px 6px; cursor: pointer; font-size: 11px; border-bottom: 1px solid #232936; }
+    #part-shape-list div:hover, #piece-list div:hover, #part-picker div.item:hover { background: #232936; }
+    #part-shape-list div.active, #piece-list div.active { background: #2f5fa8; }
+    #part-picker div.category { padding: 3px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #6f7a8c; background: #171a22; cursor: default; }
+    #status { margin-top: 8px; min-height: 15px; font-size: 11px; color: #7d9a7d; }
+    #status.err { color: #e08a5a; }
+    #hint { position: absolute; left: 12px; bottom: 10px; color: #5b6373; font-size: 11px; }
+    .row { display: flex; gap: 5px; margin-top: 8px; }
+    .row > button { flex: 1; }
+    input[type=color] { width: 100%; height: 26px; margin-top: 3px; background: #232936; border: 1px solid #333b4c; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="preview-canvas"></canvas>
+    <div id="hint">click a piece/shape to select · G move · R rotate · S scale · Esc deselect · left-drag to orbit (any angle) · right-drag to pan · scroll to zoom</div>
+  </div>
+
+  <div id="panel">
+    <h1>Building Builder</h1>
+
+    <div class="row">
+      <button id="mode-parts-btn" class="active">Parts</button>
+      <button id="mode-assemble-btn">Assemble</button>
+    </div>
+
+    <!-- ==================== PARTS MODE ==================== -->
+    <div id="parts-mode">
+      <h2>Part Library</h2>
+      <select id="part-catalog" size="8"></select>
+      <div class="row">
+        <button id="part-new-btn">New</button>
+        <button id="part-dup-btn">Duplicate</button>
+        <button id="part-del-btn" class="danger">Delete</button>
+      </div>
+      <label>Name<input type="text" id="part-name-input" /></label>
+      <label>Category
+        <select id="part-category-sel">
+          <option value="wall">Wall</option>
+          <option value="roof">Roof</option>
+          <option value="window">Window</option>
+          <option value="door">Door</option>
+          <option value="trim">Trim</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+
+      <div class="sub">Add shape</div>
+      <div class="grid3" id="part-shape-palette"></div>
+
+      <div class="sub">Shapes in this part</div>
+      <div id="part-shape-list"></div>
+      <div class="row">
+        <button id="part-del-shape" class="danger">Delete shape</button>
+      </div>
+
+      <div id="part-shape-editor"></div>
+    </div>
+
+    <!-- ==================== ASSEMBLE MODE ==================== -->
+    <div id="assemble-mode" style="display:none">
+      <h2>Building Catalog</h2>
+      <select id="building-catalog" size="8"></select>
+      <div class="row">
+        <button id="building-new-btn">New</button>
+        <button id="building-dup-btn">Duplicate</button>
+        <button id="building-del-btn" class="danger">Delete</button>
+      </div>
+      <label>Name<input type="text" id="building-name-input" /></label>
+      <div class="grid">
+        <label>Footprint width<input type="number" id="building-width" step="0.5" /></label>
+        <label>Footprint depth<input type="number" id="building-depth" step="0.5" /></label>
+      </div>
+
+      <div class="sub">Add part (click to place)</div>
+      <div id="part-picker"></div>
+
+      <div class="sub">Add raw shape</div>
+      <div class="grid3" id="building-shape-palette"></div>
+
+      <div class="sub">Pieces in this building</div>
+      <div id="piece-list"></div>
+      <div class="row">
+        <button id="piece-dup-btn">Duplicate piece</button>
+        <button id="piece-del-btn" class="danger">Delete piece</button>
+      </div>
+
+      <div id="piece-editor"></div>
+    </div>
+
+    <h2>Save</h2>
+    <div class="row">
+      <button id="save-btn">Save all</button>
+      <button id="revert-btn">Reload from server</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="/src/building-builder/main.js"></script>
+</body>
+</html>

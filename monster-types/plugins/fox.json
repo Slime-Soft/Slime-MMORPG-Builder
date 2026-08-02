@@ -1,0 +1,480 @@
+{
+  "id": "fox",
+  "name": "Fox",
+  "stance": "quadruped",
+  "configuredLevel": 2,
+  "baseStats": {
+    "maxHealth": 16,
+    "damage": 3,
+    "speed": 2.3,
+    "aggroRange": 6,
+    "attackRange": 1.0,
+    "attackCooldownMs": 1100
+  },
+  "abilitySlots": [
+    {
+      "id": "bite",
+      "name": "Snap Bite",
+      "unlockLevel": 2,
+      "kind": "melee",
+      "cooldownMs": 1100,
+      "windupMs": 200,
+      "effectMs": 120,
+      "recoveryMs": 260,
+      "power": 3,
+      "description": "A quick bite."
+    }
+  ],
+  "slots": [
+    {
+      "role": "torso",
+      "anchor": {
+        "x": 0,
+        "y": 0.34,
+        "z": 0
+      },
+      "shapes": [
+        {
+          "id": "body",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.22,
+            "y": 0.2,
+            "z": 0.5
+          },
+          "color": 14251822
+        },
+        {
+          "id": "chest",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.04,
+            "z": 0.24
+          },
+          "scale": {
+            "x": 0.22,
+            "y": 0.2,
+            "z": 0.22
+          },
+          "color": 14251822
+        },
+        {
+          "id": "rump",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.02,
+            "z": -0.23
+          },
+          "scale": {
+            "x": 0.2,
+            "y": 0.19,
+            "z": 0.2
+          },
+          "color": 14251822
+        },
+        {
+          "id": "belly",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.09,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.16,
+            "y": 0.06,
+            "z": 0.4
+          },
+          "color": 15788248
+        }
+      ]
+    },
+    {
+      "role": "head",
+      "anchor": {
+        "x": 0,
+        "y": 0.42,
+        "z": 0.34
+      },
+      "shapes": [
+        {
+          "id": "skull",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.17,
+            "y": 0.16,
+            "z": 0.18
+          },
+          "color": 14251822
+        },
+        {
+          "id": "snout",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.05,
+            "z": 0.12
+          },
+          "scale": {
+            "x": 0.09,
+            "y": 0.08,
+            "z": 0.14
+          },
+          "color": 14251822
+        },
+        {
+          "id": "nose",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": -0.07,
+            "z": 0.19
+          },
+          "scale": {
+            "x": 0.045,
+            "y": 0.04,
+            "z": 0.045
+          },
+          "color": 1710618
+        },
+        {
+          "id": "earL",
+          "kind": "pyramid",
+          "position": {
+            "x": -0.07,
+            "y": 0.12,
+            "z": -0.02
+          },
+          "scale": {
+            "x": 0.07,
+            "y": 0.13,
+            "z": 0.06
+          },
+          "color": 14251822
+        },
+        {
+          "id": "earR",
+          "kind": "pyramid",
+          "position": {
+            "x": 0.07,
+            "y": 0.12,
+            "z": -0.02
+          },
+          "scale": {
+            "x": 0.07,
+            "y": 0.13,
+            "z": 0.06
+          },
+          "color": 14251822
+        },
+        {
+          "id": "eyeL",
+          "kind": "sphere",
+          "position": {
+            "x": -0.06,
+            "y": 0.02,
+            "z": 0.1
+          },
+          "scale": {
+            "x": 0.028,
+            "y": 0.028,
+            "z": 0.022
+          },
+          "color": 15777856
+        },
+        {
+          "id": "eyeR",
+          "kind": "sphere",
+          "position": {
+            "x": 0.06,
+            "y": 0.02,
+            "z": 0.1
+          },
+          "scale": {
+            "x": 0.028,
+            "y": 0.028,
+            "z": 0.022
+          },
+          "color": 15777856
+        }
+      ]
+    },
+    {
+      "role": "tail",
+      "anchor": {
+        "x": 0,
+        "y": 0.38,
+        "z": -0.34
+      },
+      "shapes": [
+        {
+          "id": "x1",
+          "kind": "cone",
+          "position": {
+            "x": 0,
+            "y": 0.03,
+            "z": -0.11
+          },
+          "scale": {
+            "x": 0.1,
+            "y": 0.34,
+            "z": 0.1
+          },
+          "color": 14251822,
+          "rotation": {
+            "x": -100,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "tip",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": -0.02,
+            "z": -0.25
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 15788248
+        }
+      ]
+    },
+    {
+      "role": "legFrontL",
+      "anchor": {
+        "x": -0.09,
+        "y": 0.24,
+        "z": 0.18
+      },
+      "shapes": [
+        {
+          "id": "hip",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 14251822
+        },
+        {
+          "id": "l1",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.09,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.075,
+            "y": 0.19,
+            "z": 0.075
+          },
+          "color": 14251822
+        },
+        {
+          "id": "paw",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.19,
+            "z": 0.02
+          },
+          "scale": {
+            "x": 0.085,
+            "y": 0.045,
+            "z": 0.1
+          },
+          "color": 1710618
+        }
+      ]
+    },
+    {
+      "role": "legFrontR",
+      "anchor": {
+        "x": 0.09,
+        "y": 0.24,
+        "z": 0.18
+      },
+      "shapes": [
+        {
+          "id": "hip",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 14251822
+        },
+        {
+          "id": "l1",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.09,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.075,
+            "y": 0.19,
+            "z": 0.075
+          },
+          "color": 14251822
+        },
+        {
+          "id": "paw",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.19,
+            "z": 0.02
+          },
+          "scale": {
+            "x": 0.085,
+            "y": 0.045,
+            "z": 0.1
+          },
+          "color": 1710618
+        }
+      ]
+    },
+    {
+      "role": "legBackL",
+      "anchor": {
+        "x": -0.09,
+        "y": 0.24,
+        "z": -0.18
+      },
+      "shapes": [
+        {
+          "id": "hip",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 14251822
+        },
+        {
+          "id": "l1",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.09,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.075,
+            "y": 0.19,
+            "z": 0.075
+          },
+          "color": 14251822
+        },
+        {
+          "id": "paw",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.19,
+            "z": 0.02
+          },
+          "scale": {
+            "x": 0.085,
+            "y": 0.045,
+            "z": 0.1
+          },
+          "color": 1710618
+        }
+      ]
+    },
+    {
+      "role": "legBackR",
+      "anchor": {
+        "x": 0.09,
+        "y": 0.24,
+        "z": -0.18
+      },
+      "shapes": [
+        {
+          "id": "hip",
+          "kind": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.11,
+            "y": 0.11,
+            "z": 0.11
+          },
+          "color": 14251822
+        },
+        {
+          "id": "l1",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.09,
+            "z": 0
+          },
+          "scale": {
+            "x": 0.075,
+            "y": 0.19,
+            "z": 0.075
+          },
+          "color": 14251822
+        },
+        {
+          "id": "paw",
+          "kind": "box",
+          "position": {
+            "x": 0,
+            "y": -0.19,
+            "z": 0.02
+          },
+          "scale": {
+            "x": 0.085,
+            "y": 0.045,
+            "z": 0.1
+          },
+          "color": 1710618
+        }
+      ]
+    }
+  ]
+}
