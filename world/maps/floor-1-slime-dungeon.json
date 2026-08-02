@@ -1264,9 +1264,9 @@
       "type": "cave-ceiling-tile",
       "seed": 848789570,
       "position": {
-        "x": 21.862599900203694,
+        "x": 1,
         "y": 6.6,
-        "z": 75.71705117133364
+        "z": 75
       },
       "rotationDeg": 0,
       "scale": 6.5
@@ -1395,6 +1395,17 @@
       },
       "rotationDeg": 0,
       "scale": 1
+    },
+    {
+      "type": "cave-ceiling-tile",
+      "seed": 848789570,
+      "position": {
+        "x": 22,
+        "y": 6.6,
+        "z": 75
+      },
+      "rotationDeg": 0,
+      "scale": 6.5
     }
   ],
   "teleporters": [],

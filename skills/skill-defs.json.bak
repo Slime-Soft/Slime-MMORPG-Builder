@@ -30,7 +30,45 @@
     "animation": {
       "windupMs": 150,
       "effectMs": 150,
-      "recoveryMs": 200
+      "recoveryMs": 200,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 252,
+          "part": "armL",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 493,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "travel",
+          "atMs": 493,
+          "endAtMs": 793,
+          "vfxId": "impact-physical"
+        }
+      ]
     },
     "vfx": {
       "castAnchor": "hand",
@@ -67,11 +105,50 @@
     "animation": {
       "windupMs": 100,
       "effectMs": 200,
-      "recoveryMs": 150
+      "recoveryMs": 150,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 218,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 445,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "cast",
+          "atMs": 445,
+          "vfxId": "taunt-ring",
+          "anchor": "hand"
+        }
+      ]
     },
     "vfx": {
-      "castVfxId": "taunt-mark",
-      "castAnchor": "chest"
+      "castVfxId": "taunt-ring",
+      "castAnchor": "chest",
+      "impactAnchor": "target"
     },
     "legacyKind": "buff",
     "legacyPower": 0
@@ -102,13 +179,14 @@
       }
     ],
     "animation": {
-      "windupMs": 200,
-      "effectMs": 100,
+      "windupMs": 100,
+      "effectMs": 1000,
       "recoveryMs": 300
     },
     "vfx": {
       "castVfxId": "buff-aura",
-      "castAnchor": "chest"
+      "castAnchor": "chest",
+      "impactAnchor": "target"
     },
     "legacyKind": "buff",
     "legacyPower": 0

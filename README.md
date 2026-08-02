@@ -18,7 +18,7 @@ Design complete MMORPG worlds directly in your browser: maps, terrain, NPCs, mon
 - 👤 Character & NPC Builder
 - 🗼 Dungeons and Tower Climbing Mode
 - 👹 Monster Editor with animation tools
-- ✨ Skill & VFX Builder
+- ✨ Skill & VFX Builder with Status Logik (like stun, taunt, slow, burn...)
 - 📜 Quest, Dialogue & Event System
 - ⚒️ Crafting, Gathering & Items
 - 🗺️ Multi-map support with teleporters

@@ -1461,10 +1461,10 @@
     },
     "anisotropy": 4,
     "playerCamera": {
-      "distance": 7,
+      "distance": 5,
       "pitchDeg": 28,
-      "minDistance": 6,
-      "maxDistance": 60
+      "minDistance": 5,
+      "maxDistance": 10
     }
   },
   "walls": [],
