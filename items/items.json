@@ -6,7 +6,7 @@
     "rarity": "common",
     "description": "Heals you for 25% of your health",
     "sellPrice": 0,
-    "iconUrl": "/assets/icons/icon-1785760415779-422905418.png",
+    "iconUrl": "/assets/icons/icon-1785784282629-283764895.png",
     "usageConfig": {
       "mode": "single",
       "cooldownSeconds": 30,
@@ -37,7 +37,7 @@
     "rarity": "common",
     "description": "Can be sold to merchants",
     "sellPrice": 25,
-    "iconUrl": "/assets/icons/icon-1785318980711-173968777.png"
+    "iconUrl": "/assets/icons/icon-1785784383496-330652380.png"
   },
   {
     "id": "wolffang1",

@@ -6,12 +6,14 @@
     "rarity": "common",
     "description": "Heals you for 25% of your health",
     "sellPrice": 0,
+    "iconUrl": "/assets/icons/icon-1785784282629-283764895.png",
     "usageConfig": {
       "mode": "single",
       "cooldownSeconds": 30,
       "effectTrigger": {
-        "stat": "resourceRegen",
+        "kind": "buff",
         "amount": 25,
+        "stat": "resourceRegen",
         "durationSeconds": 30
       }
     }

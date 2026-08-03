@@ -32,7 +32,7 @@ Design complete MMORPG worlds directly in your browser: maps, terrain, NPCs, mon
 
 | World Editor | Ingame |
 |---|---|
-| ![](assets/preview/editor.png) | ![](assets/preview/ingame.png) |
+| ![](assets/preview/editor.png) | ![](assets/preview/ingame.png) | ![](assets/preview/ingame2.png) | ![](assets/preview/monstereditor.png) | ![](assets/preview/charactereditor.png) | ![](assets/preview/buildingeditor.png) | ![](assets/preview/skilleditor.png) |
 
 ## 🚀 What is it?
 
