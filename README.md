@@ -1,7 +1,4 @@
-
-<p align="center">
-  <img src="assets/preview/logo.png" width="320">
-</p>
+![Ingame](assets/preview/logo.png)
 
 # Slime MMORPG Builder
 
