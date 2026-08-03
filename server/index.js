@@ -420,6 +420,8 @@ const gatherNodeAvailableAt = new Map();
 const ITEMS_PATH = path.join(ROOT, 'items/items.json');
 const ICONS_DIR = path.join(ROOT, 'public/assets/icons');
 mkdirSync(ICONS_DIR, { recursive: true });
+const SKYBOX_DIR = path.join(ROOT, 'public/assets/skybox');
+mkdirSync(SKYBOX_DIR, { recursive: true });
 let authoredItems = parseAuthoredItems(JSON.parse(readFileSync(ITEMS_PATH, 'utf-8')));
 // Live lookups by id for src/sim/equipment.js's canEquip/equipItem/computeGearStatBonus —
 // Proxies (not a cached Object.fromEntries snapshot) so they always reflect
@@ -1648,6 +1650,29 @@ app.post('/api/items/icon', iconUpload.single('icon'), (req, res) => {
 app.post('/api/skills/icon', iconUpload.single('icon'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No icon file uploaded (expected an image, field name "icon")' });
   res.json({ url: `/assets/icons/${req.file.filename}` });
+});
+
+// Custom skybox texture upload (World Editor Graphics Settings > Sky tab) —
+// one-off per map, same "upload an image, get a URL back" idiom as
+// /api/items/icon: the URL is stored directly on
+// world.graphicsSettings.sky.textureUrl, no separate catalog file, since it's
+// a single value per map rather than a browsable list like ground textures.
+const skyboxUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, SKYBOX_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const safeExt = ['.png', '.jpg', '.jpeg', '.webp'].includes(ext) ? ext : '.jpg';
+      cb(null, `skybox-${Date.now()}-${Math.floor(Math.random() * 1e9)}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB — equirectangular panoramas are much bigger than a ground-texture tile
+  fileFilter: (_req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+});
+
+app.post('/api/skybox/upload', skyboxUpload.single('texture'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No skybox file uploaded (expected an image, field name "texture")' });
+  res.json({ url: `/assets/skybox/${req.file.filename}` });
 });
 
 // Skill cast-sound upload — a one-off per-skill sound effect, not a browsable

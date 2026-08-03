@@ -6080,6 +6080,7 @@ animateMbWorkspace(); // safe here — monsterBuilderModal is declared above thi
 const graphicsSettingsModal = createTabbedModal('graphics-settings-modal', [
   { id: 'postfx', label: 'Post-Processing' },
   { id: 'lighting', label: 'Lighting & Fog' },
+  { id: 'sky', label: 'Sky' },
   { id: 'ambient', label: 'Ambient & Sound' },
   { id: 'environment', label: 'Environment' },
   { id: 'playercamera', label: 'Player Camera' },
@@ -6265,6 +6266,54 @@ document.getElementById('gfx-anisotropy').addEventListener('change', (e) => {
 document.getElementById('gfx-light-shadowmapsize').innerHTML =
   SHADOW_MAP_SIZES.map((s) => `<option value="${s}">${s} × ${s}</option>`).join('');
 
+// --- Sky tab: custom skybox texture upload (graphicsSettings.sky.textureUrl) ---
+// Not routed through bindGfx*: this is a one-off image upload + URL, not a
+// slider/color/select bound straight to a form control, so it needs its own
+// fetch call (same idiom as the Ground Textures mode upload below).
+function refreshSkyPreview() {
+  const url = world.graphicsSettings.sky?.textureUrl || null;
+  const wrap = document.getElementById('gfx-sky-preview-wrap');
+  const img = document.getElementById('gfx-sky-preview');
+  const removeBtn = document.getElementById('gfx-sky-remove-btn');
+  wrap.style.display = url ? 'block' : 'none';
+  removeBtn.style.display = url ? 'block' : 'none';
+  if (url) img.src = url;
+}
+
+document.getElementById('gfx-sky-upload-btn').addEventListener('click', async () => {
+  const fileInput = document.getElementById('gfx-sky-upload-file');
+  const statusEl = document.getElementById('gfx-sky-upload-status');
+  const file = fileInput.files[0];
+  if (!file) {
+    statusEl.textContent = 'Choose an image file first.';
+    return;
+  }
+  const formData = new FormData();
+  formData.append('texture', file);
+  statusEl.textContent = 'Uploading…';
+  try {
+    const res = await fetch('/api/skybox/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server responded ${res.status}`);
+    world.graphicsSettings.sky.textureUrl = data.url;
+    applyLiveGfx('atmosphere');
+    refreshSkyPreview();
+    fileInput.value = '';
+    statusEl.textContent = 'Uploaded — this map now uses your custom skybox.';
+  } catch (err) {
+    statusEl.textContent = `Upload failed: ${err.message}`;
+  }
+});
+
+document.getElementById('gfx-sky-remove-btn').addEventListener('click', () => {
+  world.graphicsSettings.sky.textureUrl = null;
+  applyLiveGfx('atmosphere');
+  refreshSkyPreview();
+  document.getElementById('gfx-sky-upload-status').textContent = 'Reverted to the procedural sky.';
+});
+
+bindGfxControl('gfx-sky-rotation-speed', 'sky.rotationSpeed', { decimals: 1, liveApply: 'atmosphere' });
+
 // --- Player Camera tab (graphicsSettings.playerCamera) ---
 // Not routed through bindGfxControl: the two zoom limits constrain each other
 // (a Closest above Furthest would be a world file the sim's validator rejects
@@ -6403,6 +6452,14 @@ function populateGraphicsSettingsForm() {
   setRange('gfx-light-shadownormalbias', g.light.shadowNormalBias, 3);
   setRange('gfx-fog-density', g.fog.density, 4);
   setColor('gfx-fog-color', g.fog.color);
+
+  // Same story as shadowMapSize/playerCamera — write the default back in so
+  // a map saved before this field (or before rotationSpeed was added to it)
+  // existed persists it on the next save.
+  if (!g.sky) g.sky = { textureUrl: null, rotationSpeed: 0 };
+  if (g.sky.rotationSpeed === undefined) g.sky.rotationSpeed = 0;
+  setRange('gfx-sky-rotation-speed', g.sky.rotationSpeed, 1);
+  refreshSkyPreview();
 
   setColor('gfx-ambient-sky', g.ambient.skyColor);
   setColor('gfx-ambient-ground', g.ambient.groundColor);
@@ -12657,3 +12714,49 @@ window.__editor = {
   /** Same reasoning for the placed-light pool — bindings only refresh on a frame tick. */
   get worldLights() { return worldLightPool; },
 };
+
+// Every <input type="range"> in the editor is finicky to nudge precisely with
+// a mouse — this bolts a plain-number twin onto each one so a value can be
+// typed exactly instead. Deliberately generic (not per-slider wiring): it
+// doesn't touch whatever readout each slider already has, it just drives the
+// range's own 'input'/'change' events so all existing bindings fire exactly
+// as if the mouse had dragged it there.
+const rangeNumTwins = [];
+function enhanceRangeInputsWithNumberFields() {
+  document.querySelectorAll('input[type="range"]').forEach((range) => {
+    if (range.dataset.numTwin) return;
+    range.dataset.numTwin = '1';
+    range.classList.add('has-num-twin');
+    const num = document.createElement('input');
+    num.type = 'number';
+    num.className = 'range-num-twin';
+    if (range.min !== '') num.min = range.min;
+    if (range.max !== '') num.max = range.max;
+    num.step = range.step || 'any';
+    num.value = range.value;
+    range.insertAdjacentElement('afterend', num);
+    num.addEventListener('input', () => {
+      if (num.value === '') return;
+      const v = parseFloat(num.value);
+      if (Number.isNaN(v)) return;
+      range.value = v; // native range setter clamps to min/max for us
+      range.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    num.addEventListener('change', () => {
+      num.value = range.value; // reflect any clamping back once typing settles
+      range.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    rangeNumTwins.push([range, num]);
+  });
+}
+enhanceRangeInputsWithNumberFields();
+// Lots of sliders (e.g. Graphics Settings) get their .value set programmatically
+// when a modal opens or a selection changes, which fires no 'input' event — an
+// input-listener-only mirror would silently go stale. Polling is the only thing
+// that stays correct regardless of how the underlying value changed.
+setInterval(() => {
+  for (const [range, num] of rangeNumTwins) {
+    if (document.activeElement === num) continue;
+    if (num.value !== range.value) num.value = range.value;
+  }
+}, 250);

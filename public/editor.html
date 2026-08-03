@@ -78,6 +78,10 @@
       border: 1px solid #8a6423; border-radius: 4px; display: block; margin: 4px 0;
     }
     input[type="range"] { width: 100%; }
+    /* Sliders are hard to nudge precisely with a mouse — every one gets a typed-number
+       twin injected next to it (see enhanceRangeInputsWithNumberFields in main.js). */
+    input[type="range"].has-num-twin { width: calc(100% - 64px); vertical-align: middle; margin: 2px 0; }
+    input[type="number"].range-num-twin { width: 52px; margin: 0 0 0 6px; vertical-align: middle; }
     .row { display: flex; gap: 6px; }
     .row > * { flex: 1; }
     #zone-list, #obj-list, #item-list, #npc-list, #quest-list, #builder-shape-list, #builder-object-list, #mb-shape-list, #mb-catalog-list, #path-list, #mountain-list, #groundtex-list, #fz-list { max-height: 180px; overflow-y: auto; font-size: 13px; }
@@ -102,7 +106,16 @@
     #top-right {
       position: fixed; top: 12px; right: 12px; z-index: 10;
       display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+      /* The flex container's own box is sized to its widest child (the long
+         camera-hint text) and stacks down over every pill below it — without
+         this, that whole rectangle (including the empty gaps to the left of
+         narrower children) intercepts clicks meant for the 3D viewport
+         underneath, and right-clicks there fall through to the browser's
+         default context menu instead of the canvas's rotate handler. Each
+         child opts back in below. */
+      pointer-events: none;
     }
+    #top-right > * { pointer-events: auto; }
     #status-line { color: #9c9; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.55); padding: 4px 8px; border-radius: 4px; }
     #camera-hint, #controls-hint { color: #ccc; font-family: monospace; font-size: 13px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; text-align: right; }
     #save-btn { background: #3f8850; border-color: #3f8850; padding: 8px 14px; font-size: 14px; }
@@ -2197,6 +2210,7 @@
       <div class="modal-tabstrip">
         <button class="modal-tab active" data-tab="postfx">Post-Processing</button>
         <button class="modal-tab" data-tab="lighting">Lighting &amp; Fog</button>
+        <button class="modal-tab" data-tab="sky">Sky</button>
         <button class="modal-tab" data-tab="ambient">Ambient &amp; Sound</button>
         <button class="modal-tab" data-tab="environment">Environment</button>
         <button class="modal-tab" data-tab="playercamera">Camera</button>
@@ -2254,6 +2268,22 @@
         <div class="gfx-row"><label>Density</label><input type="range" id="gfx-fog-density" min="0" max="0.02" step="0.0001" /><output id="gfx-fog-density-out"></output></div>
         <div class="gfx-row"><label>Color</label><input type="color" id="gfx-fog-color" /></div>
         <p class="hint">No fog "Start Distance" — this project's exponential-squared fog has no such control (see the plan's skip-list); Intensity and Density would be the same slider twice, so only Density is exposed.</p>
+      </div>
+
+      <div id="graphics-settings-modal-tab-sky" class="modal-tab-panel" style="display:none">
+        <div class="gfx-subhead">Skybox</div>
+        <p class="hint">By default the sky is a procedural gradient dome with drifting clouds, tinted per atmosphere preset. Upload your own equirectangular panorama image (a single wide "360°" photo/painting, 2:1 aspect ratio works best) to replace it — the gradient, clouds and sun glow are hidden while a custom skybox is active; fog, lighting and shadows are unaffected.</p>
+        <div id="gfx-sky-preview-wrap" style="display:none; margin-bottom:8px;">
+          <img id="gfx-sky-preview" style="max-width:100%; max-height:120px; border:1px solid rgba(217,164,65,0.35); border-radius:4px; display:block;" />
+        </div>
+        <input type="file" id="gfx-sky-upload-file" accept="image/*" />
+        <button id="gfx-sky-upload-btn" style="width:100%; margin-top:4px;">⬆ Upload Skybox</button>
+        <p class="hint" id="gfx-sky-upload-status"></p>
+        <button id="gfx-sky-remove-btn" style="width:100%; margin-top:8px; background:#883f3f; border-color:#883f3f; display:none;">Remove Custom Skybox (use procedural sky)</button>
+
+        <div class="gfx-subhead">Movement</div>
+        <div class="gfx-row"><label>Rotation Speed</label><input type="range" id="gfx-sky-rotation-speed" min="-10" max="10" step="0.1" /><output id="gfx-sky-rotation-speed-out"></output></div>
+        <p class="hint">Slowly spins the custom skybox image around the vertical axis — negative reverses direction, 0 holds it still. Only visible while a custom skybox is set above; has no effect on the procedural sky.</p>
       </div>
 
       <div id="graphics-settings-modal-tab-ambient" class="modal-tab-panel" style="display:none">

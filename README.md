@@ -88,7 +88,7 @@ This is an actively developed solo project. Things like proper skill animations,
 
 
 ## 🗺️ Roadmap
-Not sure in which order, but features that will come in the future are: A lot of feature polishing for easier use, Better UI, AI NPCs who can quest, level etc, many more Assets, a Guuld System, saved Character progression, a proper landing page with logins.
+Not sure in which order, but features that will come in the future are: A lot of feature polishing for easier use, Better UI, AI NPCs who can quest, level etc, many more Assets, a Guuld System, saved Character progression, a proper landing page with logins and automatic switch to a Mobile UI.
 
 See:
 

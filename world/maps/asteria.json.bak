@@ -100124,17 +100124,6 @@
     },
     {
       "type": "grass-meadow",
-      "seed": 76695763,
-      "position": {
-        "x": -100.76623494650123,
-        "y": 0,
-        "z": 168.32953654470785
-      },
-      "rotationDeg": -54,
-      "scale": 2.1986886366797678
-    },
-    {
-      "type": "grass-meadow",
       "seed": 294061296,
       "position": {
         "x": -74.15746854412211,
@@ -130556,9 +130545,9 @@
       "type": "grass-meadow",
       "seed": 118300502,
       "position": {
-        "x": 14.389740541477849,
+        "x": 12,
         "y": 0,
-        "z": 217.06470279503014
+        "z": 212
       },
       "rotationDeg": 27,
       "scale": 2.7291541067590446
@@ -136837,9 +136826,9 @@
       "type": "tree-birch",
       "seed": 415788704,
       "position": {
-        "x": -145.313606178989,
+        "x": -153.03970434490043,
         "y": 0,
-        "z": 131.93203674232447
+        "z": 124.92877931627409
       },
       "rotationDeg": -129,
       "scale": 2.2431891025443305
@@ -150136,9 +150125,9 @@
       "type": "grass-meadow",
       "seed": 578208239,
       "position": {
-        "x": 121.67868601639249,
+        "x": 129,
         "y": 0,
-        "z": 77.9769557413267
+        "z": 63
       },
       "rotationDeg": 6,
       "scale": 2.451978552341347
@@ -181943,17 +181932,6 @@
       },
       "rotationDeg": 75,
       "scale": 2.9671340291648693
-    },
-    {
-      "type": "grass-meadow",
-      "seed": 314855934,
-      "position": {
-        "x": -97.87849620932175,
-        "y": 0,
-        "z": 168.82827509731908
-      },
-      "rotationDeg": 42,
-      "scale": 2.3074665934000986
     },
     {
       "type": "grass-meadow",
@@ -279651,9 +279629,9 @@
       "type": "pebbles",
       "seed": 103759616,
       "position": {
-        "x": -92.64728166423441,
+        "x": -95.08356605722783,
         "y": 0,
-        "z": 170.24427788478937
+        "z": 173.70292489830828
       },
       "rotationDeg": 149,
       "scale": 2.91248588342277
@@ -327704,17 +327682,6 @@
     },
     {
       "type": "grass-meadow",
-      "seed": 389974100,
-      "position": {
-        "x": -51.847719128837525,
-        "y": 0,
-        "z": 178.6926737284943
-      },
-      "rotationDeg": -71,
-      "scale": 2.952057109117427
-    },
-    {
-      "type": "grass-meadow",
       "seed": 424598696,
       "position": {
         "x": -54.31100830466142,
@@ -327811,17 +327778,6 @@
       },
       "rotationDeg": 149,
       "scale": 2.8151517524500576
-    },
-    {
-      "type": "grass-meadow",
-      "seed": 308846141,
-      "position": {
-        "x": -52.017527473003106,
-        "y": 0,
-        "z": 177.89071803116738
-      },
-      "rotationDeg": -17,
-      "scale": 2.981199689206822
     },
     {
       "type": "grass-meadow",
@@ -327968,17 +327924,6 @@
     },
     {
       "type": "grass-meadow",
-      "seed": 909067762,
-      "position": {
-        "x": -56.63502374063277,
-        "y": 0,
-        "z": 175.25098104165528
-      },
-      "rotationDeg": 140,
-      "scale": 2.9620246803120125
-    },
-    {
-      "type": "grass-meadow",
       "seed": 485353707,
       "position": {
         "x": -62.9474788014472,
@@ -328086,17 +328031,6 @@
       },
       "rotationDeg": 37,
       "scale": 2.8490956825937332
-    },
-    {
-      "type": "grass-meadow",
-      "seed": 113390518,
-      "position": {
-        "x": -60.41998346065866,
-        "y": 0,
-        "z": 173.79132828513298
-      },
-      "rotationDeg": 161,
-      "scale": 2.8145891792178026
     },
     {
       "type": "grass-meadow",
@@ -330157,17 +330091,6 @@
     },
     {
       "type": "grass-meadow",
-      "seed": 493561240,
-      "position": {
-        "x": -177.2406717402606,
-        "y": 0,
-        "z": 115.73635309658165
-      },
-      "rotationDeg": 156,
-      "scale": 2.818561299092434
-    },
-    {
-      "type": "grass-meadow",
       "seed": 793867128,
       "position": {
         "x": -173.76469906946653,
@@ -330388,17 +330311,6 @@
     },
     {
       "type": "grass-meadow",
-      "seed": 461056841,
-      "position": {
-        "x": -158.96223933342472,
-        "y": 0,
-        "z": 125.73103963739278
-      },
-      "rotationDeg": 132,
-      "scale": 2.8787006093168768
-    },
-    {
-      "type": "grass-meadow",
       "seed": 960500209,
       "position": {
         "x": -165.35035321125406,
@@ -330407,28 +330319,6 @@
       },
       "rotationDeg": 86,
       "scale": 2.875578712559694
-    },
-    {
-      "type": "grass-meadow",
-      "seed": 685993356,
-      "position": {
-        "x": -164.11418467679675,
-        "y": 0,
-        "z": 122.42688992641135
-      },
-      "rotationDeg": -27,
-      "scale": 2.846725812524336
-    },
-    {
-      "type": "grass-meadow",
-      "seed": 75083544,
-      "position": {
-        "x": -164.4175734480358,
-        "y": 0,
-        "z": 122.20609553273259
-      },
-      "rotationDeg": 73,
-      "scale": 2.7917518858662773
     },
     {
       "type": "grass-meadow",
@@ -515319,17 +515209,17 @@
         "intensity": 4
       },
       "sharpen": {
-        "enabled": true,
+        "enabled": false,
         "strength": 0.3
       },
       "bloom": {
         "enabled": true,
-        "strength": 1.6,
+        "strength": 0.55,
         "radius": 0.8,
         "threshold": 0.9
       },
       "dof": {
-        "enabled": false,
+        "enabled": true,
         "focus": 42,
         "aperture": 0.000025,
         "maxBlur": 0.008
@@ -515340,8 +515230,8 @@
         "speed": 0.01
       }
     },
-    "exposure": 1,
-    "saturation": 0.05,
+    "exposure": 1.2,
+    "saturation": 0.15,
     "colorfulness": 1,
     "light": {
       "color": 16709857,
@@ -515376,6 +515266,10 @@
       "pitchDeg": 29,
       "minDistance": 5,
       "maxDistance": 22
+    },
+    "sky": {
+      "textureUrl": "/assets/skybox/skybox-1785750424950-10737527.png",
+      "rotationSpeed": 0.6
     }
   },
   "particleEmitters": [

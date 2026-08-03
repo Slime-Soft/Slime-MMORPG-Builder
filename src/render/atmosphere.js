@@ -30,6 +30,8 @@ import { DEFAULT_SHADOW_MAP_SIZE, recommendedShadowNormalBias } from '../sim/gra
  * @property {number} groundLow    ground tint at low elevation
  * @property {number} groundHigh   ground tint at high elevation (snow caps, rock)
  * @property {number} grassColor   base colour of the grass field
+ * @property {number} cloudColor   lit (top) colour of cloud puffs — tinted per mood rather than plain white
+ * @property {number} cloudShadow  shaded (under) colour of cloud puffs
  */
 
 /** @type {AtmospherePreset[]} */
@@ -40,6 +42,7 @@ export const ATMOSPHERE_PRESETS = [
     sunColor: 0xfff0c8, sunIntensity: 1.75, sunDir: [0.55, 0.6, 0.4],
     hemiSky: 0xbfe8ff, hemiGround: 0x5f7a3a, hemiIntensity: 0.85,
     groundLow: 0x5fa03c, groundHigh: 0x87b85a, grassColor: 0x5aa832,
+    cloudColor: 0xffffff, cloudShadow: 0xd8e4ec,
   },
   {
     id: 'pine', name: 'Snowy Pines',
@@ -47,6 +50,7 @@ export const ATMOSPHERE_PRESETS = [
     sunColor: 0xf0eaff, sunIntensity: 1.15, sunDir: [0.3, 0.6, 0.6],
     hemiSky: 0xdfe6f2, hemiGround: 0x6a7a86, hemiIntensity: 1.0,
     groundLow: 0x4a6a56, groundHigh: 0xe8f0f4, grassColor: 0x4d6b52,
+    cloudColor: 0xf3f7fb, cloudShadow: 0xc7d3de,
   },
   {
     id: 'blossom', name: 'Blossom Valley',
@@ -54,6 +58,7 @@ export const ATMOSPHERE_PRESETS = [
     sunColor: 0xfff0f4, sunIntensity: 1.3, sunDir: [0.5, 0.7, 0.35],
     hemiSky: 0xf6e2ea, hemiGround: 0x8aa06a, hemiIntensity: 1.0,
     groundLow: 0x8fbf72, groundHigh: 0xe6dbe0, grassColor: 0x86bb63,
+    cloudColor: 0xfff3f7, cloudShadow: 0xe6c9d6,
   },
   {
     id: 'gloom', name: 'Deep Forest',
@@ -61,6 +66,7 @@ export const ATMOSPHERE_PRESETS = [
     sunColor: 0xd8ecc0, sunIntensity: 0.9, sunDir: [0.35, 0.8, 0.4],
     hemiSky: 0x9fbfa8, hemiGround: 0x2a3a2a, hemiIntensity: 0.75,
     groundLow: 0x3e7a34, groundHigh: 0x5c8a48, grassColor: 0x46912f,
+    cloudColor: 0xb9c4bb, cloudShadow: 0x6f7a70,
   },
   {
     id: 'dusk', name: 'Dusk',
@@ -68,6 +74,7 @@ export const ATMOSPHERE_PRESETS = [
     sunColor: 0xffbe78, sunIntensity: 1.1, sunDir: [-0.5, 0.25, -0.4],
     hemiSky: 0x6a6ab0, hemiGround: 0x3a2a2a, hemiIntensity: 0.7,
     groundLow: 0x4a5a3a, groundHigh: 0x6a6250, grassColor: 0x46583a,
+    cloudColor: 0xffd6ad, cloudShadow: 0xaa6a5a,
   },
 ];
 
@@ -84,11 +91,17 @@ export const getPreset = (id) =>
  * dome itself is `fog: false`/unlit and clouds should match that — a lit
  * cloud would darken oddly as the sun direction changes between presets.
  */
-function createClouds(radius = 850, count = 9) {
+function createClouds(preset, radius = 850, count = 13) {
   const group = new THREE.Group();
   group.name = 'cloud-layer';
-  const topMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
-  const underMat = new THREE.MeshBasicMaterial({ color: 0xd8e4ec, fog: false });
+  const topMat = new THREE.MeshBasicMaterial({ color: preset.cloudColor ?? 0xffffff, fog: false });
+  const underMat = new THREE.MeshBasicMaterial({ color: preset.cloudShadow ?? 0xd8e4ec, fog: false });
+  // Thin, sparse, semi-transparent streaks sitting higher than the puffy
+  // clusters below — cirrus-style wisps give the sky depth (something small
+  // and far, not just one layer of same-size blobs) for very little cost.
+  const wispMat = new THREE.MeshBasicMaterial({
+    color: preset.cloudColor ?? 0xffffff, fog: false, transparent: true, opacity: 0.32, depthWrite: false,
+  });
 
   for (let i = 0; i < count; i++) {
     const cluster = new THREE.Group();
@@ -96,37 +109,60 @@ function createClouds(radius = 850, count = 9) {
     // (not down at the horizon, not directly at zenith) so clouds read as
     // "in the sky ahead of you" from any direction you're facing.
     const azimuth = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
-    const elevation = 0.35 + Math.random() * 0.4; // ~20-65 degrees up
+    const elevation = 0.3 + Math.random() * 0.45; // ~17-70 degrees up
     const x = Math.cos(azimuth) * Math.cos(elevation);
     const y = Math.sin(elevation);
     const z = Math.sin(azimuth) * Math.cos(elevation);
     cluster.position.set(x * radius, y * radius, z * radius);
     cluster.lookAt(0, 0, 0); // orient so the cluster's own "up" reads correctly from the camera at the dome's center
 
-    const puffCount = 4 + Math.floor(Math.random() * 4);
-    const clusterScale = 18 + Math.random() * 22;
+    const puffCount = 5 + Math.floor(Math.random() * 5);
+    const clusterScale = 20 + Math.random() * 28;
     for (let p = 0; p < puffCount; p++) {
-      const puffR = clusterScale * (0.5 + Math.random() * 0.5);
+      const puffR = clusterScale * (0.45 + Math.random() * 0.55);
       const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(puffR, 0), topMat);
       puff.position.set(
-        (Math.random() - 0.5) * clusterScale * 1.8,
-        Math.random() * clusterScale * 0.5,
+        (Math.random() - 0.5) * clusterScale * 2.1,
+        Math.random() * clusterScale * 0.55,
         (Math.random() - 0.5) * clusterScale * 0.9 // flattened front-to-back — clouds are wide and shallow, not round
       );
-      puff.scale.y *= 0.55;
+      puff.scale.y *= 0.5 + Math.random() * 0.15;
       cluster.add(puff);
     }
-    // One or two darker under-puffs, offset low and behind — reads as the
+    // Two or three darker under-puffs, offset low and behind — reads as the
     // cloud's shaded underside without needing real lighting.
-    for (let p = 0; p < 2; p++) {
+    const underCount = 2 + Math.floor(Math.random() * 2);
+    for (let p = 0; p < underCount; p++) {
       const puffR = clusterScale * (0.45 + Math.random() * 0.3);
       const under = new THREE.Mesh(new THREE.IcosahedronGeometry(puffR, 0), underMat);
-      under.position.set((Math.random() - 0.5) * clusterScale * 1.4, -clusterScale * 0.22, -clusterScale * 0.2);
+      under.position.set((Math.random() - 0.5) * clusterScale * 1.6, -clusterScale * 0.22, -clusterScale * 0.2);
       under.scale.y *= 0.5;
       cluster.add(under);
     }
     group.add(cluster);
   }
+
+  // Cirrus wisps: fewer, higher, stretched thin — a second layer so the sky
+  // doesn't read as one uniform band of same-sized puffs.
+  const wispCount = 6;
+  for (let i = 0; i < wispCount; i++) {
+    const azimuth = (i / wispCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
+    const elevation = 0.55 + Math.random() * 0.3; // higher than the puffy layer
+    const x = Math.cos(azimuth) * Math.cos(elevation);
+    const y = Math.sin(elevation);
+    const z = Math.sin(azimuth) * Math.cos(elevation);
+    const wisp = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), wispMat);
+    wisp.position.set(x * radius, y * radius, z * radius);
+    wisp.lookAt(0, 0, 0);
+    const length = 40 + Math.random() * 50;
+    wisp.scale.set(length, length * 0.12, length * 0.35);
+    wisp.rotation.z = Math.random() * Math.PI;
+    group.add(wisp);
+  }
+  // Kept so a later preset switch can re-tint the whole layer without
+  // rebuilding it (see applyAtmosphere) — all puffs/wisps share one of
+  // these three materials each, so recoloring these three recolors everything.
+  group.userData = { topMat, underMat, wispMat };
   return group;
 }
 
@@ -299,12 +335,17 @@ export function applyAtmosphere(scene, presetOrId, opts = {}) {
 
   let clouds = scene.getObjectByName('cloud-layer');
   if (!clouds) {
-    clouds = createClouds();
+    clouds = createClouds(preset);
     scene.add(clouds);
+  } else {
+    // Switching presets re-tints the existing puffs/wisps rather than
+    // rebuilding the whole cluster layout (which would also restart their
+    // drift rotation from zero, a visible pop).
+    const { topMat, underMat, wispMat } = clouds.userData;
+    if (topMat) topMat.color.setHex(preset.cloudColor ?? 0xffffff);
+    if (underMat) underMat.color.setHex(preset.cloudShadow ?? 0xd8e4ec);
+    if (wispMat) wispMat.color.setHex(preset.cloudColor ?? 0xffffff);
   }
-  // Presets don't currently vary cloud density/color — same clusters read
-  // fine across moods since they're already a fairly neutral white/grey.
-  // If a future preset wants stormy or absent clouds, this is the spot.
 
   let glow = scene.getObjectByName('sun-glow');
   if (!glow) {
@@ -363,6 +404,68 @@ export function applyAtmosphere(scene, presetOrId, opts = {}) {
   return { preset, sun, sky };
 }
 
+// Keyed by URL so switching back and forth between two custom skyboxes (or
+// reapplying the same one on every keystroke while the editor's settings
+// modal is open) doesn't re-download/re-decode the image each time.
+const _skyboxTextureCache = new Map();
+function loadSkyboxTexture(url) {
+  let texture = _skyboxTextureCache.get(url);
+  if (texture) return texture;
+  texture = new THREE.TextureLoader().load(url);
+  // Equirectangular (a single wide "panorama" image, 2:1 aspect) is the
+  // conventional format for a user-supplied "skybox texture" — a cubemap's
+  // six separate faces would need a different upload UI entirely.
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  _skyboxTextureCache.set(url, texture);
+  return texture;
+}
+
+/**
+ * Swap between the procedural gradient sky (dome + clouds + sun sprites) and
+ * a user-supplied equirectangular photo/painting used directly as
+ * `scene.background`. The dome/clouds/glow/rays are only ever hidden, never
+ * disposed — switching back to procedural (or to a different preset) doesn't
+ * need to rebuild them.
+ * A slow constant yaw (degrees/second, via `rotationSpeedDeg`) drifts the
+ * whole panorama across `scene.backgroundRotation` — a real 3D rotation of
+ * the equirectangular background (not a 2D UV scroll), which is what actually
+ * sells "moving sky" for a starfield/cloud photo the way a static image can't.
+ * The speed is stashed on `scene.userData` rather than threaded through
+ * updateAtmosphere's argument list, since every caller already calls that
+ * once a frame with just camera/focus/elapsed and shouldn't need to know this
+ * exists.
+ * @param {THREE.Scene} scene
+ * @param {string|null} textureUrl
+ * @param {number} [rotationSpeedDeg] degrees/second; 0 = static, sign sets direction
+ */
+export function applySkybox(scene, textureUrl, rotationSpeedDeg = 0) {
+  const useCustom = !!textureUrl;
+  const dome = scene.getObjectByName('sky-dome');
+  const clouds = scene.getObjectByName('cloud-layer');
+  const glow = scene.getObjectByName('sun-glow');
+  const rays = scene.getObjectByName('sun-rays');
+  if (dome) dome.visible = !useCustom;
+  if (clouds) clouds.visible = !useCustom;
+  if (glow) glow.visible = !useCustom;
+  if (rays) rays.visible = !useCustom;
+
+  if (useCustom) {
+    scene.background = loadSkyboxTexture(textureUrl);
+    scene.userData.skyRotationSpeedRad = THREE.MathUtils.degToRad(rotationSpeedDeg);
+  } else {
+    scene.userData.skyRotationSpeedRad = 0;
+    scene.backgroundRotation.set(0, 0, 0);
+    if (scene.background?.isTexture) {
+      // Caller (applyGraphicsSettingsToAtmosphere) already set scene.background
+      // to the fog colour before calling this — nothing further to do; this
+      // branch only exists so a stale texture reference can't linger if some
+      // other caller skips that step.
+      scene.background = new THREE.Color(scene.fog?.color ?? 0x000000);
+    }
+  }
+}
+
 /**
  * Re-tunes the sun light, hemisphere ambient light, and fog from a map's own
  * graphicsSettings (src/sim/graphicsSettings.js) — layered on top of whatever
@@ -384,6 +487,10 @@ export function applyGraphicsSettingsToAtmosphere(scene, graphicsSettings) {
   scene.background = new THREE.Color(fog.color);
   const sky = scene.getObjectByName('sky-dome');
   if (sky) sky.material.uniforms.horizonColor.value.setHex(fog.color);
+  // Maps saved before this field existed simply have no custom sky — same
+  // optional-field convention as shadowMapSize/playerCamera elsewhere in
+  // this file (see defaultGraphicsSettings).
+  applySkybox(scene, graphicsSettings.sky?.textureUrl || null, graphicsSettings.sky?.rotationSpeed || 0);
 
   const hemi = scene.getObjectByName('hemi-light');
   if (hemi) {
@@ -466,6 +573,13 @@ export function sunDirection(sun) {
  * origin). Call once per frame with the camera and the player's position.
  */
 export function updateAtmosphere(scene, cameraPosition, focusPosition = cameraPosition, elapsed = 0) {
+  // A pure function of total elapsed time, same idiom as the cloud drift and
+  // sun-rays spin below — setting the angle outright rather than
+  // accumulating a per-frame delta means it can't drift out of sync with
+  // variable frame times and is trivially replayable/deterministic.
+  const skyRotationSpeedRad = scene.userData.skyRotationSpeedRad || 0;
+  if (skyRotationSpeedRad) scene.backgroundRotation.y = skyRotationSpeedRad * elapsed;
+
   const sky = scene.getObjectByName('sky-dome');
   if (sky) sky.position.copy(cameraPosition);
 

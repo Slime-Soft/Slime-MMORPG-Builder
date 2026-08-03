@@ -99,6 +99,7 @@ export function defaultGraphicsSettings() {
     },
     ambient: { skyColor: 0xbfe8ff, groundColor: 0x5f7a3a, intensity: 0.85 },
     fog: { density: 0.0026, color: 0xf0e6b8 },
+    sky: { textureUrl: null, rotationSpeed: 0 }, // custom equirectangular skybox image + its drift in deg/sec; null textureUrl = procedural gradient dome (see atmosphere.js's applySkybox)
     sound: { defaultMusicId: null, defaultAmbientSoundId: null }, // plays outside every zone
     environmental: { type: null, intensity: 1.0 },
     playerCamera: { ...PLAYER_CAMERA_DEFAULTS },
@@ -146,6 +147,21 @@ export function validateGraphicsSettings(settings) {
   if (!fog || typeof fog !== 'object') throw new Error('graphicsSettings.fog must be an object');
   if (typeof fog.density !== 'number' || typeof fog.color !== 'number') {
     throw new Error('graphicsSettings.fog.density and .color must be numbers');
+  }
+
+  // Optional for the same reason shadowMapSize/playerCamera are: maps saved
+  // before this field existed lack it, and absent means the procedural sky.
+  if (settings.sky !== undefined) {
+    const sky = settings.sky;
+    if (!sky || typeof sky !== 'object') throw new Error('graphicsSettings.sky must be an object');
+    if (sky.textureUrl !== null && typeof sky.textureUrl !== 'string') {
+      throw new Error('graphicsSettings.sky.textureUrl must be a string or null');
+    }
+    // Optional for the same reason: maps saved before rotation existed have
+    // textureUrl but no rotationSpeed. Absent means static (0).
+    if (sky.rotationSpeed !== undefined && typeof sky.rotationSpeed !== 'number') {
+      throw new Error('graphicsSettings.sky.rotationSpeed must be a number');
+    }
   }
 
   if (!sound || typeof sound !== 'object') throw new Error('graphicsSettings.sound must be an object');
