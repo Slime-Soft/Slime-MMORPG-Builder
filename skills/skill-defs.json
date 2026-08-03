@@ -76,7 +76,8 @@
       "impactAnchor": "target"
     },
     "legacyKind": "melee",
-    "legacyPower": 29
+    "legacyPower": 29,
+    "icon": "/assets/icons/icon-1785778805485-179340994.png"
   },
   {
     "id": "taunt",
@@ -112,14 +113,24 @@
           "atMs": 0,
           "part": "armR",
           "rotationDeg": {
-            "x": -60,
+            "x": 0,
             "y": 0,
             "z": 0
           }
         },
         {
           "type": "pose",
-          "atMs": 218,
+          "atMs": 224,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -49,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 447,
           "part": "armR",
           "rotationDeg": {
             "x": 0,
@@ -128,18 +139,8 @@
           }
         },
         {
-          "type": "pose",
-          "atMs": 445,
-          "part": "armR",
-          "rotationDeg": {
-            "x": -60,
-            "y": 0,
-            "z": 0
-          }
-        },
-        {
           "type": "cast",
-          "atMs": 445,
+          "atMs": 200,
           "vfxId": "taunt-ring",
           "anchor": "hand"
         }
@@ -151,7 +152,8 @@
       "impactAnchor": "target"
     },
     "legacyKind": "buff",
-    "legacyPower": 0
+    "legacyPower": 0,
+    "icon": "/assets/icons/icon-1785778967396-883002960.png"
   },
   {
     "id": "shield-wall",
@@ -189,7 +191,8 @@
       "impactAnchor": "target"
     },
     "legacyKind": "buff",
-    "legacyPower": 0
+    "legacyPower": 0,
+    "icon": "/assets/icons/icon-1785779032780-315013721.png"
   },
   {
     "id": "sweeping-strike",
@@ -265,7 +268,8 @@
       "impactAnchor": "hand"
     },
     "legacyKind": "melee",
-    "legacyPower": 38
+    "legacyPower": 38,
+    "icon": "/assets/icons/icon-1785779186748-856696535.png"
   },
   {
     "id": "last-stand",
@@ -301,7 +305,8 @@
       "castAnchor": "chest"
     },
     "legacyKind": "buff",
-    "legacyPower": 0
+    "legacyPower": 0,
+    "icon": "/assets/icons/icon-1785779275801-665917054.png"
   },
   {
     "id": "slash",
@@ -330,14 +335,48 @@
     "animation": {
       "windupMs": 100,
       "effectMs": 150,
-      "recoveryMs": 150
+      "recoveryMs": 150,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 199,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 396,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "impactVfxId": "sword-slash-arc",
       "impactAnchor": "hand"
     },
     "legacyKind": "melee",
-    "legacyPower": 21
+    "legacyPower": 21,
+    "icon": "/assets/icons/icon-1785781433014-153397999.png"
   },
   {
     "id": "rending-cut",
@@ -367,27 +406,67 @@
         "damageType": "physical",
         "damagePerTick": 6,
         "tickMs": 1000,
-        "durationMs": 6000
+        "durationMs": 600
       }
     ],
     "animation": {
       "windupMs": 200,
       "effectMs": 150,
-      "recoveryMs": 200
+      "recoveryMs": 200,
+      "timeline": [
+        {
+          "type": "impact",
+          "atMs": 0,
+          "vfxId": "impact-holy",
+          "anchor": "target"
+        },
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 272,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -29,
+            "y": -5,
+            "z": -8
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 548,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "impactVfxId": "poison-cloud",
       "impactAnchor": "target"
     },
     "legacyKind": "melee",
-    "legacyPower": 38
+    "legacyPower": 38,
+    "icon": "/assets/icons/icon-1785781646685-498288058.png"
   },
   {
     "id": "charge",
     "classId": "warrior",
     "key": 3,
-    "name": "Charge",
-    "description": "Close the distance and stun briefly.",
+    "name": "Stun",
+    "description": "Stun briefly.",
     "resourceCost": 20,
     "cooldownMs": 10000,
     "castMs": 100,
@@ -402,18 +481,56 @@
     "effects": [
       {
         "type": "damage",
-        "amount": 39,
+        "amount": 10,
         "damageType": "physical"
       },
       {
         "type": "stun",
-        "durationMs": 1000
+        "durationMs": 200
       }
     ],
     "animation": {
       "windupMs": 100,
       "effectMs": 250,
-      "recoveryMs": 200
+      "recoveryMs": 200,
+      "timeline": [
+        {
+          "type": "impact",
+          "atMs": 0,
+          "vfxId": "stun-stars",
+          "anchor": "target"
+        },
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "legL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 267,
+          "part": "legL",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 548,
+          "part": "legL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        }
+      ]
     },
     "vfx": {
       "castVfxId": "charge-dust-trail",
@@ -422,7 +539,8 @@
       "impactAnchor": "target"
     },
     "legacyKind": "melee",
-    "legacyPower": 39
+    "legacyPower": 39,
+    "icon": "/assets/icons/icon-1785781935565-523356183.png"
   },
   {
     "id": "whirlwind",
@@ -452,14 +570,80 @@
     "animation": {
       "windupMs": 250,
       "effectMs": 250,
-      "recoveryMs": 300
+      "recoveryMs": 300,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 201,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 409,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -40,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 594,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 795,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "cast",
+          "atMs": 100,
+          "vfxId": "whirlwind-spin-blur",
+          "anchor": "hand"
+        },
+        {
+          "type": "impact",
+          "atMs": 100,
+          "vfxId": "whirlwind",
+          "anchor": "target"
+        }
+      ]
     },
     "vfx": {
       "castVfxId": "whirlwind-spin-blur",
-      "castAnchor": "chest"
+      "castAnchor": "chest",
+      "impactAnchor": "target"
     },
     "legacyKind": "melee",
-    "legacyPower": 52
+    "legacyPower": 52,
+    "icon": "/assets/icons/icon-1785782013925-184871772.png"
   },
   {
     "id": "execute",
@@ -488,14 +672,60 @@
     "animation": {
       "windupMs": 200,
       "effectMs": 200,
-      "recoveryMs": 250
+      "recoveryMs": 250,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 315,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -180,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 641,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "cast",
+          "atMs": 100,
+          "vfxId": "wind-slash",
+          "anchor": "hand"
+        },
+        {
+          "type": "impact",
+          "atMs": 100,
+          "vfxId": "blood-splatter",
+          "anchor": "target"
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "impactVfxId": "execute-critical-slash",
       "impactAnchor": "target"
     },
     "legacyKind": "melee",
-    "legacyPower": 64
+    "legacyPower": 64,
+    "icon": "/assets/icons/icon-1785782222393-194928360.png"
   },
   {
     "id": "firebolt",
@@ -591,7 +821,8 @@
     "legacyKind": "ranged",
     "legacyPower": 20,
     "requiredLevel": 1,
-    "levelUpgrades": []
+    "levelUpgrades": [],
+    "icon": "/assets/icons/icon-1785778563437-135937172.png"
   },
   {
     "id": "frost-nova",
@@ -632,7 +863,8 @@
       "castAnchor": "ground"
     },
     "legacyKind": "ranged",
-    "legacyPower": 48
+    "legacyPower": 48,
+    "icon": "/assets/icons/icon-1785778576145-360279366.png"
   },
   {
     "id": "fireball",
@@ -671,7 +903,8 @@
       "impactAnchor": "target"
     },
     "legacyKind": "ranged",
-    "legacyPower": 47
+    "legacyPower": 47,
+    "icon": "/assets/icons/icon-1785778587205-461026553.png"
   },
   {
     "id": "arcane-shield",
@@ -708,7 +941,8 @@
       "castAnchor": "chest"
     },
     "legacyKind": "buff",
-    "legacyPower": 0
+    "legacyPower": 0,
+    "icon": "/assets/icons/icon-1785778597287-112702037.png"
   },
   {
     "id": "meteor",
@@ -746,13 +980,14 @@
       "impactAnchor": "ground"
     },
     "legacyKind": "ranged",
-    "legacyPower": 116
+    "legacyPower": 116,
+    "icon": "/assets/icons/icon-1785778671089-490467678.png"
   },
   {
     "id": "quick-shot",
     "classId": "archer",
-    "key": 1,
-    "name": "Quick Shot",
+    "key": 2,
+    "name": "Thunder Arrow",
     "description": "A fast, low-damage arrow.",
     "resourceCost": 10,
     "cooldownMs": 1500,
@@ -770,25 +1005,73 @@
         "type": "damage",
         "amount": 14,
         "damageType": "physical"
+      },
+      {
+        "type": "stun",
+        "durationMs": 200
       }
     ],
     "animation": {
       "windupMs": 100,
       "effectMs": 100,
-      "recoveryMs": 100
+      "recoveryMs": 100,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 151,
+          "part": "armL",
+          "rotationDeg": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 256,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "travel",
+          "atMs": 236,
+          "endAtMs": 596,
+          "vfxId": "arrow-projectile"
+        },
+        {
+          "type": "impact",
+          "atMs": 396,
+          "vfxId": "lightning-strike",
+          "anchor": "target"
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "travelVfxId": "arrow-projectile",
       "impactVfxId": "impact-burst",
       "impactAnchor": "target"
     },
     "legacyKind": "ranged",
-    "legacyPower": 14
+    "legacyPower": 14,
+    "icon": "/assets/icons/icon-1785779873544-281878756.png"
   },
   {
     "id": "aimed-shot",
-    "classId": "archer",
-    "key": 2,
     "name": "Aimed Shot",
     "description": "A slow but powerful precision shot.",
     "resourceCost": 25,
@@ -824,8 +1107,6 @@
   },
   {
     "id": "multi-shot",
-    "classId": "mage",
-    "key": 7,
     "name": "Multi Shot",
     "description": "Fires arrows at multiple targets.",
     "resourceCost": 30,
@@ -863,8 +1144,6 @@
   },
   {
     "id": "evasive-roll",
-    "classId": "archer",
-    "key": 4,
     "name": "Evasive Roll",
     "description": "Roll away, briefly untargetable.",
     "resourceCost": 20,
@@ -925,15 +1204,61 @@
     "animation": {
       "windupMs": 400,
       "effectMs": 300,
-      "recoveryMs": 350
+      "recoveryMs": 350,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 527,
+          "part": "armL",
+          "rotationDeg": {
+            "x": -119.9,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 1046,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "travel",
+          "atMs": 500,
+          "endAtMs": 1346,
+          "vfxId": "multishot-fan"
+        },
+        {
+          "type": "impact",
+          "atMs": 1046,
+          "vfxId": "rain-of-arrows",
+          "anchor": "target"
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "travelVfxId": "rain-of-arrows-fall",
       "impactVfxId": "impact-burst",
       "impactAnchor": "ground"
     },
     "legacyKind": "ranged",
-    "legacyPower": 83
+    "legacyPower": 83,
+    "icon": "/assets/icons/icon-1785780573004-988197679.png"
   },
   {
     "id": "heal",
@@ -962,14 +1287,54 @@
     "animation": {
       "windupMs": 300,
       "effectMs": 150,
-      "recoveryMs": 150
+      "recoveryMs": 150,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 297,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 600,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "impact",
+          "atMs": 100,
+          "vfxId": "heal-sparkle",
+          "anchor": "target"
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "impactVfxId": "heal-sparkle",
       "impactAnchor": "target"
     },
     "legacyKind": "heal",
-    "legacyPower": 24
+    "legacyPower": 24,
+    "icon": "/assets/icons/icon-1785782732849-236892584.png"
   },
   {
     "id": "renew",
@@ -1000,14 +1365,60 @@
     "animation": {
       "windupMs": 150,
       "effectMs": 100,
-      "recoveryMs": 150
+      "recoveryMs": 150,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 201,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -30,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 396,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "cast",
+          "atMs": 100,
+          "vfxId": "life-drain-beam",
+          "anchor": "hand"
+        },
+        {
+          "type": "impact",
+          "atMs": 396,
+          "vfxId": "healing-rain",
+          "anchor": "target"
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "impactVfxId": "renew-glow",
       "impactAnchor": "target"
     },
     "legacyKind": "heal",
-    "legacyPower": 30
+    "legacyPower": 30,
+    "icon": "/assets/icons/icon-1785783111894-190962321.png"
   },
   {
     "id": "smite",
@@ -1036,15 +1447,67 @@
     "animation": {
       "windupMs": 200,
       "effectMs": 150,
-      "recoveryMs": 150
+      "recoveryMs": 150,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 249,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -60,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 495,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "impact",
+          "atMs": 495,
+          "vfxId": "impact-holy",
+          "anchor": "target"
+        },
+        {
+          "type": "travel",
+          "atMs": 495,
+          "endAtMs": 795,
+          "vfxId": "holy-smite-beam"
+        },
+        {
+          "type": "cast",
+          "atMs": 495,
+          "vfxId": "impact-holy",
+          "anchor": "hand"
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "travelVfxId": "holy-smite-beam",
       "impactVfxId": "impact-burst",
       "impactAnchor": "target"
     },
     "legacyKind": "ranged",
-    "legacyPower": 22
+    "legacyPower": 22,
+    "icon": "/assets/icons/icon-1785783387955-278300816.png"
   },
   {
     "id": "shield-of-faith",
@@ -1068,20 +1531,61 @@
       {
         "type": "shield",
         "amount": 40,
-        "durationMs": 8000
+        "durationMs": 800
       }
     ],
     "animation": {
       "windupMs": 150,
       "effectMs": 100,
-      "recoveryMs": 200
+      "recoveryMs": 200,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 226,
+          "part": "armL",
+          "rotationDeg": {
+            "x": -30,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 445,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "impact",
+          "atMs": 100,
+          "vfxId": "renew-aura",
+          "anchor": "target",
+          "durationMs": 800
+        }
+      ]
     },
     "vfx": {
+      "castAnchor": "hand",
       "impactVfxId": "shield-bubble",
       "impactAnchor": "target"
     },
     "legacyKind": "buff",
-    "legacyPower": 0
+    "legacyPower": 0,
+    "icon": "/assets/icons/icon-1785783698961-108185334.png"
   },
   {
     "id": "mass-heal",
@@ -1111,14 +1615,60 @@
     "animation": {
       "windupMs": 600,
       "effectMs": 300,
-      "recoveryMs": 400
+      "recoveryMs": 400,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 670,
+          "part": "armR",
+          "rotationDeg": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 1282,
+          "part": "armR",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "impact",
+          "atMs": 1282,
+          "vfxId": "holy-nova",
+          "anchor": "target"
+        },
+        {
+          "type": "cast",
+          "atMs": 1282,
+          "vfxId": "holy-nova",
+          "anchor": "hand"
+        }
+      ]
     },
     "vfx": {
       "castVfxId": "heal-sparkle",
-      "castAnchor": "chest"
+      "castAnchor": "chest",
+      "impactAnchor": "target"
     },
     "legacyKind": "heal",
-    "legacyPower": 66
+    "legacyPower": 66,
+    "icon": "/assets/icons/icon-1785783944124-160517954.png"
   },
   {
     "id": "new-skill",
@@ -1155,6 +1705,274 @@
     "vfx": {
       "impactVfxId": "impact-burst",
       "impactAnchor": "target"
-    }
+    },
+    "classId": "archer",
+    "key": 3,
+    "requiredLevel": 1
+  },
+  {
+    "id": "quick-shot-copy",
+    "name": "Frost Arrow",
+    "description": "Slows the enemy.",
+    "resourceCost": 10,
+    "cooldownMs": 1500,
+    "castMs": 100,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 14,
+        "damageType": "physical"
+      },
+      {
+        "type": "slow",
+        "durationMs": 200,
+        "slowPercent": 0.5
+      }
+    ],
+    "animation": {
+      "windupMs": 100,
+      "effectMs": 100,
+      "recoveryMs": 100,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 151,
+          "part": "armL",
+          "rotationDeg": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 256,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "travel",
+          "atMs": 236,
+          "endAtMs": 596,
+          "vfxId": "arrow-projectile"
+        },
+        {
+          "type": "impact",
+          "atMs": 396,
+          "vfxId": "icicle-burst",
+          "anchor": "target"
+        }
+      ]
+    },
+    "vfx": {
+      "castAnchor": "hand",
+      "travelVfxId": "arrow-projectile",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 14,
+    "icon": "/assets/icons/icon-1785781063908-410379198.png"
+  },
+  {
+    "id": "quick-shot-copy-copy",
+    "name": "Poison Arrow",
+    "description": "Poisons the enemy",
+    "resourceCost": 10,
+    "cooldownMs": 1500,
+    "castMs": 100,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 14,
+        "damageType": "physical"
+      },
+      {
+        "type": "dot",
+        "damagePerTick": 10,
+        "tickMs": 100,
+        "durationMs": 500,
+        "damageType": "poison"
+      }
+    ],
+    "animation": {
+      "windupMs": 100,
+      "effectMs": 100,
+      "recoveryMs": 100,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 151,
+          "part": "armL",
+          "rotationDeg": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 256,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "travel",
+          "atMs": 236,
+          "endAtMs": 596,
+          "vfxId": "arrow-projectile"
+        },
+        {
+          "type": "impact",
+          "atMs": 396,
+          "vfxId": "plague-swarm",
+          "anchor": "target"
+        }
+      ]
+    },
+    "vfx": {
+      "castAnchor": "hand",
+      "travelVfxId": "arrow-projectile",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 14,
+    "icon": "/assets/icons/icon-1785780428564-517420442.png",
+    "classId": "archer",
+    "key": 4,
+    "requiredLevel": 1
+  },
+  {
+    "id": "quick-shot-copy-2",
+    "name": "Fire Arrow",
+    "description": "A burning high damage arrow",
+    "resourceCost": 10,
+    "cooldownMs": 3500,
+    "castMs": 100,
+    "canMoveDuringCast": true,
+    "targeting": {
+      "modes": [
+        "enemy"
+      ],
+      "range": 15,
+      "shape": "single"
+    },
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 14,
+        "damageType": "physical"
+      },
+      {
+        "type": "knockback",
+        "distance": 10
+      }
+    ],
+    "animation": {
+      "windupMs": 100,
+      "effectMs": 100,
+      "recoveryMs": 100,
+      "timeline": [
+        {
+          "type": "pose",
+          "atMs": 0,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 151,
+          "part": "armL",
+          "rotationDeg": {
+            "x": -90,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "pose",
+          "atMs": 256,
+          "part": "armL",
+          "rotationDeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "type": "travel",
+          "atMs": 236,
+          "endAtMs": 596,
+          "vfxId": "arrow-projectile"
+        },
+        {
+          "type": "impact",
+          "atMs": 396,
+          "vfxId": "impact-fire",
+          "anchor": "target"
+        }
+      ]
+    },
+    "vfx": {
+      "castAnchor": "hand",
+      "travelVfxId": "arrow-projectile",
+      "impactVfxId": "impact-burst",
+      "impactAnchor": "target"
+    },
+    "legacyKind": "ranged",
+    "legacyPower": 14,
+    "icon": "/assets/icons/icon-1785780802857-32895140.png",
+    "classId": "archer",
+    "key": 1,
+    "requiredLevel": 1
   }
 ]

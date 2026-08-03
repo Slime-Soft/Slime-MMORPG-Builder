@@ -66687,9 +66687,9 @@
       "type": "bld-inn",
       "seed": 604775492,
       "position": {
-        "x": -16.892818837980748,
+        "x": -16.780510022217733,
         "y": 0,
-        "z": 78.79118013413476
+        "z": 79.12994650239835
       },
       "scale": 1,
       "rotation": {
@@ -67307,9 +67307,9 @@
       "type": "street-lantern",
       "seed": 222005593,
       "position": {
-        "x": -5.625858947663631,
+        "x": 6,
         "y": 0,
-        "z": 86.00435515942034
+        "z": 80
       },
       "rotationDeg": 141.5,
       "scale": 1
@@ -67469,9 +67469,9 @@
       "type": "bench",
       "seed": 33877694,
       "position": {
-        "x": -14.045998090650386,
+        "x": 5,
         "y": 0,
-        "z": 84.92991860587972
+        "z": 90
       },
       "scale": 1,
       "rotation": {
@@ -69266,9 +69266,9 @@
       "type": "street-lantern",
       "seed": 452261114,
       "position": {
-        "x": -5.744652422283936,
+        "x": 2,
         "y": 0,
-        "z": 73.63277762191427
+        "z": 53
       },
       "rotationDeg": -158.6,
       "scale": 1
@@ -189090,9 +189090,9 @@
       "type": "flowerbed-long",
       "seed": 162761570,
       "position": {
-        "x": -21.427031724826975,
+        "x": 0,
         "y": 0,
-        "z": 83.45336381586013
+        "z": 91
       },
       "scale": 1,
       "rotation": {
@@ -339715,9 +339715,9 @@
       "type": "bridge-stone-ramp",
       "seed": 273461582,
       "position": {
-        "x": -2.874189798348656,
+        "x": -3.1410174290951174,
         "y": 0,
-        "z": 182.0598360852355
+        "z": 181.94807543020204
       },
       "scale": 1.6,
       "rotation": {
@@ -341061,32 +341061,12 @@
       "facingDeg": -45
     },
     {
-      "id": "npc-488120158",
-      "name": "City Guard",
-      "position": {
-        "x": -3.5084775645619324,
-        "y": 0,
-        "z": 136.84595444773575
-      },
-      "appearance": {
-        "seed": 212909122,
-        "classId": "guardian"
-      },
-      "dialog": [
-        "I wonder what my wife is cooking today."
-      ],
-      "wander": true,
-      "wanderRadius": 8,
-      "speed": 1.2,
-      "facingDeg": 0
-    },
-    {
       "id": "npc-616268206",
       "name": "City Guard",
       "position": {
-        "x": 3.785135146839114,
+        "x": 4,
         "y": 0,
-        "z": 136.79733150087677
+        "z": 136
       },
       "appearance": {
         "seed": 212909122,
@@ -341438,6 +341418,26 @@
       "wander": true,
       "wanderRadius": 2,
       "speed": 1.13,
+      "facingDeg": 0
+    },
+    {
+      "id": "npc-587081444",
+      "name": "City Guard",
+      "position": {
+        "x": -3,
+        "y": 0,
+        "z": 136
+      },
+      "appearance": {
+        "seed": 212909122,
+        "classId": "guardian"
+      },
+      "dialog": [
+        "I wonder what my wife is cooking today."
+      ],
+      "wander": false,
+      "wanderRadius": 8,
+      "speed": 1.2,
       "facingDeg": 0
     }
   ],

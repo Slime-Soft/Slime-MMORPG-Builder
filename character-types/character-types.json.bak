@@ -7726,5 +7726,447 @@
       "mainHand": null,
       "offHand": null
     }
+  },
+  {
+    "id": "merchant-copy-2-copy",
+    "name": "Miner",
+    "kind": "npc",
+    "stance": "humanoid",
+    "slots": [
+      {
+        "role": "torso",
+        "anchor": {
+          "x": 0,
+          "y": 0.95,
+          "z": 0
+        },
+        "shapes": [
+          {
+            "id": "chest",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.52,
+              "y": 0.7,
+              "z": 0.38
+            },
+            "color": 14342615
+          },
+          {
+            "id": "belt",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.24,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.56,
+              "y": 0.1,
+              "z": 0.42
+            },
+            "color": 4140058
+          },
+          {
+            "id": "strapL",
+            "kind": "box",
+            "position": {
+              "x": -0.13,
+              "y": 0.04,
+              "z": 0.19
+            },
+            "scale": {
+              "x": 0.09,
+              "y": 0.62,
+              "z": 0.05
+            },
+            "color": 4140058,
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": -10
+            }
+          },
+          {
+            "id": "strapR",
+            "kind": "box",
+            "position": {
+              "x": 0.13,
+              "y": 0.04,
+              "z": 0.19
+            },
+            "scale": {
+              "x": 0.09,
+              "y": 0.62,
+              "z": 0.05
+            },
+            "color": 4140058,
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 10
+            }
+          },
+          {
+            "id": "buckle",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.24,
+              "z": 0.21
+            },
+            "scale": {
+              "x": 0.1,
+              "y": 0.1,
+              "z": 0.05
+            },
+            "color": 14264618
+          }
+        ]
+      },
+      {
+        "role": "head",
+        "anchor": {
+          "x": 0,
+          "y": 1.5,
+          "z": 0
+        },
+        "shapes": [
+          {
+            "id": "head",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.46
+            },
+            "color": 15251850
+          },
+          {
+            "id": "hairTop",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": 0.19,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.54,
+              "y": 0.18,
+              "z": 0.5
+            },
+            "color": 13750737
+          },
+          {
+            "id": "hairBack",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": -0.19
+            },
+            "scale": {
+              "x": 0.52,
+              "y": 0.36,
+              "z": 0.14
+            },
+            "color": 13419960
+          },
+          {
+            "id": "eyeL",
+            "kind": "box",
+            "position": {
+              "x": -0.11,
+              "y": 0.02,
+              "z": 0.22
+            },
+            "scale": {
+              "x": 0.07,
+              "y": 0.06,
+              "z": 0.04
+            },
+            "color": 2960779
+          },
+          {
+            "id": "eyeR",
+            "kind": "box",
+            "position": {
+              "x": 0.11,
+              "y": 0.02,
+              "z": 0.22
+            },
+            "scale": {
+              "x": 0.07,
+              "y": 0.06,
+              "z": 0.04
+            },
+            "color": 5131912
+          },
+          {
+            "id": "beard",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.21,
+              "z": 0.12
+            },
+            "scale": {
+              "x": 0.51,
+              "y": 0.26,
+              "z": 0.28
+            },
+            "color": 13551813
+          },
+          {
+            "id": "stache",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.09,
+              "z": 0.21
+            },
+            "scale": {
+              "x": 0.24,
+              "y": 0.06,
+              "z": 0.08
+            },
+            "color": 12365220
+          }
+        ]
+      },
+      {
+        "role": "armL",
+        "anchor": {
+          "x": -0.34,
+          "y": 1.15,
+          "z": 0
+        },
+        "shapes": [
+          {
+            "id": "shoulder",
+            "kind": "sphere",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.23,
+              "y": 0.23,
+              "z": 0.23
+            },
+            "color": 9144190
+          },
+          {
+            "id": "upper",
+            "kind": "capsule",
+            "position": {
+              "x": 0,
+              "y": -0.24,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.16,
+              "y": 0.44,
+              "z": 0.16
+            },
+            "color": 9144190
+          },
+          {
+            "id": "hand",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.55,
+              "z": 0.01
+            },
+            "scale": {
+              "x": 0.15,
+              "y": 0.15,
+              "z": 0.16
+            },
+            "color": 15251850
+          }
+        ]
+      },
+      {
+        "role": "armR",
+        "anchor": {
+          "x": 0.34,
+          "y": 1.15,
+          "z": 0
+        },
+        "shapes": [
+          {
+            "id": "shoulder",
+            "kind": "sphere",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.23,
+              "y": 0.23,
+              "z": 0.23
+            },
+            "color": 9144190
+          },
+          {
+            "id": "upper",
+            "kind": "capsule",
+            "position": {
+              "x": 0,
+              "y": -0.24,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.16,
+              "y": 0.44,
+              "z": 0.16
+            },
+            "color": 9144190
+          },
+          {
+            "id": "hand",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.55,
+              "z": 0.01
+            },
+            "scale": {
+              "x": 0.15,
+              "y": 0.15,
+              "z": 0.16
+            },
+            "color": 15251850
+          }
+        ]
+      },
+      {
+        "role": "legL",
+        "anchor": {
+          "x": -0.13,
+          "y": 0.6,
+          "z": 0
+        },
+        "shapes": [
+          {
+            "id": "hip",
+            "kind": "sphere",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.2,
+              "y": 0.2,
+              "z": 0.2
+            },
+            "color": 4140058
+          },
+          {
+            "id": "thigh",
+            "kind": "capsule",
+            "position": {
+              "x": 0,
+              "y": -0.24,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.17,
+              "y": 0.44,
+              "z": 0.17
+            },
+            "color": 4140058
+          },
+          {
+            "id": "boot",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.5,
+              "z": 0.03
+            },
+            "scale": {
+              "x": 0.19,
+              "y": 0.16,
+              "z": 0.28
+            },
+            "color": 6965802
+          }
+        ]
+      },
+      {
+        "role": "legR",
+        "anchor": {
+          "x": 0.13,
+          "y": 0.6,
+          "z": 0
+        },
+        "shapes": [
+          {
+            "id": "hip",
+            "kind": "sphere",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.2,
+              "y": 0.2,
+              "z": 0.2
+            },
+            "color": 4140058
+          },
+          {
+            "id": "thigh",
+            "kind": "capsule",
+            "position": {
+              "x": 0,
+              "y": -0.24,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.17,
+              "y": 0.44,
+              "z": 0.17
+            },
+            "color": 4140058
+          },
+          {
+            "id": "boot",
+            "kind": "box",
+            "position": {
+              "x": 0,
+              "y": -0.5,
+              "z": 0.03
+            },
+            "scale": {
+              "x": 0.19,
+              "y": 0.16,
+              "z": 0.28
+            },
+            "color": 6965802
+          }
+        ]
+      }
+    ],
+    "equipment": {
+      "mainHand": null,
+      "offHand": null
+    }
   }
 ]
