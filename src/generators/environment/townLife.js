@@ -969,7 +969,11 @@ export function generateStoneBridgeRamp(seed) {
     k.box('stone', W - 0.06, top + 0.9, run, 0, top / 2 - 0.45, z);
     // Nosing: a lighter lip standing proud of the course's +Z face, which is
     // what makes the steps read from the side instead of as a smooth wedge.
-    k.box('stoneLight', W, 0.07, run + 0.06, 0, top - 0.035, z);
+    // Sits ON TOP of the tread (bottom flush with it) rather than embedded
+    // flush with its top — embedded put the nosing's top face exactly on the
+    // tread's own top face, two opaque coplanar surfaces the depth buffer
+    // can't order, which flickered hard (check:zfight).
+    k.box('stoneLight', W, 0.03, run + 0.06, 0, top + 0.015, z);
   }
   // Battered abutment cheeks down both sides, running below grade — the ramp
   // is carried by the bank the same way the bridge is carried by its piers.

@@ -381379,9 +381379,9 @@
       "id": "event-7",
       "name": "Woodworking",
       "position": {
-        "x": -82,
+        "x": -53,
         "y": 0,
-        "z": -48
+        "z": 41
       },
       "attachedType": null,
       "start": {
@@ -381612,9 +381612,9 @@
       "id": "event-10",
       "name": "smithing",
       "position": {
-        "x": -51.64125086138599,
+        "x": -41,
         "y": 0,
-        "z": 29.346583355286384
+        "z": -44
       },
       "attachedType": null,
       "start": {
