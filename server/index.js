@@ -44,6 +44,7 @@ import { parseAuthoredItems } from '../src/sim/authoredItems.js';
 import { parseObjectDefs } from '../src/sim/objectDefs.js';
 import { parseMonsterTypeDefs } from '../src/sim/monsterTypeDefs.js';
 import { parseQuests, initQuestState, canAccept, acceptQuest, applyKill, applyTalk, isReadyToTurnIn, isActive, isCompleted, turnInQuest, turnInNpcId, applyQuestSwitch } from '../src/sim/quests.js';
+import { parseGuides } from '../src/sim/guides.js';
 import { createParty, addMember, removeMember, canAddMember, isInParty, MAX_PARTY_SIZE } from '../src/sim/party.js';
 import { STORE_INTERIOR } from '../src/sim/interiors.js';
 import { createRng } from '../src/sim/rng.js';
@@ -448,6 +449,12 @@ function resolveSellPrice(itemId) {
 // --- Load authored quests (World Editor Quests mode) ---
 const QUESTS_PATH = path.join(ROOT, 'quests/quests.json');
 let quests = parseQuests(JSON.parse(readFileSync(QUESTS_PATH, 'utf-8')));
+
+// --- Load authored guides (World Editor "?" help panel) ---
+const GUIDES_PATH = path.join(ROOT, 'guides/guides.json');
+const GUIDE_IMAGES_DIR = path.join(ROOT, 'public/assets/guides');
+mkdirSync(GUIDE_IMAGES_DIR, { recursive: true });
+let guides = parseGuides(JSON.parse(readFileSync(GUIDES_PATH, 'utf-8')));
 
 // --- Load authored recipes (World Editor Recipe Builder) — replaces
 // src/sim/crafting.js's old 5-hardcoded-recipe placeholder entirely. Same
@@ -1025,6 +1032,43 @@ app.delete('/api/quests/:id', (req, res) => {
     res.json({ ok: true, quests: next });
   } catch (err) {
     res.status(500).json({ error: `Failed to write quests.json: ${err.message}` });
+  }
+});
+
+// Authored guides (World Editor "?" help panel) — same load/validate/save/
+// backup/single-delete pattern as quests above.
+app.get('/api/guides', (_req, res) => res.json(guides));
+
+app.post('/api/guides', (req, res) => {
+  let validated;
+  try {
+    validated = parseGuides(req.body);
+  } catch (err) {
+    return res.status(400).json({ error: `Invalid guide data: ${err.message}` });
+  }
+  try {
+    if (existsSync(GUIDES_PATH)) copyFileSync(GUIDES_PATH, GUIDES_PATH + '.bak');
+    writeFileSync(GUIDES_PATH, JSON.stringify(validated, null, 2));
+    guides = validated;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: `Failed to write guides.json: ${err.message}` });
+  }
+});
+
+app.delete('/api/guides/:id', (req, res) => {
+  const id = req.params.id;
+  const next = guides.filter((g) => g.id !== id);
+  if (next.length === guides.length) {
+    return res.status(404).json({ error: `No guide with id "${id}"` });
+  }
+  try {
+    if (existsSync(GUIDES_PATH)) copyFileSync(GUIDES_PATH, GUIDES_PATH + '.bak');
+    writeFileSync(GUIDES_PATH, JSON.stringify(next, null, 2));
+    guides = next;
+    res.json({ ok: true, guides: next });
+  } catch (err) {
+    res.status(500).json({ error: `Failed to write guides.json: ${err.message}` });
   }
 });
 
@@ -1650,6 +1694,26 @@ app.post('/api/items/icon', iconUpload.single('icon'), (req, res) => {
 app.post('/api/skills/icon', iconUpload.single('icon'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No icon file uploaded (expected an image, field name "icon")' });
   res.json({ url: `/assets/icons/${req.file.filename}` });
+});
+
+// Guide body images (World Editor "?" help panel) — embedded inline in a
+// guide's rich-text content, so larger than an icon but still small.
+const guideImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, GUIDE_IMAGES_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const safeExt = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext) ? ext : '.png';
+      cb(null, `guide-${Date.now()}-${Math.floor(Math.random() * 1e9)}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+});
+
+app.post('/api/guides/image', guideImageUpload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image file uploaded (expected an image, field name "image")' });
+  res.json({ url: `/assets/guides/${req.file.filename}` });
 });
 
 // Custom skybox texture upload (World Editor Graphics Settings > Sky tab) —

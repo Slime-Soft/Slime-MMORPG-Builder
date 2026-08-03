@@ -139,6 +139,62 @@
     #save-toast.visible { opacity: 1; }
     #open-graphics-settings-btn, #open-camera-settings-btn { padding: 7px 11px; font-size: 17px; line-height: 1; }
 
+    /* --- Guides "?" button (bottom-right) + guides modal --- */
+    #guides-help-btn {
+      position: fixed; bottom: 12px; right: 12px; z-index: 10;
+      width: 40px; height: 40px; padding: 0; border-radius: 50%;
+      font-size: 18px; font-weight: 700; line-height: 1;
+    }
+    #guides-modal .modal-dialog { width: 980px; max-width: 92vw; height: 78vh; display: flex; flex-direction: column; }
+    #guides-modal .modal-header { display: flex; align-items: center; justify-content: space-between; }
+    #guides-modal .modal-header .spacer { flex: 1; }
+    #guides-body-row { flex: 1; display: flex; min-height: 0; }
+    #guides-sidebar { width: 220px; flex: 0 0 auto; overflow-y: auto; padding: 12px; border-right: 1px solid rgba(217,164,65,0.25); }
+    #guides-sidebar h4 { margin: 14px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #8a6423; }
+    #guides-sidebar h4:first-child { margin-top: 0; }
+    #guides-sidebar .guide-list-item { display: block; width: 100%; text-align: left; padding: 5px 8px; margin-bottom: 2px; background: none; border: none; border-radius: 4px; color: #e8d9b5; font-size: 14px; cursor: pointer; }
+    #guides-sidebar .guide-list-item:hover { background: rgba(217,164,65,0.12); box-shadow: none; }
+    #guides-sidebar .guide-list-item.active { background: rgba(217,164,65,0.25); color: #f4d78a; }
+    #guides-sidebar .hint { padding: 4px 2px; }
+    #guides-main { flex: 1; min-width: 0; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; }
+    #guide-title-input { font-size: 18px; font-family: 'Lusitana', serif; flex: 0 0 auto; }
+    #guide-category-row { display: flex; gap: 8px; margin: 8px 0; flex: 0 0 auto; }
+    #guide-category-row input { flex: 1; }
+    #guide-toolbar { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; flex: 0 0 auto; }
+    #guide-toolbar button { padding: 5px 10px; font-size: 13px; }
+    #guide-toolbar button.active { background: #5a4326; border-color: var(--accent-hover); }
+    /* Text-color control: a native <input type="color"> styled to sit flush
+       in the toolbar row rather than as a bare browser swatch. */
+    #guide-color-input {
+      width: 30px; height: 28px; padding: 2px; cursor: pointer;
+      background: linear-gradient(180deg, #4a3620, #3a2717);
+      border: 1px solid #8a6423; border-radius: 5px;
+    }
+    #guide-body {
+      flex: 1; min-height: 220px; overflow-y: auto;
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(217,164,65,0.2); border-radius: 4px;
+      padding: 10px; font-size: 14px; line-height: 1.5; color: #e8d9b5;
+    }
+    #guide-body:focus { outline: none; border-color: var(--accent-hover); }
+    #guide-body img { max-width: 100%; border-radius: 4px; margin: 6px 0; display: block; }
+    #guide-body h2 { font-family: 'Lusitana', serif; color: #f4d78a; margin: 10px 0 6px; }
+    #guide-body ul, #guide-body ol { padding-left: 22px; }
+    #guide-editor-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; flex: 0 0 auto; }
+    #guide-delete-btn { background: #7a2f2f; border-color: #7a2f2f; }
+    #guide-delete-btn:hover { background: #8f3838; }
+    #guide-save-btn { background: #3f8850; border-color: #3f8850; }
+    #guide-save-btn:hover { background: #4fa060; }
+
+    /* --- Guide article view (read-only, shown before Edit is clicked) --- */
+    #guide-view-title { font-family: 'Lusitana', serif; font-size: 22px; color: #f4d78a; text-shadow: 0 0 10px rgba(244,215,138,0.3), 0 1px 0 #000; }
+    #guide-view-category { color: #8a6423; }
+    #guide-view-body { color: #e8d9b5; font-size: 14px; }
+    #guide-view-body img { max-width: 100%; border-radius: 4px; margin: 6px 0; display: block; }
+    #guide-view-body h2 { font-family: 'Lusitana', serif; color: #f4d78a; margin: 10px 0 6px; }
+    #guide-view-body ul, #guide-view-body ol { padding-left: 22px; }
+    #guide-view-delete-btn { background: #7a2f2f; border-color: #7a2f2f; }
+    #guide-view-delete-btn:hover { background: #8f3838; }
+
     /* --- Graphics Settings modal: per-map profile, gear icon in #top-right ---
        Anchored below the gear icon instead of centered, and the shared
        .modal-overlay's dimming backdrop is switched off here — this panel
@@ -374,6 +430,62 @@
     <button id="download-btn">⬇ Download world.json</button>
     <button id="open-graphics-settings-btn" title="Graphics Settings">⚙</button>
     <button id="open-camera-settings-btn" title="Camera Controls (sensitivity, fly speed)">🎥</button>
+  </div>
+
+  <button id="guides-help-btn" title="Guides">?</button>
+
+  <div id="guides-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span>📖 Guides</span>
+        <span class="spacer"></span>
+        <button id="guides-add-post-btn">+ Add Post</button>
+        <button id="guides-modal-close">✕</button>
+      </div>
+      <div id="guides-body-row">
+        <div id="guides-sidebar"></div>
+        <div id="guides-main">
+          <div id="guides-empty-state" class="hint">Select a guide on the left, or click "+ Add Post" to write one.</div>
+
+          <!-- Read-only article view — what clicking a guide in the sidebar shows first. -->
+          <div id="guides-view" style="display:none; flex-direction:column; flex:1; min-height:0;">
+            <div id="guide-view-category" class="hint" style="text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px;"></div>
+            <h2 id="guide-view-title" style="margin:0 0 10px;"></h2>
+            <div id="guide-view-body" style="flex:1; overflow-y:auto; line-height:1.5;"></div>
+            <div id="guide-view-actions" style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end; flex:0 0 auto;">
+              <button type="button" id="guide-view-delete-btn">🗑 Delete</button>
+              <button type="button" id="guide-view-edit-btn">✎ Edit</button>
+            </div>
+          </div>
+
+          <div id="guides-editor" style="display:none; flex-direction:column; flex:1; min-height:0;">
+            <input id="guide-title-input" placeholder="Guide title" />
+            <div id="guide-category-row">
+              <input id="guide-category-input" list="guide-category-datalist" placeholder="Category (e.g. Getting Started)" />
+              <datalist id="guide-category-datalist"></datalist>
+            </div>
+            <div id="guide-toolbar">
+              <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+              <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+              <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+              <button type="button" data-cmd="formatBlock" data-value="h2" title="Heading">H2</button>
+              <button type="button" data-cmd="formatBlock" data-value="p" title="Paragraph">¶</button>
+              <button type="button" data-cmd="insertUnorderedList" title="Bullet list">• List</button>
+              <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+              <input type="color" id="guide-color-input" value="#e8d9b5" title="Text color" />
+              <button type="button" id="guide-insert-image-btn" title="Insert image">🖼 Image</button>
+              <input type="file" id="guide-image-file" accept="image/*" style="display:none;" />
+            </div>
+            <div id="guide-body" contenteditable="true"></div>
+            <div id="guide-editor-actions">
+              <button type="button" id="guide-cancel-btn">Cancel</button>
+              <button type="button" id="guide-delete-btn" style="display:none;">🗑 Delete</button>
+              <button type="button" id="guide-save-btn">💾 Save Guide</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="tool-flyout-resizer" title="Drag to resize the tool panel (double-click to reset)"></div>
@@ -2294,7 +2406,9 @@
 
         <div class="gfx-subhead">Sound — plays outside every zone</div>
         <div class="gfx-row"><label>Default Music</label><select id="gfx-sound-music"><option value="">— none —</option></select></div>
+        <div class="gfx-row"><label>Default Music Volume</label><input type="range" id="gfx-sound-music-volume" min="0" max="1" step="0.05" /><output id="gfx-sound-music-volume-out"></output></div>
         <div class="gfx-row"><label>Default Ambient Sound</label><select id="gfx-sound-ambient"><option value="">— none —</option></select></div>
+        <div class="gfx-row"><label>Default Ambient Volume</label><input type="range" id="gfx-sound-ambient-volume" min="0" max="1" step="0.05" /><output id="gfx-sound-ambient-volume-out"></output></div>
         <p class="hint">Live in the game client (crossfades in whenever you're outside every zone) — not audible from the editor itself, which stays a static blockout view like ambient particles already do.</p>
       </div>
 

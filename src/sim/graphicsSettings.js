@@ -100,7 +100,7 @@ export function defaultGraphicsSettings() {
     ambient: { skyColor: 0xbfe8ff, groundColor: 0x5f7a3a, intensity: 0.85 },
     fog: { density: 0.0026, color: 0xf0e6b8 },
     sky: { textureUrl: null, rotationSpeed: 0 }, // custom equirectangular skybox image + its drift in deg/sec; null textureUrl = procedural gradient dome (see atmosphere.js's applySkybox)
-    sound: { defaultMusicId: null, defaultAmbientSoundId: null }, // plays outside every zone
+    sound: { defaultMusicId: null, defaultAmbientSoundId: null, defaultMusicVolume: 1, defaultAmbientVolume: 1 }, // plays outside every zone
     environmental: { type: null, intensity: 1.0 },
     playerCamera: { ...PLAYER_CAMERA_DEFAULTS },
     anisotropy: 4,
@@ -170,6 +170,14 @@ export function validateGraphicsSettings(settings) {
   }
   if (sound.defaultAmbientSoundId !== null && typeof sound.defaultAmbientSoundId !== 'string') {
     throw new Error('graphicsSettings.sound.defaultAmbientSoundId must be a string or null');
+  }
+  // Optional for the same reason shadowMapSize is: maps saved before these
+  // fields existed lack them, and absent means full volume (1).
+  if (sound.defaultMusicVolume !== undefined && typeof sound.defaultMusicVolume !== 'number') {
+    throw new Error('graphicsSettings.sound.defaultMusicVolume must be a number');
+  }
+  if (sound.defaultAmbientVolume !== undefined && typeof sound.defaultAmbientVolume !== 'number') {
+    throw new Error('graphicsSettings.sound.defaultAmbientVolume must be a number');
   }
 
   if (!environmental || typeof environmental !== 'object') throw new Error('graphicsSettings.environmental must be an object');

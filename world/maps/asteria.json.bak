@@ -340484,7 +340484,7 @@
     },
     {
       "id": "npc-town-3",
-      "name": "Traveller",
+      "name": "Traveler",
       "position": {
         "x": -14.3,
         "y": 0,
@@ -340506,9 +340506,9 @@
       "id": "npc-town-4",
       "name": "Bard",
       "position": {
-        "x": -36.37,
+        "x": -21,
         "y": 0,
-        "z": 2.74
+        "z": -6
       },
       "appearance": {
         "seed": 415406234,
@@ -340574,9 +340574,9 @@
       "id": "npc-town-23",
       "name": "Bard",
       "position": {
-        "x": -83.46056236198766,
+        "x": -82,
         "y": 0,
-        "z": -6.24371035923032
+        "z": -4
       },
       "appearance": {
         "seed": 369915279,
@@ -340584,8 +340584,9 @@
       },
       "dialog": [],
       "wander": true,
-      "wanderRadius": 9,
-      "speed": 1.13
+      "wanderRadius": 2,
+      "speed": 1.13,
+      "facingDeg": 0
     },
     {
       "id": "npc-town-24",
@@ -340608,9 +340609,9 @@
       "id": "npc-town-25",
       "name": "Apprentice",
       "position": {
-        "x": -50.77170737798576,
+        "x": -53,
         "y": 0,
-        "z": -5.560410449882127
+        "z": -2
       },
       "appearance": {
         "seed": 7520333,
@@ -340618,8 +340619,9 @@
       },
       "dialog": [],
       "wander": true,
-      "wanderRadius": 6,
-      "speed": 1.04
+      "wanderRadius": 2,
+      "speed": 1.04,
+      "facingDeg": 0
     },
     {
       "id": "npc-town-28",
@@ -340867,9 +340869,9 @@
       "id": "npc-746872273",
       "name": "Townsperson",
       "position": {
-        "x": -0.1986777686394916,
+        "x": -6,
         "y": 0,
-        "z": 14.719473432951858
+        "z": 14
       },
       "appearance": {
         "seed": 644900624,
@@ -340879,7 +340881,7 @@
         "We were supposed to meet here...where is she?"
       ],
       "wander": true,
-      "wanderRadius": 8,
+      "wanderRadius": 4,
       "speed": 1.2,
       "facingDeg": 0
     },
@@ -340899,7 +340901,7 @@
         "I hope my son is doing fine in the Tower..."
       ],
       "wander": true,
-      "wanderRadius": 8,
+      "wanderRadius": 3,
       "speed": 1.2,
       "facingDeg": 0
     },
@@ -340919,7 +340921,7 @@
         "What a nice day to wander around!"
       ],
       "wander": true,
-      "wanderRadius": 8,
+      "wanderRadius": 3,
       "speed": 1.2,
       "facingDeg": 0
     },
@@ -340936,10 +340938,10 @@
         "classId": "villager"
       },
       "dialog": [
-        "I used to be an Adventurer, but then i took an arrow into my knee..."
+        "I used to be an Adventurer, but then i took an arrow to my knee..."
       ],
       "wander": true,
-      "wanderRadius": 8,
+      "wanderRadius": 3,
       "speed": 1.2,
       "facingDeg": 0
     },
@@ -340957,8 +340959,9 @@
       },
       "dialog": [],
       "wander": true,
-      "wanderRadius": 8,
-      "speed": 1.2
+      "wanderRadius": 3,
+      "speed": 1.2,
+      "facingDeg": 0
     },
     {
       "id": "npc-333378062",
@@ -341417,6 +341420,24 @@
       "wander": true,
       "wanderRadius": 8,
       "speed": 1.2,
+      "facingDeg": 0
+    },
+    {
+      "id": "npc-535967809",
+      "name": "Bard",
+      "position": {
+        "x": -79,
+        "y": 0,
+        "z": -36
+      },
+      "appearance": {
+        "seed": 369915279,
+        "classId": "archer"
+      },
+      "dialog": [],
+      "wander": true,
+      "wanderRadius": 2,
+      "speed": 1.13,
       "facingDeg": 0
     }
   ],
@@ -381960,6 +381981,42 @@
       ],
       "attachedId": "npc-126130054",
       "quest": "golems"
+    },
+    {
+      "id": "event-5",
+      "name": "General Store",
+      "position": {
+        "x": -8.429186795768896,
+        "y": 0,
+        "z": 49.72244202143966
+      },
+      "attachedType": "npc",
+      "start": {
+        "type": "talk",
+        "prompt": "Visit General Store (Press E)"
+      },
+      "sheets": [
+        {
+          "commands": [
+            {
+              "type": "openMerchantStore",
+              "items": [
+                {
+                  "itemId": "hp_potion_1",
+                  "price": 100
+                },
+                {
+                  "itemId": "tome_of_eternal_strength",
+                  "price": 250
+                }
+              ],
+              "sellMultiplier": 0.5
+            }
+          ],
+          "runOnce": false
+        }
+      ],
+      "attachedId": "npc-720612880"
     }
   ],
   "waterBodies": [
@@ -515254,7 +515311,9 @@
     },
     "sound": {
       "defaultMusicId": "audio-1785498735507-304564",
-      "defaultAmbientSoundId": null
+      "defaultAmbientSoundId": null,
+      "defaultMusicVolume": 0.6,
+      "defaultAmbientVolume": 0.6
     },
     "environmental": {
       "type": "dust",

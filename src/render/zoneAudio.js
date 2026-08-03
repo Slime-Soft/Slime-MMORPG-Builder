@@ -100,8 +100,8 @@ export function createZoneAudioController(audioCatalogById) {
     if (key === currentKey) return;
     currentKey = key;
     const zone = zoneId ? zonesById[zoneId] : null;
-    const musicRef = zone?.music ?? (defaultSound?.defaultMusicId ? { musicId: defaultSound.defaultMusicId, loop: true, volume: 1 } : null);
-    const ambientRef = zone?.ambientSound ?? (defaultSound?.defaultAmbientSoundId ? { soundId: defaultSound.defaultAmbientSoundId } : null);
+    const musicRef = zone?.music ?? (defaultSound?.defaultMusicId ? { musicId: defaultSound.defaultMusicId, loop: true, volume: defaultSound.defaultMusicVolume ?? 1 } : null);
+    const ambientRef = zone?.ambientSound ?? (defaultSound?.defaultAmbientSoundId ? { soundId: defaultSound.defaultAmbientSoundId, volume: defaultSound.defaultAmbientVolume ?? 1 } : null);
     crossfadeChannel(channels.music, musicRef);
     crossfadeChannel(channels.ambient, ambientRef);
   }

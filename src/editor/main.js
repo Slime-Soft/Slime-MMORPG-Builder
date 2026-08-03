@@ -123,6 +123,7 @@ import { buildMonsterRig, resolveGaitTable } from '../generators/monsterRig.js';
 import { findDetachedSlots } from '../generators/monsterConnectivity.js';
 import { GAIT_TABLES, applyIdlePose, applyGaitPose, applyAttackPose, applyKeyframeClip, defaultAnimationForStance } from '../generators/rig.js';
 import { createTabbedModal } from './modal.js';
+import { initGuides } from './guides.js';
 import { ABILITY_KINDS, ABILITY_LEVEL_LADDER } from '../sim/monsterTypeDefs.js';
 import { PART_PRESETS, BODY_PRESETS, presetCategoryForRole } from '../generators/monsterPresets.js';
 import { ITEM_IDS, getItemDef } from '../sim/items.js';
@@ -849,6 +850,7 @@ let armedSpawnFacing = false; // Maps mode's "click ground to aim the spawn faci
 let selected = null; // entry from placedItems
 let dragging = false;
 let npcDragging = false; // Npcs mode: a placed NPC is being dragged to a new spot
+let eventDragging = false; // Events mode: a placed event marker is being dragged to a new spot
 
 // --- Tower floor / monster placement (Monsters mode) ---
 // A totally separate bounded space from the overworld, so it lives in its
@@ -6095,6 +6097,8 @@ document.getElementById('open-graphics-settings-btn').addEventListener('click', 
   graphicsSettingsModal.open();
 });
 
+initGuides();
+
 // --- Camera Controls panel (🎥, next to the ⚙ gear) ---
 // Plain show/hide instead of createTabbedModal: one page, no tab strip for
 // that helper to drive. Unlike Graphics Settings this writes to localStorage
@@ -6248,7 +6252,9 @@ bindGfxColorControl('gfx-ambient-sky', 'ambient.skyColor', { liveApply: 'atmosph
 bindGfxColorControl('gfx-ambient-ground', 'ambient.groundColor', { liveApply: 'atmosphere' });
 bindGfxControl('gfx-ambient-intensity', 'ambient.intensity', { liveApply: 'atmosphere' });
 bindGfxSelectControl('gfx-sound-music', 'sound.defaultMusicId', { parse: (v) => v || null });
+bindGfxControl('gfx-sound-music-volume', 'sound.defaultMusicVolume');
 bindGfxSelectControl('gfx-sound-ambient', 'sound.defaultAmbientSoundId', { parse: (v) => v || null });
+bindGfxControl('gfx-sound-ambient-volume', 'sound.defaultAmbientVolume');
 
 bindGfxSelectControl('gfx-env-type', 'environmental.type', { parse: (v) => v || null, liveApply: 'particles' });
 bindGfxControl('gfx-env-intensity', 'environmental.intensity', { liveApply: 'particles' });
@@ -6465,7 +6471,11 @@ function populateGraphicsSettingsForm() {
   setColor('gfx-ambient-ground', g.ambient.groundColor);
   setRange('gfx-ambient-intensity', g.ambient.intensity);
   setSelect('gfx-sound-music', g.sound.defaultMusicId);
+  if (g.sound.defaultMusicVolume === undefined) g.sound.defaultMusicVolume = 1;
+  setRange('gfx-sound-music-volume', g.sound.defaultMusicVolume);
   setSelect('gfx-sound-ambient', g.sound.defaultAmbientSoundId);
+  if (g.sound.defaultAmbientVolume === undefined) g.sound.defaultAmbientVolume = 1;
+  setRange('gfx-sound-ambient-volume', g.sound.defaultAmbientVolume);
 
   setSelect('gfx-env-type', g.environmental.type);
   setRange('gfx-env-intensity', g.environmental.intensity);
@@ -9660,7 +9670,12 @@ canvas.addEventListener('pointerdown', (e) => {
       if (point) placeEventAt(point);
       return;
     }
-    selectEvent(raycastEvents());
+    const hit = raycastEvents();
+    selectEvent(hit);
+    if (hit) {
+      eventDragging = true;
+      statusLine.textContent = 'Event selected — drag to move.';
+    }
   } else if (mode === 'object-builder') {
     const hit = raycastBuilderShapes();
     selectBuilderShape(hit);
@@ -9852,6 +9867,13 @@ canvas.addEventListener('pointermove', (e) => {
       selectedNpc.ref.position.z = snap(point.z);
       applyNpcTransform(selectedNpc);
     }
+  } else if (mode === 'events' && eventDragging && selectedEvent) {
+    const point = raycastGround();
+    if (point) {
+      selectedEvent.ref.position.x = snap(point.x);
+      selectedEvent.ref.position.z = snap(point.z);
+      selectedEvent.mesh.position.set(selectedEvent.ref.position.x, selectedEvent.ref.position.y || 0, selectedEvent.ref.position.z);
+    }
   } else if (mode === 'object-builder' && builderDragging && selectedBuilderShape) {
     const point = raycastBuilderPlane();
     if (point) {
@@ -10025,6 +10047,7 @@ window.addEventListener('pointerup', () => {
   }
   dragging = false;
   npcDragging = false;
+  eventDragging = false;
   scatterDragging = false;
   monsterScatterDragging = false;
   builderDragging = false;
@@ -11522,14 +11545,20 @@ function renderEventCommandRows(container, list, nested, onChanged) {
       case 'openMerchantStore': {
         cmd.items = cmd.items || [];
         const itemsWrap = document.createElement('div');
+        const merchantItemOptions = ITEM_IDS.map((id) => `<option value="${id}">${getItemDef(id).name}</option>`)
+          .concat(itemCatalog.map((i) => `<option value="${i.id}">${i.name} (authored)</option>`))
+          .join('');
         const renderMerchantItems = () => {
           itemsWrap.innerHTML = '';
           cmd.items.forEach((entry, ei) => {
             const iRow = document.createElement('div');
             iRow.style.cssText = 'display:flex; gap:4px; align-items:center; margin:2px 0;';
-            const itemIdInput = textInput(entry.itemId, 'item id', (v) => { entry.itemId = v; });
-            itemIdInput.style.cssText = 'flex:1 1 auto; min-width:70px;'; // a flex row shrinks a plain text input to near-nothing without this
-            iRow.appendChild(itemIdInput);
+            const itemIdSel = document.createElement('select');
+            itemIdSel.innerHTML = merchantItemOptions;
+            itemIdSel.value = entry.itemId;
+            itemIdSel.style.cssText = 'flex:1 1 auto; min-width:70px;'; // a flex row shrinks a plain select to near-nothing without this
+            itemIdSel.addEventListener('change', () => { entry.itemId = itemIdSel.value; });
+            iRow.appendChild(itemIdSel);
             const priceInput = numberInput(entry.price ?? 0, (v) => { entry.price = Math.max(0, v); });
             priceInput.title = 'Gold cost to buy 1';
             priceInput.style.width = '70px';
@@ -11558,7 +11587,7 @@ function renderEventCommandRows(container, list, nested, onChanged) {
         const addMerchantItemBtn = document.createElement('button');
         addMerchantItemBtn.textContent = '+ Add Item';
         addMerchantItemBtn.addEventListener('click', () => {
-          cmd.items.push({ itemId: '', price: 0 });
+          cmd.items.push({ itemId: ITEM_IDS[0], price: 0 });
           renderMerchantItems();
         });
         body.appendChild(addMerchantItemBtn);

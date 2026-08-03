@@ -84,5 +84,13 @@
     "description": "Meat of a wild Deer",
     "sellPrice": 0,
     "questLocked": true
+  },
+  {
+    "id": "foxfur",
+    "name": "Fox Fur",
+    "type": "misc",
+    "rarity": "common",
+    "description": "Fur used for Crafting",
+    "sellPrice": 0
   }
 ]
