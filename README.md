@@ -82,6 +82,7 @@ Open:
 - `/buildings.html` Create Buildings
 - `/characters.html`Create NPCs and playable Characters
 - `/skills.html` Create Skills for playable Characters
+- `/monsters.html` Create Monster Types
 
 ## 📌 Project Status
 

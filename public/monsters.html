@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Monster Type Editor — Fantasy MMO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/theme.css" />
+  <style>
+    :root {
+      --panel-bg: linear-gradient(180deg, #2b1e12 0%, #1b140d 100%);
+      --panel-border: #8a6423;
+      --accent: #5a4326;
+      --accent-hover: #d9a441;
+    }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0f0b07; font-family: 'Lusitana', serif; }
+    body { display: flex; flex-direction: column; }
+    a { color: #d9a441; }
+
+    .row { display: flex; gap: 6px; }
+    .hint { color: rgba(232,217,181,0.65); font-size: 13px; line-height: 1.5; }
+    .palette { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    label { display: block; margin: 8px 0 3px; color: #e8d9b5; font-size: 14px; }
+    input, select {
+      width: 100%; box-sizing: border-box; padding: 6px 7px; background: #241a10; color: #e8d9b5;
+      border: 1px solid var(--panel-border); border-radius: 5px; font-family: inherit; font-size: 14px;
+    }
+    button {
+      font-family: 'Lusitana', serif; font-weight: 600; padding: 7px 10px;
+      background: linear-gradient(180deg, #4a3620, #3a2717); color: #f4d78a;
+      border: 1px solid var(--panel-border); border-radius: 5px; cursor: pointer; font-size: 14px;
+    }
+    button:hover { border-color: var(--accent-hover); box-shadow: 0 0 6px rgba(244,215,138,0.3); }
+    button.active { background: linear-gradient(180deg, #5a4326, #241a10); border-color: var(--accent-hover); }
+    h3 { font-size: 14px; color: #f4d78a; margin: 14px 0 6px; }
+
+    /* --- Page header (was the modal's header/tabstrip) --- */
+    #mb-page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 16px; border-bottom: 1px solid rgba(217,164,65,0.25); font-size: 17px; color: #f4d78a;
+      flex: 0 0 auto; background: var(--panel-bg);
+    }
+    #mb-page-header a { font-size: 13px; text-decoration: none; color: #8a6423; }
+    #mb-page-header a:hover { color: #f4d78a; }
+    #mb-tabstrip { display: flex; border-bottom: 1px solid rgba(217,164,65,0.25); flex: 0 0 auto; background: var(--panel-bg); }
+    .mb-tab { padding: 9px 16px; background: none; border: none; color: #e8d9b5; cursor: pointer; font-size: 15px; border-radius: 0; }
+    .mb-tab:hover { background: rgba(217,164,65,0.12); color: #f4d78a; box-shadow: none; }
+    .mb-tab.active { color: #f4d78a; border-bottom: 2px solid var(--accent-hover); }
+    .mb-tab-panel { flex: 1; overflow-y: auto; padding: 14px; min-height: 0; color: #e8d9b5; }
+    #mb-footer { border-top: 1px solid rgba(217,164,65,0.25); padding: 10px 14px; flex: 0 0 auto; background: var(--panel-bg); }
+
+    /* --- Model Editor tab: two-pane layout (live preview + tabbed part editor) --- */
+    #mb-tab-model { overflow: hidden; display: flex; padding: 14px; }
+    .mb-model-layout { display: flex; gap: 12px; width: 100%; height: 100%; min-height: 0; }
+    .mb-preview-pane { flex: 1 1 420px; min-width: 260px; display: flex; flex-direction: column; min-height: 0; position: relative; }
+    #mb-hint { position: absolute; left: 8px; bottom: 8px; color: #e8d9b5; opacity: 0.65; font-size: 11px; text-shadow: 0 1px 2px #000; pointer-events: none; }
+    #mb-workspace-canvas { flex: 1; width: 100%; min-width: 0; min-height: 0; display: block; background: #0f0b07; border: 1px solid var(--panel-border); border-radius: 4px; }
+    .mb-editor-pane { flex: 1 1 420px; min-width: 300px; max-width: 520px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    #mb-part-tabstrip { flex: 0 0 auto; display: flex; flex-wrap: wrap; border-bottom: 1px solid rgba(217,164,65,0.25); margin-bottom: 10px; }
+    #mb-part-tabstrip button { padding: 7px 13px; background: none; border: none; color: #e8d9b5; cursor: pointer; font-size: 15px; }
+    #mb-part-tabstrip button:hover { background: rgba(217,164,65,0.12); color: #f4d78a; box-shadow: none; }
+    #mb-part-tabstrip button.active { color: #f4d78a; border-bottom: 2px solid var(--accent-hover); }
+    #mb-part-tabstrip button.filled::after { content: " ●"; color: #6bd67f; font-size: 12px; }
+    #mb-part-content { flex: 1; overflow-y: auto; min-height: 0; padding-right: 4px; }
+
+    @media (max-width: 900px) {
+      .mb-model-layout { flex-direction: column; }
+      .mb-preview-pane { flex: 0 0 320px; width: 100%; }
+      .mb-editor-pane { min-width: 0; max-width: none; }
+    }
+
+    .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; margin-bottom: 10px; }
+    .preset-thumb {
+      background: #241a10; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer;
+      padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .preset-thumb:hover { border-color: var(--accent); }
+    .preset-thumb.active { border-color: var(--accent-hover); background: #3a2717; }
+    .preset-thumb img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #0f0b07; border-radius: 3px; }
+    .preset-thumb span { font-size: 13px; color: #e8d9b5; text-align: center; }
+    .color-swatch-row { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+    .color-swatch {
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--panel-border); cursor: pointer; padding: 0;
+    }
+    .color-swatch:hover { border-color: #fff; }
+    #mb-adjust-toggle { width: 100%; margin: 4px 0 10px; }
+    #mb-adjust-body { display: none; border-top: 1px solid rgba(217,164,65,0.18); padding-top: 10px; margin-top: 4px; }
+
+    .anim-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 6px; border: 1px solid rgba(217,164,65,0.2); border-radius: 4px; margin-bottom: 4px; font-size: 14px;
+    }
+    .anim-row .anim-part { flex: 0 0 82px; color: #e8d9b5; }
+    .anim-row select, .anim-row input { flex: 1; min-width: 0; }
+    .anim-row .anim-unit { flex: 0 0 auto; color: rgba(232,217,181,0.6); font-size: 12px; }
+    .anim-head { display: flex; gap: 6px; font-size: 12px; color: rgba(232,217,181,0.65); padding: 0 6px 3px; }
+    .anim-head span:nth-child(1) { flex: 0 0 82px; }
+    .anim-head span:nth-child(2) { flex: 1; }
+    .anim-head span:nth-child(3) { flex: 1; }
+    .anim-head span:nth-child(4) { flex: 1; }
+
+    .ability-ladder-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 8px; border: 1px solid rgba(217,164,65,0.2); border-radius: 4px; margin-bottom: 5px; font-size: 14px;
+    }
+    .ability-ladder-row .level-badge { color: #6a8; font-weight: bold; width: 34px; flex: 0 0 auto; }
+    .warn-text { color: #e08a4a; font-size: 14px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div id="mb-page-header">
+    <span>🧬 Monster Type Editor</span>
+    <a href="/editor.html">← World Editor</a>
+  </div>
+  <div id="mb-tabstrip">
+    <button class="mb-tab active" data-tab="general">General</button>
+    <button class="mb-tab" data-tab="abilities">Abilities</button>
+    <button class="mb-tab" data-tab="model">Model Editor</button>
+    <button class="mb-tab" data-tab="prefabs">Prefabs</button>
+  </div>
+
+  <div id="mb-tab-general" class="mb-tab-panel">
+    <label>Id</label>
+    <input type="text" id="mb-id" placeholder="e.g. cave-troll" />
+    <label>Name</label>
+    <input type="text" id="mb-name" placeholder="e.g. Cave Troll" />
+    <h3>Base Stats <span class="hint">(defaults for new spawns of this type — a placed spawn can still override them individually)</span></h3>
+    <div class="row">
+      <div><label>Max HP</label><input type="number" id="mb-maxHealth" value="30" min="1" /></div>
+      <div><label>Damage</label><input type="number" id="mb-damage" value="5" min="0" /></div>
+    </div>
+    <div class="row">
+      <div><label>Speed</label><input type="number" id="mb-speed" value="1.6" min="0" step="0.1" /></div>
+      <div><label>Attack CD (ms)</label><input type="number" id="mb-attackCooldownMs" value="1400" min="100" step="50" /></div>
+    </div>
+    <div class="row">
+      <div><label>Aggro range</label><input type="number" id="mb-aggroRange" value="8" min="1" step="0.5" /></div>
+      <div><label>Attack range</label><input type="number" id="mb-attackRange" value="1.6" min="0.5" step="0.1" /></div>
+    </div>
+
+    <h3>Loot Table <span class="hint">(dropped by EVERY spawn of this type, including ones already placed — each entry rolls independently)</span></h3>
+    <div id="mb-loot-list" class="hint"></div>
+    <div class="row">
+      <select id="mb-loot-item"></select>
+    </div>
+    <div class="row">
+      <div><label>Drop chance %</label><input type="number" id="mb-loot-chance" value="10" min="0.001" max="100" step="0.1" /></div>
+    </div>
+    <div class="row">
+      <div><label>Min qty</label><input type="number" id="mb-loot-min" value="1" min="1" step="1" /></div>
+      <div><label>Max qty</label><input type="number" id="mb-loot-max" value="1" min="1" step="1" /></div>
+    </div>
+    <label>Only drops during a quest (optional)</label>
+    <div class="row">
+      <div><select id="mb-loot-quest"><option value="">— always drops —</option></select></div>
+      <div><select id="mb-loot-quest-phase">
+        <option value="active">while it is active</option>
+        <option value="ready">once its objective is met</option>
+        <option value="done">after it is finished</option>
+      </select></div>
+    </div>
+    <p class="hint">A quest-gated entry isn't even rolled for a player outside that phase, so the same monster hands the Sealed Letter to whoever is on the quest and nothing extra to everyone else.</p>
+    <button type="button" id="mb-loot-add-btn" style="width:100%">+ Add Drop</button>
+    <p class="hint">A single placed monster can add its own extra drops in the World Editor's Monsters mode — those roll on top of these, they don't replace them.</p>
+  </div>
+
+  <div id="mb-tab-abilities" class="mb-tab-panel" style="display:none">
+    <label>Configured level <span class="hint">(authoring dial, not a runtime stat — abilities below unlock up to this level)</span></label>
+    <input type="number" id="mb-configured-level" value="2" min="2" max="20" step="2" />
+    <h3>Moveset</h3>
+    <div id="mb-ability-ladder"></div>
+  </div>
+
+  <div id="mb-tab-model" class="mb-tab-panel" style="display:none">
+    <div class="mb-model-layout">
+      <div class="mb-preview-pane">
+        <canvas id="mb-workspace-canvas"></canvas>
+        <div id="mb-hint">click a shape to select · G move · R rotate · S scale · Esc deselect · drag to orbit · scroll to zoom</div>
+      </div>
+      <div class="mb-editor-pane">
+        <div id="mb-part-tabstrip"></div>
+        <div id="mb-part-content">
+
+          <!-- Shown for any body-part tab (head/torso/tail/armL/armR/legL/legR/...) -->
+          <div id="mb-part-body-content">
+            <h3>Presets</h3>
+            <div class="preset-grid" id="mb-preset-grid"></div>
+            <h3>Recolor Whole Part</h3>
+            <div class="color-swatch-row" id="mb-color-swatches"></div>
+            <button id="mb-adjust-toggle">🔧 Adjust manually ▾</button>
+            <div id="mb-adjust-body">
+              <label>Slot anchor <span class="hint">(pivot position relative to the monster's root — auto-filled with a sensible default when you first pick this body part, fine-tune here)</span></label>
+              <div class="row">
+                <input type="number" id="mb-anchor-x" step="0.05" />
+                <input type="number" id="mb-anchor-y" step="0.05" />
+                <input type="number" id="mb-anchor-z" step="0.05" />
+              </div>
+              <label>Add a shape</label>
+              <div class="palette" style="grid-template-columns: repeat(4, 1fr);">
+                <button data-mb-shape="box">🧊 Box</button>
+                <button data-mb-shape="cylinder">🥫 Cylinder</button>
+                <button data-mb-shape="sphere">⚪ Sphere</button>
+                <button data-mb-shape="cone">🔺 Cone</button>
+                <button data-mb-shape="capsule">💊 Capsule</button>
+                <button data-mb-shape="pyramid">⛰️ Pyramid</button>
+                <button data-mb-shape="wedge">📐 Wedge</button>
+              </div>
+
+              <h3>Selected Shape</h3>
+              <div id="mb-shape-selected-info" class="hint">Nothing selected. Click a shape in the preview.</div>
+              <div id="mb-shape-controls" style="display:none">
+                <label>Position (local X / Y / Z)</label>
+                <div class="row">
+                  <input type="number" id="mbs-pos-x" step="0.05" />
+                  <input type="number" id="mbs-pos-y" step="0.05" />
+                  <input type="number" id="mbs-pos-z" step="0.05" />
+                </div>
+                <label>Rotation (deg, X / Y / Z)</label>
+                <div class="row">
+                  <input type="number" id="mbs-rot-x" value="0" step="5" />
+                  <input type="number" id="mbs-rot-y" value="0" step="5" />
+                  <input type="number" id="mbs-rot-z" value="0" step="5" />
+                </div>
+                <label>Scale (X / Y / Z)</label>
+                <div class="row">
+                  <input type="number" id="mbs-scale-x" value="1" min="0.02" step="0.02" />
+                  <input type="number" id="mbs-scale-y" value="1" min="0.02" step="0.02" />
+                  <input type="number" id="mbs-scale-z" value="1" min="0.02" step="0.02" />
+                </div>
+                <label>Color</label>
+                <input type="color" id="mbs-color" value="#cccccc" style="height:28px; padding:2px;" />
+                <label>Opacity <output id="mbs-opacity-out">1.00</output></label>
+                <input type="range" id="mbs-opacity" min="0.05" max="1" step="0.05" value="1" />
+                <button id="mb-duplicate-shape" style="width:100%; margin-top:8px;">⧉ Duplicate Shape</button>
+                <button id="mb-delete-shape" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Shape</button>
+              </div>
+
+              <h3>Shapes In This Slot (<span id="mb-shape-count">0</span>)</h3>
+              <div id="mb-shape-list"></div>
+            </div>
+          </div>
+
+          <!-- Shown only for the Settings tab -->
+          <div id="mb-part-settings-content" style="display:none">
+            <label>Stance</label>
+            <select id="mb-stance">
+              <option value="humanoid">Humanoid (2 legs, 2 arms)</option>
+              <option value="quadruped">Quadruped (4 legs)</option>
+            </select>
+            <label>Preview animation</label>
+            <select id="mb-preview-anim">
+              <option value="idle">Idle</option>
+              <option value="walk">Walk</option>
+              <option value="attack">Attack</option>
+              <option value="walk-clip">Walk Clip</option>
+              <option value="idle-clip">Idle Clip</option>
+              <option value="attack-clip">Attack Clip</option>
+            </select>
+            <p class="warn-text" id="mb-weapon-warning" style="display:none">⚠ Cannot use weapons: not humanoid</p>
+
+            <h3>Walk Animation</h3>
+            <p class="hint">Each body part swings as a sine wave while the monster walks. Amplitude 0 = the part stays still. Phase 180° puts a part exactly opposite another (that's how legs alternate). Switch Preview animation to <em>Walk</em> to see it live.</p>
+            <div id="mb-anim-rows"></div>
+            <button id="mb-anim-reset" style="width:100%; margin-top:8px;">↺ Reset to default gait for this stance</button>
+
+            <h3>Keyframe Animation <span class="hint">(advanced)</span></h3>
+            <p class="hint">Hand-pose exact frames instead of a sine wave — a start pose, an end pose, optional poses in between. A clip here overrides the sine gait above for that state (Walk/Idle) or plays alongside the attack flash (Attack) while it exists. Pick Preview animation → <em>Walk/Idle/Attack Clip</em> below to watch it loop.</p>
+            <div class="row">
+              <button id="kf-clip-walk" class="active" style="flex:1;">Walk</button>
+              <button id="kf-clip-idle" style="flex:1;">Idle</button>
+              <button id="kf-clip-attack" style="flex:1;">Attack</button>
+            </div>
+
+            <div id="kf-clip-empty" class="hint" style="margin-top:8px;">No <span id="kf-clip-empty-label">walk</span> clip yet.</div>
+            <button id="kf-clip-create" style="width:100%; margin-top:6px;">+ Create Clip</button>
+
+            <div id="kf-clip-editor" style="display:none">
+              <label>Duration (ms)</label>
+              <input type="number" id="kf-duration" value="1000" min="50" step="50" />
+              <label><input type="checkbox" id="kf-loop" style="width:auto;" /> Loop</label>
+              <button id="kf-clip-clear" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete This Clip</button>
+
+              <h4 style="margin-bottom:4px;">Tracks <span class="hint">(one per body part)</span></h4>
+              <div class="row">
+                <select id="kf-add-track-part" style="flex:1;"></select>
+                <button id="kf-add-track">+ Add Track</button>
+              </div>
+              <div id="kf-track-list" style="margin-top:6px;"></div>
+
+              <div id="kf-keyframe-section" style="display:none; margin-top:10px; border-top: 1px solid #1c2838; padding-top: 10px;">
+                <h4 style="margin-bottom:4px;">Keyframes for "<span id="kf-track-part-label"></span>"</h4>
+                <button id="kf-add-keyframe" style="width:100%;">+ Add Keyframe (midpoint)</button>
+                <div id="kf-keyframe-list" style="margin-top:6px;"></div>
+
+                <div id="kf-keyframe-controls" style="display:none">
+                  <label>t <span class="hint">(0 = start, 1 = end; first/last are fixed)</span></label>
+                  <input type="number" id="kf-t" min="0" max="1" step="0.05" />
+                  <label>Position offset (local X / Y / Z)</label>
+                  <div class="row">
+                    <input type="number" id="kf-pos-x" step="0.02" />
+                    <input type="number" id="kf-pos-y" step="0.02" />
+                    <input type="number" id="kf-pos-z" step="0.02" />
+                  </div>
+                  <label>Rotation offset (deg, X / Y / Z)</label>
+                  <div class="row">
+                    <input type="number" id="kf-rot-x" step="5" />
+                    <input type="number" id="kf-rot-y" step="5" />
+                    <input type="number" id="kf-rot-z" step="5" />
+                  </div>
+                  <label>Scale multiplier (X / Y / Z)</label>
+                  <div class="row">
+                    <input type="number" id="kf-scale-x" min="0.02" step="0.02" />
+                    <input type="number" id="kf-scale-y" min="0.02" step="0.02" />
+                    <input type="number" id="kf-scale-z" min="0.02" step="0.02" />
+                  </div>
+                  <button id="kf-delete-keyframe" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Keyframe</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="mb-tab-prefabs" class="mb-tab-panel" style="display:none">
+    <p class="hint">Pick a starter creature to replace this monster type's whole body (all slots + stance) with — then customize it in the Model Editor. Built-in, not saved/editable.</p>
+    <div class="preset-grid" id="mb-body-preset-grid"></div>
+  </div>
+
+  <div id="mb-footer">
+    <div class="row">
+      <button id="mb-save-btn" style="flex:1;">💾 Save Monster Type</button>
+      <button id="mb-new-btn" style="flex:0 0 auto;">＋ New</button>
+    </div>
+    <p class="hint" id="mb-status"></p>
+    <h3>Monster Type Catalog (<span id="mb-catalog-count">0</span>)</h3>
+    <div id="mb-catalog-list" class="hint" style="max-height:100px; overflow-y:auto;"></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="/src/monster-builder/main.js"></script>
+</body>
+</html>
