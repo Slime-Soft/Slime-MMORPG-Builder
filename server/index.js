@@ -55,6 +55,8 @@ import { isPointInZone } from '../src/sim/zones.js';
 import { initEventRuntimeState, initEventObjectWorldState, startEventScript, stepEventScript, resumeEventChoice, switchKey, isPointInEventRange, DEFAULT_EVENT_INTERACT_RANGE } from '../src/sim/events.js';
 import { initTowerProgress, clearedFloorCount, isFloorUnlocked, markFloorCleared, isFloorRequirementMet } from '../src/sim/towerDungeon.js';
 import { CHARACTER_PRESETS } from '../src/generators/characterPresets.js';
+import { createAccountStore, mountAuthRoutes } from './accounts.js';
+import { mountSiteRoutes } from './site.js';
 import { parseBuildingPartDefs } from '../src/sim/buildingPartDefs.js';
 import { parseBuildingTypeDefs } from '../src/sim/buildingTypeDefs.js';
 import { BUILDING_PART_PRESETS } from '../src/generators/buildingPartPresets.js';
@@ -782,8 +784,49 @@ console.log(`Built ${collision.colliders.length} static colliders`);
 // --- Express: serve client + world JSON ---
 const app = express();
 app.use(express.json({ limit: '10mb' })); // world JSON with a painted heightmap can be sizable
+
+// --- Public landing page (public/home.html) ---
+// `/` is the WEBSITE now, not the game. This route has to be registered
+// BEFORE the static mount below, because express.static would otherwise
+// answer `/` with public/index.html (its default index file) and the landing
+// page would never be reachable at the root. The game itself moved to
+// `/play`; `/index.html` still serves it directly, so nothing that
+// deep-linked the old URL breaks.
+app.get('/', (_req, res) => res.sendFile(path.join(ROOT, 'public/home.html')));
+app.get('/play', (_req, res) => res.sendFile(path.join(ROOT, 'public/index.html')));
+
 app.use(express.static(path.join(ROOT, 'public'), { setHeaders: (res) => res.set('Cache-Control', 'no-cache') }));
 app.use('/src', express.static(path.join(ROOT, 'src'), { setHeaders: (res) => res.set('Cache-Control', 'no-cache') }));
+// Marketing/site art (assets/web/) lives OUTSIDE public/ on purpose — it's
+// authored source material for the site, not a game asset the client loads
+// by id like everything under public/assets. Mounted after the public static
+// mount, so a same-named file in public/ would still win.
+app.use('/assets/web', express.static(path.join(ROOT, 'assets/web'), { setHeaders: (res) => res.set('Cache-Control', 'max-age=3600') }));
+
+// --- Accounts (see server/accounts.js for the scope caveats) ---
+const accountStore = createAccountStore(ROOT);
+mountAuthRoutes(app, accountStore);
+console.log(`Account store ready (${accountStore.count} account(s))`);
+
+// --- Landing page data (release notes + catalog counts) ---
+// Read live off the same catalogs the game uses, so the numbers on the site
+// are the real ones and move whenever someone authors something new.
+mountSiteRoutes(app, {
+  rootDir: ROOT,
+  readStats: () => ({
+    maps: maps.size,
+    monsters: monsterTypeDefs.length,
+    items: authoredItems.length,
+    skills: skillDefs.length,
+    quests: quests.length,
+    recipes: recipes.length,
+    characters: characterTypeDefs.length,
+    // "Assets" as an author thinks of them: everything placeable in a world —
+    // Object Builder pieces, imported meshes, and building parts.
+    assets: allObjectDefs().length + allModels().length + buildingPartDefs.length,
+  }),
+});
+
 // Legacy aliases — kept so nothing that predates multi-map support (an
 // old bookmark, a script) breaks; both always resolve to the one map
 // flagged isDefault in the manifest. The World Editor's Maps mode (a later
@@ -2629,6 +2672,49 @@ function applyDamageToPlayer(id, damage, damageType = 'physical') {
   }
 }
 
+/**
+ * What a monster's attack actually does to the player it hit.
+ *
+ * A catalog monster type authored in the Monster Builder can now give an
+ * ability a full `effects[]` — the same SkillEffect vocabulary a class skill
+ * uses (src/sim/skillDefs.js) — so "bite for 12 AND poison AND stagger" is
+ * three entries rather than one flat damage number. When an ability carries
+ * effects they are authoritative; `attackEvent.damage` (the legacy flat
+ * `power`) is only used when it doesn't, which is every hand-authored spawn and
+ * every catalog entry written before that editor existed.
+ *
+ * Damage still routes through applyDamageToPlayer, so dodge, physDefense/
+ * magicResist, armor buffs, shield absorption and the death/respawn path all
+ * apply exactly as before. Everything else lands as a timed status effect,
+ * which the per-player tick loop already expires and ticks.
+ *
+ * NOT applied: knockback/pull (players are client-predicted — forcing their
+ * position outside stepMovement risks rubber-banding, the same reason
+ * applySkillEffect skips it for players), heal/taunt (meaningless aimed at the
+ * player a monster is already attacking), and AoE shape — stepMonsterAI picks
+ * ONE target, so an aoe-circle ability hits that target alone for now.
+ */
+function applyMonsterAttackToPlayer(monster, attackEvent, now) {
+  const ability = (resolveMonsterAbilities(monster.type) || []).find((a) => a.id === attackEvent.abilityId);
+  const effects = ability?.effects;
+  if (!effects || !effects.length) {
+    applyDamageToPlayer(attackEvent.targetId, attackEvent.damage);
+    return;
+  }
+  for (const effect of effects) {
+    if (effect.type === 'damage') {
+      applyDamageToPlayer(attackEvent.targetId, effect.amount, effect.damageType);
+      continue;
+    }
+    if (['heal', 'taunt', 'knockback', 'pull'].includes(effect.type)) continue;
+    // Re-read each time: an earlier damage effect in this same list may have
+    // killed the player, and a corpse should not pick up a fresh stun.
+    const player = players.get(attackEvent.targetId);
+    if (!player || player.isDead) return;
+    player.statusEffects = applyStatusEffect(player.statusEffects, effect, now);
+  }
+}
+
 /** Once a dead player's respawn timer elapses, return them to the overworld at the tower's base, fully healed. */
 function respawnIfReady(id, player) {
   if (!player.isDead || !player.respawnAt || Date.now() < player.respawnAt) return;
@@ -3853,6 +3939,17 @@ setInterval(() => {
         if (ev.type === 'dot') player.health = Math.max(0, player.health - ev.amount);
         else if (ev.type === 'hot') player.health = Math.min(player.maxHealth, player.health + ev.amount);
       }
+      // A DoT tick is the one path to 0 health that does NOT go through
+      // applyDamageToPlayer, so it has to run the death transition itself.
+      // Previously unreachable — nothing applied a DoT to a player — but a
+      // monster ability authored with a `dot` effect now can, and a player
+      // sitting at 0 health who is never marked dead can neither respawn nor
+      // be healed out of it.
+      if (player.health === 0 && !player.isDead) {
+        player.isDead = true;
+        player.respawnAt = now + RESPAWN_DELAY_MS;
+        io.sockets.sockets.get(id)?.emit('player-died', { respawnMs: RESPAWN_DELAY_MS });
+      }
     }
     // Stunned/frozen/asleep: input is ignored entirely (no movement, no
     // jump) rather than threading a "can't act" flag through stepMovement
@@ -4022,7 +4119,7 @@ setInterval(() => {
     const { attackEvent, ...nextState } = stepMonsterAI(m, overworldAiPlayers, DT, now, collision, rng);
     overworldMonsters[i] = nextState;
     if (attackEvent) {
-      applyDamageToPlayer(attackEvent.targetId, attackEvent.damage);
+      applyMonsterAttackToPlayer(m, attackEvent, now);
       // For client-side VFX only (src/main.js looks up the full ability def
       // by id from the monster's type catalog entry) — mirrors 'ability-used'
       // for players. Harmless no-op for legacy monsters' synthesized
@@ -4060,10 +4157,11 @@ setInterval(() => {
     const aiPlayers = playersOnFloor.map((p) => ({ id: p.id, position: p.position, isDead: p.isDead }));
     for (let i = 0; i < floor.monsters.length; i++) {
       if (floor.monsters[i].health > 0) tickMonsterStatusEffects(floor.monsters[i], now);
-      const { attackEvent, ...nextState } = stepMonsterAI(floor.monsters[i], aiPlayers, DT, now, null, rng);
+      const attacker = floor.monsters[i];
+      const { attackEvent, ...nextState } = stepMonsterAI(attacker, aiPlayers, DT, now, null, rng);
       floor.monsters[i] = nextState;
       if (attackEvent) {
-        applyDamageToPlayer(attackEvent.targetId, attackEvent.damage);
+        applyMonsterAttackToPlayer(attacker, attackEvent, now);
         io.to(`floor-${floorNumber}`).emit('monster-ability-used', { monsterId: floor.monsters[i].id, abilityId: attackEvent.abilityId });
       }
     }
@@ -4095,10 +4193,11 @@ setInterval(() => {
     const aiPlayers = playersInInstance.map((p) => ({ id: p.id, position: p.position, isDead: p.isDead }));
     for (let i = 0; i < inst.monsters.length; i++) {
       if (inst.monsters[i].health > 0) tickMonsterStatusEffects(inst.monsters[i], now);
-      const { attackEvent, ...nextState } = stepMonsterAI(inst.monsters[i], aiPlayers, DT, now, null, rng);
+      const attacker = inst.monsters[i];
+      const { attackEvent, ...nextState } = stepMonsterAI(attacker, aiPlayers, DT, now, null, rng);
       inst.monsters[i] = nextState;
       if (attackEvent) {
-        applyDamageToPlayer(attackEvent.targetId, attackEvent.damage);
+        applyMonsterAttackToPlayer(attacker, attackEvent, now);
         io.to(room).emit('monster-ability-used', { monsterId: inst.monsters[i].id, abilityId: attackEvent.abilityId });
       }
     }

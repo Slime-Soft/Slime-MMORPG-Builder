@@ -18,45 +18,73 @@
         "role": "torso",
         "anchor": {
           "x": 0,
-          "y": 0.66,
+          "y": 0.03,
           "z": 0
         },
         "shapes": [
           {
-            "id": "t1",
-            "kind": "capsule",
+            "id": "puddle",
+            "kind": "sphere",
             "position": {
               "x": 0,
               "y": 0,
               "z": 0
             },
             "scale": {
-              "x": 0.36,
-              "y": 0.52,
-              "z": 0.28
+              "x": 1.12,
+              "y": 0.11200000000000002,
+              "z": 1.1872000000000003
             },
-            "color": 6986314
+            "color": 1994142,
+            "opacity": 0.55
           },
           {
-            "id": "belt",
-            "kind": "box",
+            "id": "splashA",
+            "kind": "sphere",
             "position": {
-              "x": -0.0003,
-              "y": -0.16,
-              "z": 0
+              "x": -0.5,
+              "y": 0,
+              "z": 0.2
             },
             "scale": {
-              "x": 0.26,
-              "y": 0.08,
-              "z": 0.19
+              "x": 0.22,
+              "y": 0.030800000000000004,
+              "z": 0.198
             },
-            "color": 3811866,
-            "rotation": {
-              "x": 0,
+            "color": 1994142,
+            "opacity": 0.5
+          },
+          {
+            "id": "splashB",
+            "kind": "sphere",
+            "position": {
+              "x": 0.49,
               "y": 0,
-              "z": 0
+              "z": -0.18
             },
-            "opacity": 1
+            "scale": {
+              "x": 0.18,
+              "y": 0.0252,
+              "z": 0.162
+            },
+            "color": 1994142,
+            "opacity": 0.5
+          },
+          {
+            "id": "splashC",
+            "kind": "sphere",
+            "position": {
+              "x": 0.14,
+              "y": 0,
+              "z": 0.5
+            },
+            "scale": {
+              "x": 0.15,
+              "y": 0.021,
+              "z": 0.135
+            },
+            "color": 1994142,
+            "opacity": 0.45
           }
         ]
       },
@@ -64,12 +92,12 @@
         "role": "head",
         "anchor": {
           "x": 0,
-          "y": 1,
+          "y": 0.47,
           "z": 0
         },
         "shapes": [
           {
-            "id": "h1",
+            "id": "dome",
             "kind": "sphere",
             "position": {
               "x": 0,
@@ -77,350 +105,474 @@
               "z": 0
             },
             "scale": {
+              "x": 0.96,
+              "y": 0.9792,
+              "z": 0.9408
+            },
+            "color": 4436710,
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "opacity": 0.8
+          },
+          {
+            "id": "crown",
+            "kind": "sphere",
+            "position": {
+              "x": 0.01,
+              "y": 0.24,
+              "z": -0.01
+            },
+            "scale": {
+              "x": 0.56,
+              "y": 0.36960000000000004,
+              "z": 0.336
+            },
+            "color": 4436710
+          },
+          {
+            "id": "skirt",
+            "kind": "sphere",
+            "position": {
+              "x": 0,
+              "y": -0.34,
+              "z": 0
+            },
+            "scale": {
+              "x": 1.04,
+              "y": 0.2496,
+              "z": 1.04
+            },
+            "color": 4436710,
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "opacity": 0.55
+          },
+          {
+            "id": "sheen",
+            "kind": "sphere",
+            "position": {
+              "x": -0.21977418999563006,
+              "y": 0.34672708383780265,
+              "z": 0.19563232821580703
+            },
+            "scale": {
               "x": 0.3,
-              "y": 0.3,
-              "z": 0.3
+              "y": 0.132,
+              "z": 0.132
             },
-            "color": 6986314
-          },
-          {
-            "id": "snout",
-            "kind": "box",
-            "position": {
+            "color": 14349055,
+            "rotation": {
               "x": 0,
-              "y": -0.05,
-              "z": 0.16
-            },
-            "scale": {
-              "x": 0.16,
-              "y": 0.14,
-              "z": 0.2
-            },
-            "color": 6986314
-          },
-          {
-            "id": "earL",
-            "kind": "pyramid",
-            "position": {
-              "x": -0.10259116933219944,
-              "y": 0.04616602619948975,
+              "y": -30,
               "z": 0
             },
-            "scale": {
-              "x": 0.08,
-              "y": 0.26,
-              "z": 0.06
+            "opacity": 0.75
+          },
+          {
+            "id": "sheen2",
+            "kind": "sphere",
+            "position": {
+              "x": -0.0178,
+              "y": 0.1752,
+              "z": 0.2605
             },
-            "color": 6986314,
+            "scale": {
+              "x": 0.13,
+              "y": 0.065,
+              "z": 0.065
+            },
+            "color": 14349055,
             "rotation": {
               "x": 0,
               "y": 0,
-              "z": 55
-            }
-          },
-          {
-            "id": "earR",
-            "kind": "pyramid",
-            "position": {
-              "x": 0.10259116933219944,
-              "y": 0.04616602619948975,
               "z": 0
-            },
-            "scale": {
-              "x": 0.08,
-              "y": 0.26,
-              "z": 0.06
-            },
-            "color": 6986314,
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": -55
             }
           },
           {
             "id": "eyeL",
             "kind": "sphere",
             "position": {
-              "x": -0.062192098717257824,
-              "y": 0.031096049358628912,
-              "z": 0.12438419743451565
+              "x": -0.15869916540805934,
+              "y": 0.06480215920829088,
+              "z": 0.3884823319884786
             },
             "scale": {
-              "x": 0.05,
-              "y": 0.05,
-              "z": 0.04000000000000001
+              "x": 0.22,
+              "y": 0.253,
+              "z": 0.11
             },
-            "color": 14168112
+            "color": 1194588
           },
           {
             "id": "eyeR",
             "kind": "sphere",
             "position": {
-              "x": 0.062192098717257824,
-              "y": 0.031096049358628912,
-              "z": 0.12438419743451565
+              "x": 0.15869916540805934,
+              "y": 0.06480215920829088,
+              "z": 0.3884823319884786
             },
             "scale": {
-              "x": 0.05,
-              "y": 0.05,
-              "z": 0.04000000000000001
+              "x": 0.22,
+              "y": 0.253,
+              "z": 0.11
             },
-            "color": 14168112
-          }
-        ]
-      },
-      {
-        "role": "armL",
-        "anchor": {
-          "x": -0.11,
-          "y": 0.82,
-          "z": 0
-        },
-        "shapes": [
+            "color": 1194588
+          },
           {
-            "id": "shoulder",
+            "id": "glintL",
             "kind": "sphere",
             "position": {
-              "x": -0.0665,
-              "y": 0,
-              "z": 0
+              "x": -0.13382602298072793,
+              "y": 0.14983478110611073,
+              "z": 0.4227031639848261
             },
             "scale": {
-              "x": 0.14,
-              "y": 0.14,
-              "z": 0.14
-            },
-            "color": 6986314,
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            }
-          },
-          {
-            "id": "a1",
-            "kind": "capsule",
-            "position": {
-              "x": -0.08,
-              "y": -0.19,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.1,
-              "y": 0.38,
-              "z": 0.1
-            },
-            "color": 6986314,
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            }
-          },
-          {
-            "id": "a2",
-            "kind": "cone",
-            "position": {
-              "x": -0.0747,
-              "y": -0.3496,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.09,
-              "y": 0.12,
-              "z": 0.09
-            },
-            "color": 15658734,
-            "rotation": {
-              "x": 180,
-              "y": 0,
-              "z": 0
-            }
-          }
-        ]
-      },
-      {
-        "role": "armR",
-        "anchor": {
-          "x": 0.11,
-          "y": 0.82,
-          "z": 0
-        },
-        "shapes": [
-          {
-            "id": "shoulder",
-            "kind": "sphere",
-            "position": {
-              "x": 0.0686,
-              "y": 0,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.14,
-              "y": 0.14,
-              "z": 0.14
-            },
-            "color": 6986314,
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            }
-          },
-          {
-            "id": "a1",
-            "kind": "capsule",
-            "position": {
-              "x": 0.0878,
-              "y": -0.19,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.1,
-              "y": 0.38,
-              "z": 0.1
-            },
-            "color": 6986314,
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            }
-          },
-          {
-            "id": "a2",
-            "kind": "cone",
-            "position": {
-              "x": 0.0976,
-              "y": -0.37,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.09,
-              "y": 0.12,
-              "z": 0.09
-            },
-            "color": 15658734,
-            "rotation": {
-              "x": 180,
-              "y": 0,
-              "z": 0
-            }
-          }
-        ]
-      },
-      {
-        "role": "legL",
-        "anchor": {
-          "x": -0.09,
-          "y": 0.46,
-          "z": 0
-        },
-        "shapes": [
-          {
-            "id": "hip",
-            "kind": "sphere",
-            "position": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.15,
-              "y": 0.15,
-              "z": 0.15
-            },
-            "color": 6986314
-          },
-          {
-            "id": "l1",
-            "kind": "capsule",
-            "position": {
-              "x": 0,
-              "y": -0.26,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.12,
-              "y": 0.56,
-              "z": 0.12
-            },
-            "color": 6986314
-          },
-          {
-            "id": "foot",
-            "kind": "box",
-            "position": {
-              "x": 0,
-              "y": -0.5,
-              "z": 0.04
-            },
-            "scale": {
-              "x": 0.14,
+              "x": 0.08,
               "y": 0.08,
-              "z": 0.19
+              "z": 0.032
             },
-            "color": 3811866
-          }
-        ]
-      },
-      {
-        "role": "legR",
-        "anchor": {
-          "x": 0.09,
-          "y": 0.46,
-          "z": 0
-        },
-        "shapes": [
+            "color": 15921902
+          },
           {
-            "id": "hip",
+            "id": "glintR",
+            "kind": "sphere",
+            "position": {
+              "x": 0.13382602298072793,
+              "y": 0.14983478110611073,
+              "z": 0.4227031639848261
+            },
+            "scale": {
+              "x": 0.08,
+              "y": 0.08,
+              "z": 0.032
+            },
+            "color": 15921902
+          },
+          {
+            "id": "glintBL",
+            "kind": "sphere",
+            "position": {
+              "x": -0.2158957545446651,
+              "y": 0,
+              "z": 0.4145057378921266
+            },
+            "scale": {
+              "x": 0.045,
+              "y": 0.045,
+              "z": 0.018
+            },
+            "color": 15921902
+          },
+          {
+            "id": "glintBR",
+            "kind": "sphere",
+            "position": {
+              "x": 0.2158957545446651,
+              "y": 0,
+              "z": 0.4145057378921266
+            },
+            "scale": {
+              "x": 0.045,
+              "y": 0.045,
+              "z": 0.018
+            },
+            "color": 15921902
+          },
+          {
+            "id": "mouth",
             "kind": "sphere",
             "position": {
               "x": 0,
-              "y": 0,
-              "z": 0
+              "y": -0.14336650202961987,
+              "z": 0.42973377521633505
             },
             "scale": {
-              "x": 0.15,
-              "y": 0.15,
-              "z": 0.15
+              "x": 0.2,
+              "y": 0.084,
+              "z": 0.06
             },
-            "color": 6986314
-          },
-          {
-            "id": "l1",
-            "kind": "capsule",
-            "position": {
-              "x": 0,
-              "y": -0.26,
-              "z": 0
-            },
-            "scale": {
-              "x": 0.12,
-              "y": 0.56,
-              "z": 0.12
-            },
-            "color": 6986314
-          },
-          {
-            "id": "foot",
-            "kind": "box",
-            "position": {
-              "x": 0,
-              "y": -0.5,
-              "z": 0.04
-            },
-            "scale": {
-              "x": 0.14,
-              "y": 0.08,
-              "z": 0.19
-            },
-            "color": 3811866
+            "color": 1194588
           }
         ]
       }
-    ]
+    ],
+    "previewAnimation": "idle",
+    "animation": {
+      "idleClip": {
+        "durationMs": 2400,
+        "loop": true,
+        "timeline": [
+          {
+            "type": "pose",
+            "atMs": 0,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 600,
+            "part": "head",
+            "rotationDeg": {
+              "x": 4,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 1200,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 1800,
+            "part": "head",
+            "rotationDeg": {
+              "x": -4,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 2400,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 0,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 3
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 600,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 1200,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": -3
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 1800,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 2400,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 3
+            }
+          }
+        ]
+      },
+      "walkClip": {
+        "durationMs": 820,
+        "loop": true,
+        "timeline": [
+          {
+            "type": "pose",
+            "atMs": 0,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 205,
+            "part": "head",
+            "rotationDeg": {
+              "x": 8,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 410,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 615,
+            "part": "head",
+            "rotationDeg": {
+              "x": -8,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 820,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 0,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 4.3
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 205,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": -2.5
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 410,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": -4.3
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 615,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 2.5
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 820,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 4.3
+            }
+          }
+        ]
+      },
+      "attackClip": {
+        "durationMs": 520,
+        "loop": false,
+        "timeline": [
+          {
+            "type": "pose",
+            "atMs": 0,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 177,
+            "part": "head",
+            "rotationDeg": {
+              "x": -16,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 286,
+            "part": "head",
+            "rotationDeg": {
+              "x": 22,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 416,
+            "part": "head",
+            "rotationDeg": {
+              "x": 6,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "type": "pose",
+            "atMs": 520,
+            "part": "head",
+            "rotationDeg": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        ]
+      }
+    }
   },
   {
     "id": "forest-spider",

@@ -77,7 +77,8 @@ npm start
 
 Open:
 
-- `/` Ingame Preview
+- `/` Landing page — play, or create an account
+- `/play` Ingame Preview
 - `/editor.html` World Editor
 - `/buildings.html` Create Buildings
 - `/characters.html`Create NPCs and playable Characters

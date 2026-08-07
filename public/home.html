@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slime MMORPG Builder — Build your MMO world</title>
+  <meta name="description" content="A no-code MMORPG builder in your browser. Design maps, monsters, quests, skills and buildings — then walk into the world you made." />
+  <meta name="theme-color" content="#06111a" />
+
+  <link rel="icon" href="/assets/web/logo.png" />
+  <link rel="preload" as="image" href="/assets/web/bg.png" crossorigin />
+  <link rel="preload" as="image" href="/assets/web/hill.png" crossorigin />
+
+  <!-- Tailwind via the Play CDN. This project has no build step anywhere (the
+       browser loads src/ as raw ES modules, three.js comes from jsdelivr), so
+       a CDN keeps this page consistent with everything around it. Swapping to
+       a compiled stylesheet is the right move before real traffic. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 900: '#06111a', 800: '#0a1a24', 700: '#102a38', 600: '#17394a' },
+            gold: { deep: '#b07d1f', DEFAULT: '#f0bc4e', bright: '#ffd97a' },
+            // Contrast-checked against the panel background compositing over the
+            // brightest thing the painting can put behind it (the white tower).
+            mist: { DEFAULT: '#e6eef3', dim: '#a8bcc8', faint: '#8fa4b2' },
+          },
+          fontFamily: {
+            // The logo image carries the brand lettering, so page type only has
+            // to be maximally legible over a painting — a heavy sans.
+            sans: ['Segoe UI', 'ui-sans-serif', 'system-ui', 'Inter', 'sans-serif'],
+          },
+          keyframes: {
+            'rise-in': { from: { opacity: '0', transform: 'translateY(16px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+            'modal-in': { from: { opacity: '0', transform: 'translateY(14px) scale(0.965)' }, to: { opacity: '1', transform: 'translateY(0) scale(1)' } },
+            'sheen': { '0%': { transform: 'translateX(-120%)' }, '60%,100%': { transform: 'translateX(220%)' } },
+            'nudge': { '0%,100%': { transform: 'translateY(0)', opacity: '0.5' }, '50%': { transform: 'translateY(6px)', opacity: '1' } },
+          },
+          animation: {
+            'rise-in': 'rise-in 0.7s cubic-bezier(0.22,1,0.36,1) both',
+            'modal-in': 'modal-in 0.3s cubic-bezier(0.22,1,0.36,1) both',
+            'nudge': 'nudge 2.2s ease-in-out infinite',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* Page chrome is plain CSS on purpose. Tailwind's Play CDN builds its
+       stylesheet by scanning the DOM, so anything applied only via classList
+       from JS (active chip, nav scroll state) can be late to style. */
+
+    html { scroll-behavior: smooth; }
+    body { background-color: #06111a; overflow-x: clip; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+    /* Panels are lighter and more transparent than the last pass. The point of
+       this page is the painting; chrome that boxes it in fights the art. */
+    .panel {
+      background: rgba(7, 18, 26, 0.86);
+      border: 1px solid rgba(240, 188, 78, 0.20);
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+    }
+
+    .btn-gold {
+      position: relative; overflow: hidden;
+      background: linear-gradient(180deg, #ffd97a 0%, #f0bc4e 45%, #d99f2f 100%);
+      color: #2b1d05;
+      border: 1px solid #ffe6a4; border-radius: 9px;
+      font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.5);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+      cursor: pointer;
+    }
+    .btn-gold:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 10px 24px rgba(0,0,0,0.5), 0 0 22px rgba(240,188,78,0.35), inset 0 1px 0 rgba(255,255,255,0.55); }
+    .btn-gold:active { transform: translateY(0); }
+    .btn-gold::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent);
+      transform: translateX(-120%);
+    }
+    .btn-gold:hover::after { animation: sheen 0.85s ease-out; }
+
+    .btn-ghost {
+      border: 1px solid rgba(240,188,78,0.32); border-radius: 9px;
+      color: #e6eef3; background: rgba(10,26,36,0.6);
+      font-weight: 700; letter-spacing: 0.05em; cursor: pointer;
+      transition: border-color 0.16s, background 0.16s, color 0.16s;
+    }
+    .btn-ghost:hover { border-color: #f0bc4e; color: #ffd97a; background: rgba(16,42,56,0.8); }
+
+    .news-item { display: block; padding: 9px 10px; border-radius: 8px; transition: background 0.18s; }
+    .news-item + .news-item { border-top: 1px solid rgba(240,188,78,0.10); }
+    .news-item:hover { background: rgba(16,42,56,0.55); }
+
+    .badge-new { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #3f8850; color: #eafff0; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    /* Tool cards below the fold */
+    .tool-card { transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), border-color 0.22s, background 0.22s; }
+    .tool-card:hover { transform: translateY(-4px); border-color: rgba(240,188,78,0.5); background: rgba(12,28,38,0.92); }
+    .tool-card:hover .tool-icon { color: #ffd97a; transform: scale(1.08); }
+    .tool-icon { transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), color 0.22s; }
+
+    .rule-gold { height: 1px; background: linear-gradient(90deg, transparent, rgba(240,188,78,0.45), transparent); }
+
+    dialog::backdrop { background: rgba(3,9,13,0.75); backdrop-filter: blur(7px); }
+
+    .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.12), rgba(255,255,255,0.05)); background-size: 200% 100%; animation: sheen-bg 1.3s linear infinite; border-radius: 6px; }
+    @keyframes sheen-bg { to { background-position: -200% 0; } }
+
+    /* Scroll reveal is gated on <html class="js-reveal">, added by landing.js —
+       so a JS failure can never leave the content permanently invisible. */
+    .js-reveal .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1); }
+    .js-reveal .reveal.is-visible { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+
+<body class="font-sans text-mist antialiased selection:bg-gold/30">
+
+  <!-- Icon sprite. Vector, single stroke weight, one family (Lucide geometry) —
+       emoji are font-dependent, render differently per OS, and can't be themed
+       or sized off design tokens, so they have no place as structural icons. -->
+  <svg width="0" height="0" class="hidden" aria-hidden="true">
+    <defs>
+      <g id="i-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></g>
+      <g id="i-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></g>
+      <g id="i-user"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>
+      <g id="i-skull"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></g>
+      <g id="i-sparkles"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.29 1.29L3 12l5.81 1.91a2 2 0 0 1 1.29 1.29L12 21l1.9-5.8a2 2 0 0 1 1.29-1.29L21 12l-5.81-1.91a2 2 0 0 1-1.29-1.29z"/></g>
+      <g id="i-wand"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8 19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2 19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2 11 5"/></g>
+      <g id="i-sword"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/></g>
+      <g id="i-play"><polygon points="6 3 20 12 6 21 6 3"/></g>
+      <g id="i-megaphone"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></g>
+      <g id="i-box"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></g>
+      <g id="i-map"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15"/><path d="M15 6v15"/></g>
+      <g id="i-layers"><path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></g>
+      <g id="i-server"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="13" width="20" height="8" rx="2"/><path d="M6 7h.01"/><path d="M6 17h.01"/></g>
+      <g id="i-braces"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></g>
+      <g id="i-chevron-right"><path d="m9 18 6-6-6-6"/></g>
+      <g id="i-chevron-down"><path d="m6 9 6 6 6-6"/></g>
+      <g id="i-external"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></g>
+      <g id="i-hammer"><path d="m15 12-8.5 8.5a2.12 2.12 0 1 1-3-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"/></g>
+    </defs>
+  </svg>
+
+  <!-- ══ The layered scene ═════════════════════════════════════════════════ -->
+  <div class="fixed inset-0 -z-10">
+    <div id="scene-fallback" class="absolute inset-0 hidden">
+      <div class="absolute inset-0 bg-cover bg-center" style="background-image:url('/assets/web/bg.png')"></div>
+      <div class="absolute bottom-0 left-0 h-[66%] w-[23%] bg-contain bg-bottom bg-no-repeat" style="background-image:url('/assets/web/hill.png')"></div>
+    </div>
+    <canvas id="scene-canvas" class="absolute inset-0 h-full w-full"></canvas>
+  </div>
+
+  <!-- ══ Nav ══════════════════════════════════════════════════════════════ -->
+  <!-- A floating solid bar, not a transparent overlay. The previous version
+       faded its own background in only after scrolling, which left dark link
+       text sitting on the painting's bright sky — effectively invisible at the
+       one place every visitor starts. -->
+  <header id="site-nav" class="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-5 sm:pt-4">
+    <div class="panel mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-2.5 sm:px-5">
+      <a href="#top" class="flex items-center gap-2.5">
+        <img src="/assets/web/logo.png" alt="" width="40" height="40" class="h-9 w-9 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+        <span class="leading-none">
+          <span class="block text-base font-extrabold tracking-[0.14em] text-mist">SLIME</span>
+          <span class="block text-[0.55rem] font-bold tracking-[0.2em] text-gold">MMO BUILDER</span>
+        </span>
+      </a>
+
+      <nav class="hidden items-center gap-7 md:flex">
+        <a href="#builders" class="text-[0.72rem] font-bold uppercase tracking-[0.13em] text-mist transition-colors hover:text-gold-bright">Builders</a>
+        <a href="#how" class="text-[0.72rem] font-bold uppercase tracking-[0.13em] text-mist transition-colors hover:text-gold-bright">How it works</a>
+        <a href="#status" class="text-[0.72rem] font-bold uppercase tracking-[0.13em] text-mist transition-colors hover:text-gold-bright">Status</a>
+        <a href="/play" class="text-[0.72rem] font-bold uppercase tracking-[0.13em] text-mist transition-colors hover:text-gold-bright">Play</a>
+      </nav>
+
+      <div class="flex items-center gap-2" id="account-slot"><!-- filled by landing.js --></div>
+    </div>
+  </header>
+
+  <!-- ══ Hero — one viewport, art dominant ════════════════════════════════ -->
+  <!-- Deliberately empty through the middle and along the bottom-left: that is
+       where the tower and the cliff live. Chrome stays out of the picture. -->
+  <section id="top" class="relative flex h-[100svh] flex-col justify-between px-4 pb-6 pt-[88px] sm:px-7 sm:pb-8">
+    <!-- Fades the painting into the solid section below, so the boundary is a
+         deliberate transition rather than a hard seam across the artwork. -->
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-[1] h-40 bg-gradient-to-b from-transparent to-ink-900"></div>
+
+    <div class="flex items-start justify-between gap-4">
+      <!-- Hero card: narrow on purpose, so the cliff and the party stay clear -->
+      <!-- Wide and short, not tall and narrow. Height is the scarce resource
+           here: every vertical pixel this panel takes is a pixel the cliff
+           below it has to give up to stay clear of the party. -->
+      <div id="hero-card" class="panel animate-rise-in w-full max-w-[31rem] px-5 py-4 sm:px-6 sm:py-5">
+        <p class="text-[0.58rem] font-bold uppercase tracking-[0.28em] text-gold-deep">No-code · Browser-based</p>
+        <h1 class="mt-1.5 text-[clamp(1.5rem,2.2vw,2rem)] font-extrabold uppercase leading-[1.05] tracking-tight">
+          <span class="text-mist">Build your </span><span class="text-gold-bright">MMO world</span>
+        </h1>
+
+        <p class="mt-2 text-[0.78rem] leading-relaxed text-mist-dim">
+          Design maps, monsters, quests, skills and buildings in your browser — then walk into the
+          world you made.
+        </p>
+
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+          <a href="/play" class="btn-gold inline-flex items-center gap-2 px-5 py-2.5 text-[0.72rem]">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" class="h-3 w-3" aria-hidden="true"><use href="#i-play"/></svg>
+            Play Now
+          </a>
+          <a href="/editor.html" target="_blank" rel="noopener noreferrer"
+             class="btn-ghost inline-flex items-center gap-1.5 px-4 py-2.5 text-[0.68rem] uppercase">
+            Open World Editor
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3" aria-hidden="true"><use href="#i-external"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Updates: compact, right side, out of the tower's way -->
+      <aside id="updates" class="panel animate-rise-in hidden w-full max-w-[19rem] p-3.5 lg:block">
+        <div class="mb-2 flex items-center gap-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 text-gold" aria-hidden="true"><use href="#i-megaphone"/></svg>
+          <h2 class="text-[0.65rem] font-extrabold uppercase tracking-[0.15em] text-mist">Latest Updates</h2>
+        </div>
+        <div class="rule-gold mb-1"></div>
+        <div id="news-list" class="max-h-[15rem] overflow-y-auto">
+          <div class="space-y-2 p-2">
+            <div class="skeleton h-3 w-2/3"></div>
+            <div class="skeleton h-2.5 w-full"></div>
+            <div class="skeleton h-2.5 w-5/6"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Bottom of the hero stays clear — this is where the party stands. -->
+    <a href="#builders" class="mx-auto flex flex-col items-center gap-1 text-gold-bright/70 transition-colors hover:text-gold-bright" aria-label="Scroll to the builders">
+      <span class="text-[0.6rem] font-bold uppercase tracking-[0.2em]">Explore the toolkit</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-nudge h-4 w-4" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </a>
+  </section>
+
+  <!-- ══ Below the fold — the informative half ════════════════════════════ -->
+  <!-- Fully opaque. The previous pass let the painting show through at ~95%,
+       which put bright fields and the tower directly behind body copy — the
+       art won and the text became unreadable. Below the fold the artwork's job
+       is done; this half is for reading. -->
+  <main class="relative bg-ink-900">
+
+    <!-- The Builders — every card is one real tool, linked 1:1 -->
+    <section id="builders" class="relative mx-auto max-w-[1400px] px-4 pb-16 pt-20 sm:px-7">
+      <div class="reveal mx-auto max-w-2xl text-center">
+        <p class="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-gold-deep">Six tools, one world</p>
+        <h2 class="mt-3 text-3xl font-extrabold uppercase tracking-tight text-mist sm:text-4xl">The Builders</h2>
+        <p class="mt-4 text-sm leading-relaxed text-mist-dim">
+          Each one writes plain JSON the running server picks up immediately. Open a builder,
+          change something, switch back to the game — it's already there. They open in new tabs
+          so you can keep several going at once.
+        </p>
+      </div>
+
+      <div class="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <a href="/editor.html" target="_blank" rel="noopener noreferrer" class="tool-card reveal panel group flex gap-4 p-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="tool-icon h-7 w-7 shrink-0 text-gold" aria-hidden="true"><use href="#i-globe"/></svg>
+          <div class="min-w-0">
+            <h3 class="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">World Editor
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-mist-faint" aria-hidden="true"><use href="#i-external"/></svg>
+            </h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-mist-dim">Terrain, water, rivers and roads, zones, prop and monster placement, quests, events, and multi-map worlds linked by teleporters.</p>
+          </div>
+        </a>
+
+        <a href="/buildings.html" target="_blank" rel="noopener noreferrer" class="tool-card reveal panel group flex gap-4 p-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="tool-icon h-7 w-7 shrink-0 text-gold" aria-hidden="true"><use href="#i-home"/></svg>
+          <div class="min-w-0">
+            <h3 class="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Building Builder
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-mist-faint" aria-hidden="true"><use href="#i-external"/></svg>
+            </h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-mist-dim">Assemble houses, keeps and shops from a modular part library — walls, roofs, doors and trim, snapped together from primitives.</p>
+          </div>
+        </a>
+
+        <a href="/characters.html" target="_blank" rel="noopener noreferrer" class="tool-card reveal panel group flex gap-4 p-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="tool-icon h-7 w-7 shrink-0 text-gold" aria-hidden="true"><use href="#i-user"/></svg>
+          <div class="min-w-0">
+            <h3 class="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Character &amp; NPC Builder
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-mist-faint" aria-hidden="true"><use href="#i-external"/></svg>
+            </h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-mist-dim">Author playable bodies and townsfolk, hand them weapons, and tune exactly how each weapon sits in the grip.</p>
+          </div>
+        </a>
+
+        <a href="/monsters.html" target="_blank" rel="noopener noreferrer" class="tool-card reveal panel group flex gap-4 p-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="tool-icon h-7 w-7 shrink-0 text-gold" aria-hidden="true"><use href="#i-skull"/></svg>
+          <div class="min-w-0">
+            <h3 class="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Monster Editor
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-mist-faint" aria-hidden="true"><use href="#i-external"/></svg>
+            </h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-mist-dim">Build creatures out of shapes, rig and animate them, then tune stats, ability slots and the levels their moveset unlocks at.</p>
+          </div>
+        </a>
+
+        <a href="/skills.html" target="_blank" rel="noopener noreferrer" class="tool-card reveal panel group flex gap-4 p-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="tool-icon h-7 w-7 shrink-0 text-gold" aria-hidden="true"><use href="#i-sparkles"/></svg>
+          <div class="min-w-0">
+            <h3 class="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Skill &amp; VFX Builder
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-mist-faint" aria-hidden="true"><use href="#i-external"/></svg>
+            </h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-mist-dim">Compose abilities from effects and targeting rules, wire status logic — stun, taunt, slow, burn — and author the particles that sell them.</p>
+          </div>
+        </a>
+
+        <a href="/character-creation.html" target="_blank" rel="noopener noreferrer" class="tool-card reveal panel group flex gap-4 p-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="tool-icon h-7 w-7 shrink-0 text-gold" aria-hidden="true"><use href="#i-wand"/></svg>
+          <div class="min-w-0">
+            <h3 class="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Character Creation
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-mist-faint" aria-hidden="true"><use href="#i-external"/></svg>
+            </h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-mist-dim">The player-facing one: pick a body, hair, eyes and skin, choose a class, and step into the overworld.</p>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" class="relative border-t border-gold/10 bg-ink-800/40 py-16">
+      <div class="mx-auto max-w-[1400px] px-4 sm:px-7">
+        <div class="reveal mx-auto max-w-2xl text-center">
+          <p class="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-gold-deep">Under the hood</p>
+          <h2 class="mt-3 text-3xl font-extrabold uppercase tracking-tight text-mist sm:text-4xl">How it works</h2>
+        </div>
+
+        <div class="mt-12 grid gap-4 md:grid-cols-3">
+          <div class="reveal panel p-6">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7 text-gold" aria-hidden="true"><use href="#i-braces"/></svg>
+            <h3 class="mt-4 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Content is data</h3>
+            <p class="mt-2 text-xs leading-relaxed text-mist-dim">Every monster, quest, item, skill and map is a plain JSON file on disk. The builders write it, the server validates and hot-loads it, and nothing needs a rebuild or a restart.</p>
+          </div>
+          <div class="reveal panel p-6">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7 text-gold" aria-hidden="true"><use href="#i-server"/></svg>
+            <h3 class="mt-4 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Server owns the truth</h3>
+            <p class="mt-2 text-xs leading-relaxed text-mist-dim">The same simulation code runs on both ends. The client predicts your movement so it feels instant; the server resolves every outcome, so nothing is decided by the browser.</p>
+          </div>
+          <div class="reveal panel p-6">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="h-7 w-7 text-gold" aria-hidden="true"><use href="#i-layers"/></svg>
+            <h3 class="mt-4 text-sm font-extrabold uppercase tracking-[0.06em] text-mist">Bring your own assets</h3>
+            <p class="mt-2 text-xs leading-relaxed text-mist-dim">Import FBX and GLB models, or drop a file into one folder and refresh — exported objects, meshes and procedural generator modules all register themselves with no catalog to hand-edit.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status + live catalog counts -->
+    <section id="status" class="relative border-t border-gold/10 py-16">
+      <div class="mx-auto max-w-[1400px] px-4 sm:px-7">
+        <div class="grid gap-10 lg:grid-cols-[1fr_1fr]">
+          <div class="reveal">
+            <p class="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-gold-deep">Where the project stands</p>
+            <h2 class="mt-3 text-3xl font-extrabold uppercase tracking-tight text-mist sm:text-4xl">Honest status</h2>
+            <p class="mt-5 text-sm leading-relaxed text-mist-dim">
+              This is an actively developed solo project. The editors are already capable of authoring
+              rich content, and the multiplayer architecture is server-authoritative from the ground up.
+            </p>
+            <p class="mt-3 text-sm leading-relaxed text-mist-dim">
+              Persistence, a production backend and saved character progression are still in
+              development — accounts created here are the first step toward that. Some assets are
+              visually rough, and skill animations and sound are deliberately parked while the
+              builder systems come first.
+            </p>
+          </div>
+
+          <div class="reveal">
+            <h3 class="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-mist-faint">This install, right now</h3>
+            <p class="mt-1 text-xs text-mist-faint">Read live from the server's own catalogs — not marketing numbers.</p>
+            <dl id="stat-bar" class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3"><!-- filled by landing.js --></dl>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ══ Footer ═══════════════════════════════════════════════════════════ -->
+  <footer class="border-t border-gold/15 bg-ink-900 py-8">
+    <div class="mx-auto flex max-w-[1400px] flex-col items-center gap-5 px-4 sm:px-7 lg:flex-row lg:justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/assets/web/logo.png" alt="Slime MMO Builder" width="40" height="40" class="h-10 w-10 object-contain" />
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-mist">Slime MMORPG Builder</p>
+          <p class="text-[0.68rem] text-mist-faint">A solo work in progress.</p>
+        </div>
+      </div>
+      <nav class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[0.68rem] font-bold uppercase tracking-[0.11em] text-mist-faint">
+        <a href="/editor.html" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-gold">Editor</a>
+        <a href="/characters.html" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-gold">Characters</a>
+        <a href="/buildings.html" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-gold">Buildings</a>
+        <a href="/monsters.html" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-gold">Monsters</a>
+        <a href="/skills.html" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-gold">Skills</a>
+        <a href="/play" class="transition-colors hover:text-gold">Play</a>
+      </nav>
+    </div>
+  </footer>
+
+  <!-- ══ Account modal ════════════════════════════════════════════════════ -->
+  <dialog id="auth-dialog"
+          class="w-[min(29rem,calc(100vw-2rem))] animate-modal-in rounded-2xl border border-gold/25 bg-[#081420] p-0 text-mist shadow-[0_30px_90px_rgba(0,0,0,0.8)]">
+    <form method="dialog" class="absolute right-3 top-3">
+      <button class="grid h-8 w-8 place-items-center rounded-lg border border-gold/25 text-mist-dim transition-colors hover:border-gold hover:text-gold-bright" aria-label="Close">✕</button>
+    </form>
+
+    <div class="px-7 pb-7 pt-8">
+      <div class="text-center">
+        <img src="/assets/web/logo.png" alt="" width="56" height="56" class="mx-auto mb-3 h-14 w-14 object-contain" />
+        <h2 id="auth-title" class="text-xl font-extrabold uppercase tracking-[0.06em] text-gold-bright">Claim your name</h2>
+        <p id="auth-sub" class="mt-1.5 text-sm text-mist-dim">Keep your characters and creations tied to you.</p>
+      </div>
+
+      <div class="mt-6 grid grid-cols-2 gap-1 rounded-xl border border-gold/20 bg-ink-900/70 p-1" role="tablist">
+        <button type="button" role="tab" data-auth-tab="register" aria-selected="true"
+                class="rounded-lg px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] transition-colors">Create account</button>
+        <button type="button" role="tab" data-auth-tab="login" aria-selected="false"
+                class="rounded-lg px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] transition-colors">Sign in</button>
+      </div>
+
+      <form id="auth-form" class="mt-6 space-y-4" novalidate>
+        <div>
+          <label for="auth-username" class="mb-1.5 block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-gold-deep">Name</label>
+          <input id="auth-username" name="username" type="text" autocomplete="username" required
+                 class="w-full rounded-lg border border-gold/25 bg-ink-900 px-3.5 py-2.5 text-mist placeholder:text-mist-faint focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/25"
+                 placeholder="Ashvale" />
+          <p class="mt-1.5 text-xs text-mist-faint">3–20 characters — letters, numbers, hyphens, underscores.</p>
+        </div>
+
+        <div data-only="register">
+          <label for="auth-email" class="mb-1.5 block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-gold-deep">Email <span class="normal-case tracking-normal text-mist-faint">(optional)</span></label>
+          <input id="auth-email" name="email" type="email" autocomplete="email"
+                 class="w-full rounded-lg border border-gold/25 bg-ink-900 px-3.5 py-2.5 text-mist placeholder:text-mist-faint focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/25"
+                 placeholder="you@example.com" />
+          <p class="mt-1.5 text-xs text-mist-faint">Only used if password recovery lands later. Leave it blank if you'd rather not.</p>
+        </div>
+
+        <div>
+          <label for="auth-password" class="mb-1.5 block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-gold-deep">Password</label>
+          <input id="auth-password" name="password" type="password" required
+                 class="w-full rounded-lg border border-gold/25 bg-ink-900 px-3.5 py-2.5 text-mist placeholder:text-mist-faint focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/25"
+                 placeholder="••••••••" />
+          <p class="mt-1.5 text-xs text-mist-faint">At least 8 characters.</p>
+        </div>
+
+        <p id="auth-error" class="hidden rounded-lg border border-red-500/45 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-200" role="alert"></p>
+
+        <button type="submit" id="auth-submit" class="btn-gold w-full px-6 py-3 text-sm">Create account</button>
+      </form>
+
+      <p class="mt-4 text-center text-xs leading-relaxed text-mist-faint">
+        Development build — accounts are stored locally by the server you're connected to,
+        and sessions end when it restarts.
+      </p>
+    </div>
+  </dialog>
+
+  <script type="module" src="/src/web/landing.js"></script>
+</body>
+</html>

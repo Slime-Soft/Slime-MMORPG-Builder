@@ -14,7 +14,7 @@ import { generateFurniture } from '../generators/interior/furniture.js';
 import { generateMonster } from '../generators/monster.js';
 import { generateCustomObject } from '../generators/custom.js';
 import { buildProp } from '../generators/props.js';
-import { GAIT_TABLES, applyGaitPose, applyIdlePose, applyKeyframeClip } from '../generators/rig.js';
+import { GAIT_TABLES, applyGaitPose, applyIdlePose, applyKeyframeClip, applyPoseTimeline } from '../generators/rig.js';
 import { sampleTerrainHeight } from '../sim/world.js';
 import { applyAtmosphere, getPreset } from './atmosphere.js';
 import { createGrassCover, buildGrassPropMesh } from './grassCover.js';
@@ -877,56 +877,11 @@ export function triggerAbilityAnimation(scene, mesh, ability, vfxSystem = null, 
   };
 }
 
-/**
- * Pose every rig part named by a `pose`-type timeline event at time `t` —
- * interpolated linearly between that part's surrounding keyframes (holding
- * rest pose before its first authored keyframe, so an arm-raise reads as a
- * motion starting from idle rather than a pose that's already mid-raise the
- * instant the ability triggers). Shared by `runTimeline` (live playback) and
- * the Skill Builder's timeline scrubber (paused preview at an arbitrary
- * scrub time) — one implementation, so authoring-time preview can never
- * drift from what the live game actually plays.
- * @param {Record<string, THREE.Object3D>} rig mesh.userData.rig
- * @param {import('../sim/skillDefs.js').TimelineEvent[]} timeline
- * @param {number} t ms since the timeline started
- */
-export function applyPoseTimeline(rig, timeline, t) {
-  if (!rig) return;
-  const parts = new Set(timeline.filter((e) => e.type === 'pose').map((e) => e.part));
-  const R2D = 180 / Math.PI;
-  for (const part of parts) {
-    const pivot = rig[part];
-    if (!pivot) continue;
-    const keys = timeline
-      .filter((e) => e.type === 'pose' && e.part === part)
-      .sort((a, b) => a.atMs - b.atMs);
-    // Absent a keyframe at ms 0, an arm should start the pose from whatever
-    // it's actually resting at right now — the weapon's hold pose stamped by
-    // attachWeapons (creatureRig.js), not a hardcoded zero rotation — so the
-    // authored motion animates seamlessly OUT of the default in-game stance
-    // instead of the limb snapping there the instant the timeline starts.
-    const base = pivot.userData.basePose;
-    let prev = {
-      atMs: 0,
-      rotationDeg: base
-        ? { x: base.x * R2D, y: base.y * R2D, z: base.z * R2D }
-        : { x: 0, y: 0, z: 0 },
-    };
-    let next = keys[0] || prev;
-    for (const k of keys) {
-      if (k.atMs <= t) prev = k;
-      if (k.atMs >= t) { next = k; break; }
-    }
-    const span = next.atMs - prev.atMs;
-    const p = span > 0 ? Math.min(1, Math.max(0, (t - prev.atMs) / span)) : 1;
-    const D2R = Math.PI / 180;
-    pivot.rotation.set(
-      (prev.rotationDeg.x + (next.rotationDeg.x - prev.rotationDeg.x) * p) * D2R,
-      (prev.rotationDeg.y + (next.rotationDeg.y - prev.rotationDeg.y) * p) * D2R,
-      (prev.rotationDeg.z + (next.rotationDeg.z - prev.rotationDeg.z) * p) * D2R
-    );
-  }
-}
+// applyPoseTimeline itself now lives in generators/rig.js (applyKeyframeClip
+// there needs the exact same pose-interpolation math for monster idle/walk/
+// attack clips) — re-exported here so every existing '../render/scene.js'
+// import (Skill Builder, runTimeline below) keeps working unchanged.
+export { applyPoseTimeline };
 
 /**
  * Run an explicit, arbitrary-length `animation.timeline` (see skillDefs.js's

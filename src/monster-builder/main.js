@@ -14,13 +14,20 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { createRenderer, createScene } from '../render/scene.js';
-import { buildShapeMesh } from '../generators/custom.js';
-import { buildMonsterRig, resolveGaitTable } from '../generators/monsterRig.js';
+import { createRenderer, applyPoseTimeline } from '../render/scene.js';
+import { createStudioScene, addStudioLights, enableStudioShadows } from './studio.js';
+import { buildShapeMesh, setShapeOpacity } from '../generators/custom.js';
+import { buildMonsterRig } from '../generators/monsterRig.js';
 import { findDetachedSlots } from '../generators/monsterConnectivity.js';
-import { applyIdlePose, applyGaitPose, applyAttackPose, applyKeyframeClip, defaultAnimationForStance } from '../generators/rig.js';
+import { applyIdlePose } from '../generators/rig.js';
 import { ABILITY_KINDS, ABILITY_LEVEL_LADDER } from '../sim/monsterTypeDefs.js';
-import { PART_PRESETS, BODY_PRESETS, presetCategoryForRole } from '../generators/monsterPresets.js';
+// A monster ability and a class skill share one effect/targeting vocabulary
+// (see the header comment on src/sim/skillDefs.js) — the Abilities tab below
+// authors against the same lists the Skill Builder does rather than a
+// monster-only subset that would drift from it.
+import { TARGETING_SHAPES, EFFECT_TYPES, DAMAGE_TYPES, BUFF_STATS, VFX_ANCHORS } from '../sim/skillDefs.js';
+import { PRESET_IDS } from '../render/vfx/index.js';
+import { PART_PRESETS, BODY_PRESETS, presetCategoryForRole, defaultClipsForStance } from '../generators/monsterPresets.js';
 import { ITEM_IDS } from '../sim/items.js';
 
 // --- Small shared utilities ---------------------------------------------
@@ -46,14 +53,9 @@ const DEFAULT_ANCHORS = {
     legBackL: { x: -0.25, y: 0.25, z: -0.35 }, legBackR: { x: 0.25, y: 0.25, z: -0.35 },
   },
 };
-const ATTACK_POSE_BY_STANCE = {
-  humanoid: { part: 'armR', axis: 'x', amplitude: 1.1 },
-  quadruped: { part: 'legFrontR', axis: 'x', amplitude: 0.9 },
-};
-
 function blankMonsterType() {
   return {
-    id: '', name: '', stance: 'humanoid', slots: [], previewAnimation: 'idle',
+    id: '', name: '', stance: 'humanoid', slots: [],
     configuredLevel: 2, abilitySlots: [],
     baseStats: { maxHealth: 30, damage: 5, speed: 1.6, aggroRange: 8, attackRange: 1.6, attackCooldownMs: 1400 },
   };
@@ -74,6 +76,9 @@ let mbMonsterGroup = null;
 // since this page doesn't share the World Editor's Items/Events mode state.
 let itemCatalog = [];
 let questCatalog = [];
+// The Skill Builder's Custom VFX Library, so an ability can point at a VFX
+// authored there and not just at the built-in presets.
+let vfxCatalog = [];
 
 // --- Page tabstrip (was createTabbedModal) ---------------------------------
 const TAB_IDS = ['general', 'abilities', 'model', 'prefabs'];
@@ -91,7 +96,7 @@ document.querySelectorAll('.mb-tab').forEach((btn) => {
 
 // --- 3D workspace (own Scene/Camera/Renderer) -------------------------------
 const mbCanvas = document.getElementById('mb-workspace-canvas');
-const mbRenderer = createRenderer(mbCanvas, { shadows: false });
+const mbRenderer = createRenderer(mbCanvas, { shadows: true });
 // createRenderer's initial setSize(window.innerWidth, window.innerHeight)
 // call sets an INLINE style="width:...px;height:...px" on the canvas as a
 // side effect (Three.js's default updateStyle=true) — inline style beats
@@ -101,13 +106,15 @@ const mbRenderer = createRenderer(mbCanvas, { shadows: false });
 // updateStyle=false so this stays cleared.
 mbCanvas.style.width = '';
 mbCanvas.style.height = '';
-const mbScene = createScene();
+// A neutral modelling studio, NOT the game world's atmosphere — see studio.js
+// for why (the old createScene() parked a sun-glow sprite in the middle of the
+// viewport and fog-tinted every colour you picked).
+const mbScene = createStudioScene();
 const mbCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
 mbCamera.position.set(0.9, 1.6, 4.5);
 const mbControls = new OrbitControls(mbCamera, mbCanvas);
 mbControls.enableDamping = true;
 mbControls.target.set(0, 0.7, 0);
-mbScene.add(new THREE.GridHelper(4, 16, 0x3f88c5, 0x223344));
 const mbRaycaster = new THREE.Raycaster();
 const mbPointer = new THREE.Vector2();
 const mbSelectionHighlight = new THREE.BoxHelper(new THREE.Object3D(), 0xffdd33);
@@ -140,18 +147,32 @@ function syncMbShapeFromMesh() {
   mbSelectionHighlight.update();
 }
 
+// The gizmo is shared between two jobs — moving/rotating/scaling a SHAPE, and
+// rotating a rig PIVOT to pose it — and those want different modes. Remembering
+// the shape mode separately is what stops the pose editor (which is always
+// rotate) from permanently leaving the gizmo in rotate mode: re-selecting a
+// shape used to inherit whatever mode the pose gizmo last set, so after
+// touching any body-part tab you could only ever rotate.
+let shapeGizmoMode = 'translate';
+
 /** Point the gizmo at the selected shape (or hide it when nothing is selected). */
 function attachGizmo() {
-  if (selectedMbShape) gizmo.attach(selectedMbShape.mesh);
-  else gizmo.detach();
+  if (!selectedMbShape) { gizmo.detach(); return; }
+  gizmo.setMode(shapeGizmoMode);
+  gizmo.attach(selectedMbShape.mesh);
 }
 
 window.addEventListener('keydown', (e) => {
-  if (e.target.matches('input, select, textarea')) return;
-  if (e.key === 'g' || e.key === 'G') gizmo.setMode('translate');
-  else if (e.key === 'r' || e.key === 'R') gizmo.setMode('rotate');
-  else if (e.key === 's' || e.key === 'S') gizmo.setMode('scale');
-  else if (e.key === 'Escape') selectMbShape(null);
+  // `matches` guarded: a keydown whose target is window/document (which have no
+  // .matches) would otherwise throw and take the whole handler down with it.
+  if (e.target?.matches?.('input, select, textarea')) return;
+  const mode = { g: 'translate', r: 'rotate', s: 'scale' }[e.key.toLowerCase()];
+  if (mode) {
+    // A rig pivot only ever rotates — moving or scaling one would desync it
+    // from the shapes it carries — so the shortcuts only retarget the gizmo
+    // when it is actually driving a shape.
+    if (selectedMbShape) { shapeGizmoMode = mode; gizmo.setMode(mode); }
+  } else if (e.key === 'Escape') selectMbShape(null);
 });
 
 function resizeMbCanvas() {
@@ -163,45 +184,21 @@ function resizeMbCanvas() {
 }
 window.addEventListener('resize', resizeMbCanvas);
 
-let mbAnimPhase = 0;
-let mbClipElapsedMs = 0; // separate accumulator for the *-clip preview modes, which run on milliseconds not radians
-let mbLastFrameT = performance.now();
-/** Which animation.<key> a #mb-preview-anim clip option previews. */
-const KF_PREVIEW_CLIP_KEY = { 'walk-clip': 'walkClip', 'idle-clip': 'idleClip', 'attack-clip': 'attackClip' };
+/**
+ * Render loop: the preview always shows whichever animation (idle/walk/
+ * attack) the Timeline (advanced) panel is currently editing, posed at the
+ * scrubber's current time — same "scrub drives a paused preview pose"
+ * pattern as the Skill Builder's frame() loop (src/skill-builder/main.js).
+ * Parts with no authored keyframe for the current clip are left untouched
+ * rather than reset here, so dragging the rotate gizmo on a not-yet-keyed
+ * part isn't fought every frame — see applyPoseTimeline (generators/rig.js).
+ */
 function animateMbWorkspace() {
   requestAnimationFrame(animateMbWorkspace);
-  const now = performance.now();
-  const dt = Math.min(0.1, (now - mbLastFrameT) / 1000);
-  mbLastFrameT = now;
   resizeMbCanvas();
   mbControls.update();
-  if (mbRig && Object.keys(mbRig).length) {
-    const anim = document.getElementById('mb-preview-anim').value;
-    const clipKey = KF_PREVIEW_CLIP_KEY[anim];
-    if (anim === 'walk') {
-      mbAnimPhase += dt * 8;
-      // Resolved the same way the live game resolves it, so the preview and
-      // in-world monster can't drift apart.
-      applyGaitPose(mbRig, resolveGaitTable(currentMonsterType), mbAnimPhase, 1);
-    } else if (anim === 'attack') {
-      mbAnimPhase += dt * 2;
-      const t01 = (Math.sin(mbAnimPhase) + 1) / 2;
-      applyAttackPose(mbRig, ATTACK_POSE_BY_STANCE[currentMonsterType.stance] || ATTACK_POSE_BY_STANCE.humanoid, t01);
-    } else if (clipKey) {
-      applyIdlePose(mbRig);
-      const clip = currentMonsterType.animation?.[clipKey];
-      if (clip) {
-        mbClipElapsedMs += dt * 1000;
-        // Always loops in preview regardless of the clip's own `loop` flag
-        // (an attack clip authored loop:false for real gameplay still plays
-        // on repeat here) — seeing the whole clip cycle is what's useful
-        // while posing it, a single play-once-then-freeze isn't.
-        applyKeyframeClip(mbRig, { ...clip, loop: true }, mbClipElapsedMs);
-      }
-    } else {
-      applyIdlePose(mbRig);
-    }
-  }
+  advanceMbPlayback();
+  if (mbRig && Object.keys(mbRig).length) applyPoseTimeline(mbRig, mbClip()?.timeline || [], mbScrubTimeMs);
   if (selectedMbShape) mbSelectionHighlight.update();
   mbRenderer.render(mbScene, mbCamera);
 }
@@ -235,6 +232,7 @@ function rebuildMbWorkspace() {
   const built = buildMonsterRig(currentMonsterType);
   mbMonsterGroup = built.group;
   mbRig = built.rig;
+  enableStudioShadows(mbMonsterGroup); // the studio floor is a shadow catcher; nothing casts into it unless we say so
   mbScene.add(mbMonsterGroup);
   syncMbShapesToActiveSlot();
   resizeMbCanvas(); // ensure mbCamera.aspect is current before framing off of it
@@ -287,8 +285,9 @@ function refreshMbPartTabstrip() {
     .join('');
   const settingsActive = activePartTab === 'settings' ? 'active' : '';
   strip.innerHTML = `${roleButtons}<button data-part-tab="settings" class="${settingsActive}">Settings</button>`;
-  refreshAnimRows(); // the animatable-part list follows whichever slots exist
-  refreshKfClipEditor(); // ditto for the keyframe track-part dropdown
+  refreshPtPartOptions(); // the animatable-part list follows whichever slots exist
+  refreshPtTimelineList();
+  renderPtScrubber();
 }
 
 document.getElementById('mb-part-tabstrip').addEventListener('click', (e) => {
@@ -334,10 +333,7 @@ const thumbCanvas = document.createElement('canvas');
 const thumbRenderer = new THREE.WebGLRenderer({ canvas: thumbCanvas, antialias: true, alpha: true });
 thumbRenderer.setSize(THUMB_SIZE, THUMB_SIZE);
 const thumbScene = new THREE.Scene();
-thumbScene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.2));
-const thumbSun = new THREE.DirectionalLight(0xffffff, 0.8);
-thumbSun.position.set(2, 3, 2);
-thumbScene.add(thumbSun);
+addStudioLights(thumbScene); // same three-point rig as the workspace, so a thumbnail predicts the preview
 const thumbCamera = new THREE.PerspectiveCamera(40, 1, 0.05, 20);
 const thumbCache = new Map(); // cacheId -> dataURL
 
@@ -453,11 +449,18 @@ function applyBodyPreset(presetId) {
   if (!preset) return;
   currentMonsterType.stance = preset.stance;
   currentMonsterType.slots = structuredClone(preset.slots);
+  // Prefabs ship authored idle/walk/attack clips. Cloning them onto the type
+  // (rather than leaving the body to fall back on the procedural stance gait)
+  // is what makes a freshly-applied prefab ANIMATED — and because they are
+  // ordinary keyframes, every one of them shows up in the Timeline panel
+  // below, draggable, exactly like something you keyed by hand.
+  currentMonsterType.animation = preset.animation ? structuredClone(preset.animation) : {};
   document.getElementById('mb-stance').value = preset.stance;
   document.getElementById('mb-weapon-warning').style.display = preset.stance !== 'humanoid' ? 'block' : 'none';
   rebuildMbWorkspace();
   const roles = SLOTS_BY_STANCE[preset.stance] || SLOTS_BY_STANCE.humanoid;
   selectMbPartTab(roles[0]);
+  selectMbClipType(mbClipType); // re-read the newly-applied clip into the timeline UI
   showTab('model');
 }
 
@@ -596,8 +599,7 @@ function applyMbShapeFields() {
   mesh.rotation.set((ref.rotation.x * Math.PI) / 180, (ref.rotation.y * Math.PI) / 180, (ref.rotation.z * Math.PI) / 180);
   mesh.scale.set(ref.scale.x, ref.scale.y, ref.scale.z);
   mesh.material.color.setHex(ref.color);
-  mesh.material.opacity = ref.opacity;
-  mesh.material.transparent = ref.opacity < 1;
+  setShapeOpacity(mesh, ref.opacity); // not a plain assignment — see its doc comment
   mbSelectionHighlight.update();
 }
 [mbsPosX, mbsPosY, mbsPosZ, mbsRotX, mbsRotY, mbsRotZ, mbsScaleX, mbsScaleY, mbsScaleZ, mbsColor, mbsOpacity].forEach((el) =>
@@ -685,346 +687,389 @@ document.getElementById('mb-stance').addEventListener('change', () => {
   const roles = SLOTS_BY_STANCE[currentMonsterType.stance] || SLOTS_BY_STANCE.humanoid;
   selectMbPartTab(roles[0]);
 });
-document.getElementById('mb-preview-anim').addEventListener('change', () => {
-  currentMonsterType.previewAnimation = document.getElementById('mb-preview-anim').value;
-});
+// --- Pose Timeline editor (Settings sub-tab): idle/walk/attack, ported from
+// the Skill Builder's Timeline (advanced) system (src/skill-builder/main.js)
+// so authoring a monster's poses uses the exact same event-list + scrubber
+// + rotate-gizmo workflow as authoring a skill's cast animation. Unlike a
+// skill's single ability timeline, a monster has three independent ones —
+// stored at currentMonsterType.animation.{idleClip,walkClip,attackClip},
+// each { durationMs, loop, timeline: PoseEvent[] } — see creatureTypeDefs.js.
+let mbClipType = 'walkClip';
+let mbScrubTimeMs = 0;
+let mbSelectedPart = null;
+const MB_CLIP_DEFAULT_LOOP = { idleClip: true, walkClip: true, attackClip: false };
 
-// --- Walk animation editor (Settings sub-tab) ---
-// Every non-torso slot is a real rig pivot, so any of them can be given a
-// swing. Tails/heads/wings were always animatable — nothing ever referenced
-// them, which is why they sat still.
-
-/** Non-torso slot roles this monster actually has, in the part-tab order. */
+/** Non-torso slot roles this monster actually has, in the part-tab order — the only rig pivots posable (torso isn't tracked in mbRig, same as the gait/attack-pose systems). */
 function animatableRoles() {
   const order = SLOTS_BY_STANCE[currentMonsterType.stance] || SLOTS_BY_STANCE.humanoid;
   const present = new Set(currentMonsterType.slots.filter((s) => s.role !== 'torso').map((s) => s.role));
   return order.filter((r) => present.has(r));
 }
 
-function animWalk() {
+/** An `ability:<id>` clip type resolves to that ability's own timeline; anything else is one of the body's three named clips. */
+function abilityForClipType(type = mbClipType) {
+  if (!type.startsWith('ability:')) return null;
+  return currentMonsterType.abilitySlots?.find((a) => a.id === type.slice('ability:'.length)) || null;
+}
+
+function mbClip() {
+  const ability = abilityForClipType();
+  if (ability) {
+    ability.timeline = ability.timeline || [];
+    // A view over the ability, not a copy: `timeline` is the same array, so
+    // every edit the shared Timeline panel makes lands on the ability itself.
+    // Its length comes from the ability's own windup/effect/recovery, which is
+    // the envelope triggerAbilityAnimation will actually play it against.
+    return {
+      durationMs: Math.max(1, (ability.windupMs || 0) + (ability.effectMs || 0) + (ability.recoveryMs || 0)),
+      loop: false,
+      timeline: ability.timeline,
+    };
+  }
+  return currentMonsterType.animation?.[mbClipType] || null;
+}
+
+/** Get-or-create the clip currently being edited, seeded with a sensible per-type loop default. */
+function ensureMbClip() {
+  const ability = abilityForClipType();
+  if (ability) {
+    ability.timeline = ability.timeline || [];
+    return mbClip();
+  }
   if (!currentMonsterType.animation) currentMonsterType.animation = {};
-  if (!Array.isArray(currentMonsterType.animation.walk)) currentMonsterType.animation.walk = [];
-  return currentMonsterType.animation.walk;
+  if (!currentMonsterType.animation[mbClipType]) {
+    currentMonsterType.animation[mbClipType] = { durationMs: 500, loop: MB_CLIP_DEFAULT_LOOP[mbClipType], timeline: [] };
+  }
+  return currentMonsterType.animation[mbClipType];
 }
 
-/** What a part is doing today: its authored entry, else the stance default for that part, else nothing. */
-function animEntryFor(part) {
-  const authored = currentMonsterType.animation?.walk?.find((e) => e.part === part);
-  if (authored) return authored;
-  const fallback = defaultAnimationForStance(currentMonsterType.stance).find((e) => e.part === part);
-  return fallback || { part, axis: 'x', amplitudeDeg: 0, phaseDeg: 0 };
+/** Total timeline length in ms — same "max authored atMs, floored" calc as the Skill Builder's getTimelineTotal, so the scrubber's right edge matches what durationMs-driven playback actually runs. */
+function mbTimelineTotal() {
+  const timeline = mbClip()?.timeline || [];
+  if (!timeline.length) return 500;
+  return Math.max(500, ...timeline.map((e) => e.atMs));
 }
 
-function refreshAnimRows() {
-  const el = document.getElementById('mb-anim-rows');
-  if (!el) return;
+function recomputeMbClipDuration() {
+  // An ability clip's length is DERIVED from its windup/effect/recovery fields
+  // (see mbClip), so growing its timeline must not silently rewrite the timing
+  // the author set on the Abilities tab.
+  if (abilityForClipType()) return;
+  const clip = mbClip();
+  if (clip) clip.durationMs = mbTimelineTotal();
+}
+
+/**
+ * Point the shared gizmo at the selected part's pivot for direct-manipulation
+ * posing, deselecting any shape (only one thing the gizmo can drive at a time).
+ *
+ * Does nothing unless the Timeline panel is the one on screen. This function is
+ * reached from refreshPtPartOptions, which refreshMbPartTabstrip calls on every
+ * part-tab switch and every shape add/delete — so without this guard, merely
+ * clicking the "head" tab or adding a box yanked the gizmo off your shape onto a
+ * bone pivot and locked it into rotate mode.
+ */
+function attachPtGizmo() {
+  if (activePartTab !== 'settings') return;
+  if (!mbSelectedPart || !mbRig[mbSelectedPart]) { gizmo.detach(); return; }
+  if (selectedMbShape) selectMbShape(null);
+  gizmo.setMode('rotate');
+  gizmo.attach(mbRig[mbSelectedPart]);
+  document.getElementById('pt-selected-part-label').textContent = ` (${mbSelectedPart})`;
+}
+
+function selectMbClipType(type) {
+  mbClipType = type;
+  mbSelectedPart = null;
+  mbScrubTimeMs = 0;
+  setMbPlaying(false);
+  document.getElementById('pt-tab-idle').classList.toggle('active', type === 'idleClip');
+  document.getElementById('pt-tab-walk').classList.toggle('active', type === 'walkClip');
+  document.getElementById('pt-tab-attack').classList.toggle('active', type === 'attackClip');
+  const ability = abilityForClipType(type);
+  const label = document.getElementById('pt-clip-label');
+  label.textContent = ability ? `Editing ability animation: ${ability.name}` : '';
+  label.style.display = ability ? 'block' : 'none';
+  // An ability's timeline is a one-shot driven by its own envelope — looping it
+  // is not a thing the runtime can honour, so don't offer the toggle.
+  document.getElementById('pt-loop').disabled = !!ability;
+  document.getElementById('pt-loop').checked = ability ? false : (mbClip()?.loop ?? MB_CLIP_DEFAULT_LOOP[type]);
+  applyIdlePose(mbRig); // clear whatever pose the previous clip type left behind
+  refreshPtPartOptions();
+  refreshPtTimelineList();
+  renderPtScrubber();
+}
+document.getElementById('pt-tab-idle').addEventListener('click', () => selectMbClipType('idleClip'));
+document.getElementById('pt-tab-walk').addEventListener('click', () => selectMbClipType('walkClip'));
+document.getElementById('pt-tab-attack').addEventListener('click', () => selectMbClipType('attackClip'));
+
+document.getElementById('pt-loop').addEventListener('change', () => {
+  ensureMbClip().loop = document.getElementById('pt-loop').checked;
+});
+
+// --- Clip playback -----------------------------------------------------
+// The scrubber alone answers "what does this pose look like"; only playback
+// answers "does this animation READ" — whether a gait cycles smoothly, whether
+// an attack telegraphs. It drives the same mbScrubTimeMs the scrubber does, so
+// pausing leaves the playhead exactly where you stopped it and you can keyframe
+// from there.
+let mbPlaying = false;
+let mbLastFrameMs = 0;
+const mbPlayBtn = document.getElementById('pt-play');
+
+function setMbPlaying(on) {
+  mbPlaying = on;
+  mbLastFrameMs = performance.now();
+  mbPlayBtn.textContent = on ? '⏸ Pause' : '▶ Play';
+  mbPlayBtn.classList.toggle('active', on);
+}
+mbPlayBtn.addEventListener('click', () => setMbPlaying(!mbPlaying));
+
+function advanceMbPlayback() {
+  const now = performance.now();
+  const dt = Math.min(100, now - mbLastFrameMs); // a backgrounded tab must not fast-forward the clip
+  mbLastFrameMs = now;
+  if (!mbPlaying) return;
+  const clip = mbClip();
+  if (!clip || !clip.timeline?.length) return;
+  const total = mbTimelineTotal();
+  mbScrubTimeMs += dt;
+  if (mbScrubTimeMs > total) {
+    // A non-looping clip (attack) holds a beat on its last frame before
+    // replaying, so a one-shot is actually watchable on repeat.
+    mbScrubTimeMs = clip.loop ? mbScrubTimeMs % total : (mbScrubTimeMs > total + 400 ? 0 : total);
+  }
+  renderPtScrubber();
+}
+
+function refreshPtPartOptions() {
+  const sel = document.getElementById('pt-part-select');
+  const roles = animatableRoles();
+  const keep = mbSelectedPart;
+  sel.innerHTML = roles.length
+    ? roles.map((r) => `<option value="${r}">${r}</option>`).join('')
+    : '<option value="">(no animatable parts yet)</option>';
+  sel.value = roles.includes(keep) ? keep : (roles[0] || '');
+  mbSelectedPart = sel.value || null;
+  attachPtGizmo();
+}
+document.getElementById('pt-part-select').addEventListener('change', () => {
+  mbSelectedPart = document.getElementById('pt-part-select').value || null;
+  attachPtGizmo();
+  refreshPtTimelineList();
+  renderPtScrubber();
+});
+
+/** Reads the gizmo's current live rotation of the selected part and writes/overwrites a keyframe for it at the playhead's time — same "Set Keyframe" affordance as the Skill Builder's set-keyframe-btn. */
+document.getElementById('pt-set-keyframe').addEventListener('click', () => {
+  if (!mbSelectedPart || !mbRig[mbSelectedPart]) return;
+  const pivot = mbRig[mbSelectedPart];
+  const R2D = 180 / Math.PI;
+  const rotationDeg = {
+    x: +(pivot.rotation.x * R2D).toFixed(1),
+    y: +(pivot.rotation.y * R2D).toFixed(1),
+    z: +(pivot.rotation.z * R2D).toFixed(1),
+  };
+  const clip = ensureMbClip();
+  const atMs = Math.round(mbScrubTimeMs);
+  const existing = clip.timeline.find((e) => e.part === mbSelectedPart && e.atMs === atMs);
+  if (existing) existing.rotationDeg = rotationDeg;
+  else clip.timeline.push({ type: 'pose', atMs, part: mbSelectedPart, rotationDeg });
+  recomputeMbClipDuration();
+  refreshPtTimelineList();
+  renderPtScrubber();
+  refreshAbTimelineSummary();
+});
+
+document.getElementById('pt-add-event').addEventListener('click', () => {
+  if (!mbSelectedPart) return;
+  const clip = ensureMbClip();
+  const atMs = Math.round(mbScrubTimeMs);
+  clip.timeline.push({ type: 'pose', atMs, part: mbSelectedPart, rotationDeg: { x: 0, y: 0, z: 0 } });
+  recomputeMbClipDuration();
+  refreshPtTimelineList();
+  renderPtScrubber();
+});
+
+// A hand-built body starts with no clips at all, and "pose every limb by hand
+// from scratch" is not a reasonable first step. This seeds all three from the
+// body's stance and the slots it actually has — ordinary keyframes, so the
+// result is a starting point to edit rather than a black box.
+document.getElementById('pt-gen-defaults').addEventListener('click', () => {
   const roles = animatableRoles();
   if (!roles.length) {
-    el.innerHTML = '<p class="hint">No animatable body parts yet — add a slot other than the torso.</p>';
+    document.getElementById('mb-status').textContent = 'Add some body parts first — there is nothing to animate yet.';
     return;
   }
-  el.innerHTML =
-    '<div class="anim-head"><span>Part</span><span>Axis</span><span>Amplitude</span><span>Phase</span></div>' +
-    roles
-      .map((role) => {
-        const e = animEntryFor(role);
-        const opt = (v) => `<option value="${v}" ${e.axis === v ? 'selected' : ''}>${v.toUpperCase()}</option>`;
-        return `<div class="anim-row">
-          <span class="anim-part">${role}</span>
-          <select data-anim-axis="${role}">${opt('x')}${opt('y')}${opt('z')}</select>
-          <input type="number" data-anim-amp="${role}" value="${e.amplitudeDeg}" step="5" /><span class="anim-unit">°</span>
-          <input type="number" data-anim-phase="${role}" value="${e.phaseDeg}" step="15" /><span class="anim-unit">°</span>
-        </div>`;
-      })
-      .join('');
+  currentMonsterType.animation = defaultClipsForStance(currentMonsterType.stance, roles);
+  mbScrubTimeMs = 0;
+  selectMbClipType(mbClipType);
+});
+
+document.getElementById('pt-clip-clear').addEventListener('click', () => {
+  const ability = abilityForClipType();
+  if (ability) ability.timeline = [];
+  else if (currentMonsterType.animation) delete currentMonsterType.animation[mbClipType];
+  applyIdlePose(mbRig);
+  refreshPtTimelineList();
+  renderPtScrubber();
+  refreshAbTimelineSummary();
+});
+
+function addPtNumberInput(host, value, onChange, step = 1) {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.step = step;
+  input.value = value;
+  input.style.width = '100%';
+  input.addEventListener('change', () => onChange(parseFloat(input.value) || 0));
+  host.appendChild(input);
+  return input;
 }
 
-/** Write one part's swing into the type's own table (creating it on first edit, so untouched types keep using the stance default). */
-function setAnimEntry(part, patch) {
-  const walk = animWalk();
-  // First edit of a type that had no table: seed from what's on screen now,
-  // so tweaking one leg doesn't silently zero out every other part.
-  if (!walk.length) {
-    for (const role of animatableRoles()) walk.push({ ...animEntryFor(role) });
+function refreshPtTimelineList() {
+  const el = document.getElementById('pt-timeline-list');
+  const timeline = mbClip()?.timeline || [];
+  const sorted = [...timeline].sort((a, b) => a.atMs - b.atMs);
+  el.innerHTML = '';
+  for (const event of sorted) {
+    const i = timeline.indexOf(event);
+    const row = document.createElement('div');
+    row.className = 'anim-row';
+    row.style.cssText = 'flex-wrap:wrap; cursor:pointer;' + (event.part === mbSelectedPart && event.atMs === Math.round(mbScrubTimeMs) ? ' border-color:#d9a441;' : '');
+
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex; width:100%; gap:6px; align-items:center;';
+    const label = document.createElement('span');
+    label.style.flex = '1';
+    label.textContent = `${event.part} @ ${event.atMs}ms`;
+    head.appendChild(label);
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      timeline.splice(i, 1);
+      recomputeMbClipDuration();
+      refreshPtTimelineList();
+      renderPtScrubber();
+    });
+    head.appendChild(removeBtn);
+    row.appendChild(head);
+
+    for (const ax of ['x', 'y', 'z']) {
+      const axLabel = document.createElement('label');
+      axLabel.style.cssText = 'flex:1; margin:2px 0 0;';
+      axLabel.textContent = `Rot ${ax}°`;
+      addPtNumberInput(axLabel, event.rotationDeg[ax], (v) => {
+        event.rotationDeg[ax] = v;
+        if (event.part === mbSelectedPart) updatePtScrubPreview();
+      }, 1);
+      row.appendChild(axLabel);
+    }
+
+    row.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+      mbSelectedPart = event.part;
+      document.getElementById('pt-part-select').value = event.part;
+      attachPtGizmo();
+      mbScrubTimeMs = event.atMs;
+      updatePtScrubPreview();
+      refreshPtTimelineList();
+    });
+    el.appendChild(row);
   }
-  let entry = walk.find((e) => e.part === part);
-  if (!entry) { entry = { part, axis: 'x', amplitudeDeg: 0, phaseDeg: 0 }; walk.push(entry); }
-  Object.assign(entry, patch);
 }
 
-document.getElementById('mb-anim-rows').addEventListener('input', (e) => {
-  const t = e.target;
-  if (t.dataset.animAxis) setAnimEntry(t.dataset.animAxis, { axis: t.value });
-  else if (t.dataset.animAmp) setAnimEntry(t.dataset.animAmp, { amplitudeDeg: parseFloat(t.value) || 0 });
-  else if (t.dataset.animPhase) setAnimEntry(t.dataset.animPhase, { phaseDeg: parseFloat(t.value) || 0 });
-  else return;
-  // The preview reads resolveGaitTable() every frame, so it updates itself.
-});
+// --- Scrubber: drag the playhead to preview a paused pose, drag an event's
+// diamond marker to retime it, click empty track to seek — same interaction
+// as the Skill Builder's timeline scrubber (src/skill-builder/main.js).
+const ptTrackEl = document.getElementById('pt-scrubber-track');
+const ptEventsEl = document.getElementById('pt-scrubber-events');
+const ptPlayheadEl = document.getElementById('pt-scrubber-playhead');
+const ptTimeEl = document.getElementById('pt-scrubber-time');
 
-document.getElementById('mb-anim-reset').addEventListener('click', () => {
-  delete currentMonsterType.animation; // back to the generic stance gait
-  applyIdlePose(mbRig); // clear whatever pose the old table left behind
-  refreshAnimRows();
-});
+function renderPtScrubber() {
+  const total = mbTimelineTotal();
+  ptTimeEl.textContent = `${Math.round(mbScrubTimeMs)} / ${Math.round(total)} ms`;
+  const trackWidth = ptTrackEl.clientWidth || 1;
+  ptPlayheadEl.style.left = `${(mbScrubTimeMs / total) * trackWidth}px`;
 
-// --- Keyframe animation editor (Settings sub-tab) ---
-// Hand-authored position/rotation/scale clips, independent from the sine
-// gait above — see src/generators/rig.js's applyKeyframeClip. Lives at
-// currentMonsterType.animation.{walkClip,idleClip,attackClip}, each a
-// {durationMs, loop, tracks: [{part, keyframes: [{t, position?, rotation?, scale?}]}]}.
-let mbKeyframeClipType = 'walkClip';
-let mbSelectedTrackPart = null;
-let mbSelectedKeyframeIndex = null;
-const KF_CLIP_DEFAULT_LOOP = { walkClip: true, idleClip: true, attackClip: false };
-const KF_CLIP_LABELS = { walkClip: 'walk', idleClip: 'idle', attackClip: 'attack' };
-
-function kfClip() { return currentMonsterType.animation?.[mbKeyframeClipType] || null; }
-
-function kfSelectClipType(type) {
-  mbKeyframeClipType = type;
-  mbSelectedTrackPart = null;
-  mbSelectedKeyframeIndex = null;
-  document.getElementById('kf-clip-walk').classList.toggle('active', type === 'walkClip');
-  document.getElementById('kf-clip-idle').classList.toggle('active', type === 'idleClip');
-  document.getElementById('kf-clip-attack').classList.toggle('active', type === 'attackClip');
-  refreshKfClipEditor();
-}
-document.getElementById('kf-clip-walk').addEventListener('click', () => kfSelectClipType('walkClip'));
-document.getElementById('kf-clip-idle').addEventListener('click', () => kfSelectClipType('idleClip'));
-document.getElementById('kf-clip-attack').addEventListener('click', () => kfSelectClipType('attackClip'));
-
-document.getElementById('kf-clip-create').addEventListener('click', () => {
-  if (!currentMonsterType.animation) currentMonsterType.animation = {};
-  currentMonsterType.animation[mbKeyframeClipType] = {
-    durationMs: 1000,
-    loop: KF_CLIP_DEFAULT_LOOP[mbKeyframeClipType],
-    tracks: [],
-  };
-  refreshKfClipEditor();
-});
-
-document.getElementById('kf-clip-clear').addEventListener('click', () => {
-  if (currentMonsterType.animation) delete currentMonsterType.animation[mbKeyframeClipType];
-  mbSelectedTrackPart = null;
-  mbSelectedKeyframeIndex = null;
-  applyIdlePose(mbRig); // clear whatever pose the deleted clip left behind
-  refreshKfClipEditor();
-});
-
-document.getElementById('kf-duration').addEventListener('input', () => {
-  const clip = kfClip();
-  if (clip) clip.durationMs = Math.max(50, parseFloat(document.getElementById('kf-duration').value) || 1000);
-});
-document.getElementById('kf-loop').addEventListener('change', () => {
-  const clip = kfClip();
-  if (clip) clip.loop = document.getElementById('kf-loop').checked;
-});
-
-function refreshKfClipEditor() {
-  const clip = kfClip();
-  document.getElementById('kf-clip-empty-label').textContent = KF_CLIP_LABELS[mbKeyframeClipType];
-  document.getElementById('kf-clip-empty').style.display = clip ? 'none' : 'block';
-  document.getElementById('kf-clip-create').style.display = clip ? 'none' : 'block';
-  document.getElementById('kf-clip-editor').style.display = clip ? 'block' : 'none';
-  if (!clip) return;
-  document.getElementById('kf-duration').value = clip.durationMs;
-  document.getElementById('kf-loop').checked = !!clip.loop;
-  refreshKfTrackPartOptions();
-  refreshKfTrackList();
-  refreshKfKeyframeSection();
+  ptEventsEl.innerHTML = '';
+  const timeline = mbClip()?.timeline || [];
+  for (const event of timeline) {
+    const x = (event.atMs / total) * trackWidth;
+    ptEventsEl.appendChild(makePtScrubMarker(event, x, total, trackWidth));
+  }
 }
 
-function refreshKfTrackPartOptions() {
-  const sel = document.getElementById('kf-add-track-part');
-  const clip = kfClip();
-  const used = new Set((clip?.tracks || []).map((t) => t.part));
-  const available = animatableRoles().filter((r) => !used.has(r));
-  sel.innerHTML = available.length
-    ? available.map((r) => `<option value="${r}">${r}</option>`).join('')
-    : '<option value="">(no parts left)</option>';
-  sel.disabled = !available.length;
-  document.getElementById('kf-add-track').disabled = !available.length;
-}
+function makePtScrubMarker(event, x, total, trackWidth) {
+  const el = document.createElement('div');
+  el.className = 'pt-scrub-marker';
+  el.style.left = `${x}px`;
+  el.classList.toggle('selected', event.part === mbSelectedPart && event.atMs === Math.round(mbScrubTimeMs));
+  el.title = `${event.part} @ ${event.atMs}ms`;
 
-document.getElementById('kf-add-track').addEventListener('click', () => {
-  const clip = kfClip();
-  const part = document.getElementById('kf-add-track-part').value;
-  if (!clip || !part) return;
-  clip.tracks.push({
-    part,
-    keyframes: [
-      { t: 0, position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
-      { t: 1, position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
-    ],
+  let dragStartX = null;
+  let moved = false;
+  el.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    dragStartX = e.clientX;
+    moved = false;
+    el.setPointerCapture(e.pointerId);
   });
-  mbSelectedTrackPart = part;
-  mbSelectedKeyframeIndex = 0;
-  refreshKfClipEditor();
-});
-
-function refreshKfTrackList() {
-  const el = document.getElementById('kf-track-list');
-  const clip = kfClip();
-  const tracks = clip?.tracks || [];
-  if (!tracks.length) {
-    el.innerHTML = '<p class="hint">No tracks yet — add one above.</p>';
-    return;
-  }
-  el.innerHTML = tracks
-    .map(
-      (t) => `<div class="anim-row" data-kf-track="${t.part}" style="cursor:pointer; ${mbSelectedTrackPart === t.part ? 'border-color:#3f88c5;' : ''}">
-        <span style="flex:1">${t.part} <span class="hint">(${t.keyframes.length} keyframes)</span></span>
-        <button data-kf-delete-track="${t.part}" style="flex:0 0 auto;">✕</button>
-      </div>`
-    )
-    .join('');
-}
-
-document.getElementById('kf-track-list').addEventListener('click', (e) => {
-  const del = e.target.dataset.kfDeleteTrack;
-  if (del !== undefined) {
-    const clip = kfClip();
-    if (clip) clip.tracks = clip.tracks.filter((t) => t.part !== del);
-    if (mbSelectedTrackPart === del) { mbSelectedTrackPart = null; mbSelectedKeyframeIndex = null; }
-    refreshKfTrackPartOptions();
-    refreshKfTrackList();
-    refreshKfKeyframeSection();
-    return;
-  }
-  const row = e.target.closest('[data-kf-track]');
-  if (row) {
-    mbSelectedTrackPart = row.dataset.kfTrack;
-    mbSelectedKeyframeIndex = null;
-    refreshKfTrackList();
-    refreshKfKeyframeSection();
-  }
-});
-
-function selectedKfTrack() {
-  const clip = kfClip();
-  return clip?.tracks.find((t) => t.part === mbSelectedTrackPart) || null;
-}
-
-function refreshKfKeyframeSection() {
-  const sectionEl = document.getElementById('kf-keyframe-section');
-  const track = selectedKfTrack();
-  sectionEl.style.display = track ? 'block' : 'none';
-  if (!track) return;
-  document.getElementById('kf-track-part-label').textContent = track.part;
-  const listEl = document.getElementById('kf-keyframe-list');
-  listEl.innerHTML = track.keyframes
-    .map((kf, i) => {
-      const fixed = i === 0 || i === track.keyframes.length - 1;
-      return `<div class="anim-row" data-kf-index="${i}" style="cursor:pointer; ${mbSelectedKeyframeIndex === i ? 'border-color:#3f88c5;' : ''}">
-        <span style="flex:1">t = ${kf.t.toFixed(2)}${fixed ? ' <span class="hint">(fixed)</span>' : ''}</span>
-        ${fixed ? '' : `<button data-kf-delete-index="${i}" style="flex:0 0 auto;">✕</button>`}
-      </div>`;
-    })
-    .join('');
-  refreshKfKeyframeControls();
-}
-
-document.getElementById('kf-keyframe-list').addEventListener('click', (e) => {
-  const delIdx = e.target.dataset.kfDeleteIndex;
-  if (delIdx !== undefined) {
-    const track = selectedKfTrack();
-    if (track) track.keyframes.splice(parseInt(delIdx, 10), 1);
-    mbSelectedKeyframeIndex = null;
-    refreshKfKeyframeSection();
-    return;
-  }
-  const row = e.target.closest('[data-kf-index]');
-  if (row) {
-    mbSelectedKeyframeIndex = parseInt(row.dataset.kfIndex, 10);
-    refreshKfKeyframeSection();
-  }
-});
-
-document.getElementById('kf-add-keyframe').addEventListener('click', () => {
-  const track = selectedKfTrack();
-  if (!track) return;
-  // Insert at the midpoint of the largest gap between consecutive
-  // keyframes — a reasonable default landing spot with no author input,
-  // matching "a 3rd/4th point, e.g. a jump's crouch/launch/land."
-  let gapStart = 0;
-  let bestGap = -1;
-  for (let i = 0; i < track.keyframes.length - 1; i++) {
-    const gap = track.keyframes[i + 1].t - track.keyframes[i].t;
-    if (gap > bestGap) { bestGap = gap; gapStart = i; }
-  }
-  const t = (track.keyframes[gapStart].t + track.keyframes[gapStart + 1].t) / 2;
-  const kf = { t, position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } };
-  track.keyframes.splice(gapStart + 1, 0, kf);
-  mbSelectedKeyframeIndex = gapStart + 1;
-  refreshKfKeyframeSection();
-});
-
-function selectedKf() {
-  const track = selectedKfTrack();
-  return track && mbSelectedKeyframeIndex != null ? track.keyframes[mbSelectedKeyframeIndex] : null;
-}
-
-function refreshKfKeyframeControls() {
-  const track = selectedKfTrack();
-  const kf = selectedKf();
-  const controlsEl = document.getElementById('kf-keyframe-controls');
-  controlsEl.style.display = kf ? 'block' : 'none';
-  if (!kf || !track) return;
-  const isEndpoint = mbSelectedKeyframeIndex === 0 || mbSelectedKeyframeIndex === track.keyframes.length - 1;
-  const tEl = document.getElementById('kf-t');
-  tEl.value = kf.t;
-  tEl.disabled = isEndpoint;
-  const p = kf.position || { x: 0, y: 0, z: 0 };
-  const r = kf.rotation || { x: 0, y: 0, z: 0 };
-  const s = kf.scale || { x: 1, y: 1, z: 1 };
-  document.getElementById('kf-pos-x').value = p.x;
-  document.getElementById('kf-pos-y').value = p.y;
-  document.getElementById('kf-pos-z').value = p.z;
-  document.getElementById('kf-rot-x').value = r.x;
-  document.getElementById('kf-rot-y').value = r.y;
-  document.getElementById('kf-rot-z').value = r.z;
-  document.getElementById('kf-scale-x').value = s.x;
-  document.getElementById('kf-scale-y').value = s.y;
-  document.getElementById('kf-scale-z').value = s.z;
-  document.getElementById('kf-delete-keyframe').disabled = isEndpoint;
-}
-
-document.getElementById('kf-t').addEventListener('input', () => {
-  const track = selectedKfTrack();
-  const kf = selectedKf();
-  if (!track || !kf || mbSelectedKeyframeIndex === 0 || mbSelectedKeyframeIndex === track.keyframes.length - 1) return;
-  const prev = track.keyframes[mbSelectedKeyframeIndex - 1].t;
-  const next = track.keyframes[mbSelectedKeyframeIndex + 1].t;
-  const raw = parseFloat(document.getElementById('kf-t').value);
-  if (Number.isNaN(raw)) return;
-  // Clamped strictly between its neighbors so keyframes on a track can
-  // never cross order — applyKeyframeClip assumes ascending t.
-  kf.t = Math.min(next - 0.001, Math.max(prev + 0.001, raw));
-});
-
-[
-  ['kf-pos-x', 'position', 'x'], ['kf-pos-y', 'position', 'y'], ['kf-pos-z', 'position', 'z'],
-  ['kf-rot-x', 'rotation', 'x'], ['kf-rot-y', 'rotation', 'y'], ['kf-rot-z', 'rotation', 'z'],
-  ['kf-scale-x', 'scale', 'x'], ['kf-scale-y', 'scale', 'y'], ['kf-scale-z', 'scale', 'z'],
-].forEach(([id, group, axis]) => {
-  document.getElementById(id).addEventListener('input', () => {
-    const kf = selectedKf();
-    if (!kf) return;
-    if (!kf[group]) kf[group] = group === 'scale' ? { x: 1, y: 1, z: 1 } : { x: 0, y: 0, z: 0 };
-    const fallback = group === 'scale' ? 1 : 0;
-    kf[group][axis] = parseFloat(document.getElementById(id).value);
-    if (Number.isNaN(kf[group][axis])) kf[group][axis] = fallback;
+  el.addEventListener('pointermove', (e) => {
+    if (dragStartX === null) return;
+    const dx = e.clientX - dragStartX;
+    if (Math.abs(dx) > 2) moved = true;
+    if (!moved) return;
+    event.atMs = Math.max(0, Math.round(((x + dx) / trackWidth) * total));
+    recomputeMbClipDuration();
+    renderPtScrubber();
+    refreshPtTimelineList();
   });
-});
+  el.addEventListener('pointerup', () => {
+    const wasMoved = moved;
+    dragStartX = null;
+    moved = false;
+    if (!wasMoved) {
+      mbSelectedPart = event.part;
+      document.getElementById('pt-part-select').value = event.part;
+      attachPtGizmo();
+      mbScrubTimeMs = event.atMs;
+      updatePtScrubPreview();
+      refreshPtTimelineList();
+    }
+  });
+  return el;
+}
 
-document.getElementById('kf-delete-keyframe').addEventListener('click', () => {
-  const track = selectedKfTrack();
-  if (!track || mbSelectedKeyframeIndex == null) return;
-  if (mbSelectedKeyframeIndex === 0 || mbSelectedKeyframeIndex === track.keyframes.length - 1) return;
-  track.keyframes.splice(mbSelectedKeyframeIndex, 1);
-  mbSelectedKeyframeIndex = null;
-  refreshKfKeyframeSection();
+ptTrackEl.addEventListener('pointerdown', (e) => {
+  if (e.target !== ptTrackEl && e.target !== ptEventsEl) return;
+  ptSeekFromClientX(e.clientX);
 });
+let ptPlayheadDragging = false;
+ptPlayheadEl.addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  ptPlayheadDragging = true;
+  ptPlayheadEl.setPointerCapture(e.pointerId);
+});
+ptPlayheadEl.addEventListener('pointermove', (e) => { if (ptPlayheadDragging) ptSeekFromClientX(e.clientX); });
+ptPlayheadEl.addEventListener('pointerup', () => { ptPlayheadDragging = false; });
+
+function ptSeekFromClientX(clientX) {
+  setMbPlaying(false); // grabbing the playhead means you want to look at one frame
+  const rect = ptTrackEl.getBoundingClientRect();
+  const total = mbTimelineTotal();
+  mbScrubTimeMs = Math.max(0, Math.min(total, ((clientX - rect.left) / rect.width) * total));
+  updatePtScrubPreview();
+}
+
+function updatePtScrubPreview() {
+  renderPtScrubber();
+  refreshPtTimelineList();
+  if (mbRig && Object.keys(mbRig).length) applyPoseTimeline(mbRig, mbClip()?.timeline || [], mbScrubTimeMs);
+}
+window.addEventListener('resize', renderPtScrubber);
 
 // --- Abilities tab ---
 document.getElementById('mb-configured-level').addEventListener('input', () => {
@@ -1038,49 +1083,378 @@ function refreshAbilityLadder() {
     const ability = currentMonsterType.abilitySlots.find((a) => a.unlockLevel === level);
     const locked = level > currentMonsterType.configuredLevel;
     if (ability) {
-      return `<div class="ability-ladder-row"><span class="level-badge">Lv${level}</span><span style="flex:1">${ability.name} <span class="hint">(${ability.kind}, pwr ${ability.power})</span></span><button data-edit-ability="${level}">✎</button><button data-delete-ability="${level}">✕</button></div>`;
+      const tags = [ability.kind, `pwr ${ability.power}`, `${(ability.cooldownMs / 1000).toFixed(1)}s cd`];
+      if (ability.effects?.length > 1) tags.push(`${ability.effects.length} effects`);
+      if (ability.timeline?.length) tags.push('🎬');
+      const editing = editingAbilityId === ability.id ? ' editing' : '';
+      return `<div class="ability-ladder-row${editing}"><span class="level-badge">Lv${level}</span><span style="flex:1">${ability.icon ? `${ability.icon} ` : ''}${escapeHtml(ability.name)} <span class="hint">(${tags.join(', ')})</span></span><button data-edit-ability="${level}">✎</button><button data-delete-ability="${level}">✕</button></div>`;
     }
     return `<div class="ability-ladder-row" style="opacity:${locked ? 0.4 : 1}"><span class="level-badge">Lv${level}</span><span style="flex:1" class="hint">${locked ? 'Locked (raise configured level)' : 'Empty'}</span><button data-create-ability="${level}" ${locked ? 'disabled' : ''}>+ Create</button></div>`;
   }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 document.getElementById('mb-ability-ladder').addEventListener('click', (e) => {
   const createLevel = e.target.dataset.createAbility;
   const editLevel = e.target.dataset.editAbility;
   const deleteLevel = e.target.dataset.deleteAbility;
-  if (createLevel !== undefined || editLevel !== undefined) {
-    const level = parseInt(createLevel ?? editLevel, 10);
-    openAbilityForm(level);
+  if (createLevel !== undefined) openAbilityEditor(createAbility(parseInt(createLevel, 10)));
+  else if (editLevel !== undefined) {
+    const ability = currentMonsterType.abilitySlots.find((a) => a.unlockLevel === parseInt(editLevel, 10));
+    if (ability) openAbilityEditor(ability);
   } else if (deleteLevel !== undefined) {
-    const level = parseInt(deleteLevel, 10);
-    currentMonsterType.abilitySlots = currentMonsterType.abilitySlots.filter((a) => a.unlockLevel !== level);
-    refreshAbilityLadder();
+    deleteAbilityAtLevel(parseInt(deleteLevel, 10));
   }
 });
 
-/** A tiny inline prompt-based ability editor — simplest possible form for an MVP-scoped ability-authoring flow. */
-function openAbilityForm(level) {
-  const existing = currentMonsterType.abilitySlots.find((a) => a.unlockLevel === level);
-  const name = window.prompt('Ability name?', existing?.name || `Attack Lv${level}`);
-  if (!name) return;
-  const kind = window.prompt(`Kind (${ABILITY_KINDS.join('/')})?`, existing?.kind || 'melee');
-  if (!ABILITY_KINDS.includes(kind)) { alert(`Kind must be one of: ${ABILITY_KINDS.join(', ')}`); return; }
-  const power = parseFloat(window.prompt('Power (damage)?', existing?.power ?? 10)) || 10;
-  const cooldownMs = parseFloat(window.prompt('Cooldown (ms)?', existing?.cooldownMs ?? 2000)) || 2000;
+// =========================================================================
+// Ability editor — the Skill Builder's authoring shape, for monsters.
+//
+// This used to be four chained window.prompt() calls, which meant a monster's
+// moveset could only ever be {name, kind, power, cooldown}: no targeting, no
+// status effects, no VFX, no per-ability animation. A monster ability and a
+// class skill are the same KIND of object (see src/sim/skillDefs.js, whose
+// `effects`/`targeting`/timeline vocabulary was always meant to serve both), so
+// they get the same editor: a real form, an effects list you can stack, VFX
+// pickers, and — via the shared Timeline panel in the Model tab — its own pose
+// timeline. `triggerAbilityAnimation` (src/render/scene.js) already reads a
+// flat `timeline`/`vfx` off whatever ability it is handed, so an ability
+// authored here plays back with no runtime changes.
+// =========================================================================
+let editingAbilityId = null;
+const abForm = document.getElementById('mb-ability-form');
+const abEmpty = document.getElementById('mb-ability-empty');
+
+/** Every VFX id the pickers offer — built-in presets plus the Custom VFX Library. */
+function allVfxIds() {
+  return [...PRESET_IDS, ...vfxCatalog.map((v) => v.id)];
+}
+
+function fillSelect(el, values, { includeNone = false, labels = null } = {}) {
+  el.innerHTML = (includeNone ? '<option value="">— none —</option>' : '')
+    + values.map((v) => `<option value="${v}">${labels ? labels(v) : v}</option>`).join('');
+}
+
+// Static option lists — filled once, since none of them depend on the type.
+fillSelect(document.getElementById('ab-kind'), ABILITY_KINDS);
+fillSelect(document.getElementById('ab-shape'), TARGETING_SHAPES);
+fillSelect(document.getElementById('ab-effect-add-type'), EFFECT_TYPES);
+for (const id of ['ab-cast-anchor', 'ab-impact-anchor']) fillSelect(document.getElementById(id), VFX_ANCHORS);
+
+function refreshAbVfxPickers() {
+  const ids = allVfxIds();
+  for (const id of ['ab-cast-vfx', 'ab-impact-vfx', 'ab-travel-vfx']) {
+    const el = document.getElementById(id);
+    const keep = el.value;
+    fillSelect(el, ids, { includeNone: true });
+    el.value = ids.includes(keep) ? keep : '';
+  }
+}
+
+/** The ability currently open in the form, or null. */
+function editingAbility() {
+  return currentMonsterType.abilitySlots.find((a) => a.id === editingAbilityId) || null;
+}
+
+function createAbility(level) {
   const ability = {
-    id: existing?.id || `ability-${Date.now()}`,
-    name, kind, power, unlockLevel: level,
-    cooldownMs,
-    windupMs: existing?.windupMs ?? 150,
-    effectMs: existing?.effectMs ?? 150,
-    recoveryMs: existing?.recoveryMs ?? 200,
-    description: existing?.description || '',
+    id: `ability-${Date.now()}-${Math.floor(Math.random() * 1e4)}`,
+    name: `Attack Lv${level}`,
+    description: '',
+    kind: 'melee',
+    unlockLevel: level,
+    power: 10,
+    cooldownMs: 2000,
+    windupMs: 150,
+    effectMs: 150,
+    recoveryMs: 200,
+    targeting: { range: 2, shape: 'single' },
+    effects: [{ type: 'damage', amount: 10, damageType: 'physical' }],
   };
-  const idx = currentMonsterType.abilitySlots.findIndex((a) => a.unlockLevel === level);
-  if (idx >= 0) currentMonsterType.abilitySlots[idx] = ability;
-  else currentMonsterType.abilitySlots.push(ability);
+  currentMonsterType.abilitySlots.push(ability);
+  currentMonsterType.abilitySlots.sort((a, b) => a.unlockLevel - b.unlockLevel);
+  return ability;
+}
+
+function deleteAbilityAtLevel(level) {
+  const gone = currentMonsterType.abilitySlots.find((a) => a.unlockLevel === level);
+  currentMonsterType.abilitySlots = currentMonsterType.abilitySlots.filter((a) => a.unlockLevel !== level);
+  if (gone && gone.id === editingAbilityId) closeAbilityEditor();
+  // An ability's own timeline is the clip the Model tab may currently be
+  // editing — drop back to the body's attack clip rather than leaving the
+  // Timeline panel pointed at a deleted object.
+  if (mbClipType === `ability:${gone?.id}`) selectMbClipType('attackClip');
   refreshAbilityLadder();
 }
+
+function closeAbilityEditor() {
+  editingAbilityId = null;
+  abForm.style.display = 'none';
+  abEmpty.style.display = 'block';
+  refreshAbilityLadder();
+}
+document.getElementById('ab-close').addEventListener('click', closeAbilityEditor);
+
+const AB_FIELDS = [
+  ['ab-name', 'name', 'text'], ['ab-icon', 'icon', 'text'], ['ab-description', 'description', 'text'],
+  ['ab-kind', 'kind', 'text'],
+  ['ab-cooldown', 'cooldownMs', 'num'], ['ab-windup', 'windupMs', 'num'],
+  ['ab-effect', 'effectMs', 'num'], ['ab-recovery', 'recoveryMs', 'num'],
+];
+
+function openAbilityEditor(ability) {
+  // Catalogs written before this editor existed carry a bare `power` and no
+  // `effects`. Synthesise the equivalent effect on open, or the first keystroke
+  // in the form would run syncAbilityPower against an empty effects list and
+  // silently zero a working ability's damage.
+  if (!ability.effects) {
+    ability.effects = ability.power > 0
+      ? [{ type: 'damage', amount: ability.power, damageType: 'physical' }]
+      : [];
+  }
+  editingAbilityId = ability.id;
+  abForm.style.display = 'block';
+  abEmpty.style.display = 'none';
+  document.getElementById('ab-title').textContent = `Lv${ability.unlockLevel} — ${ability.name}`;
+  document.getElementById('ab-name').value = ability.name || '';
+  document.getElementById('ab-icon').value = ability.icon || '';
+  document.getElementById('ab-description').value = ability.description || '';
+  document.getElementById('ab-kind').value = ability.kind || 'melee';
+  document.getElementById('ab-unlock').value = ability.unlockLevel;
+  document.getElementById('ab-cooldown').value = ability.cooldownMs ?? 2000;
+  document.getElementById('ab-windup').value = ability.windupMs ?? 150;
+  document.getElementById('ab-effect').value = ability.effectMs ?? 150;
+  document.getElementById('ab-recovery').value = ability.recoveryMs ?? 200;
+  const t = ability.targeting || (ability.targeting = { range: 2, shape: 'single' });
+  document.getElementById('ab-range').value = t.range ?? 2;
+  document.getElementById('ab-shape').value = t.shape || 'single';
+  document.getElementById('ab-radius').value = t.radius ?? 3;
+  document.getElementById('ab-angle').value = t.angleDeg ?? 45;
+  document.getElementById('ab-chain').value = t.chainCount ?? 2;
+  refreshAbVfxPickers();
+  document.getElementById('ab-cast-vfx').value = ability.vfx?.castVfxId || '';
+  document.getElementById('ab-impact-vfx').value = ability.vfx?.impactVfxId || '';
+  document.getElementById('ab-travel-vfx').value = ability.vfx?.travelVfxId || '';
+  document.getElementById('ab-cast-anchor').value = ability.vfx?.castAnchor || 'hand';
+  document.getElementById('ab-impact-anchor').value = ability.vfx?.impactAnchor || 'target';
+  refreshAbShapeFields();
+  refreshAbEffectList();
+  refreshAbTimelineSummary();
+  refreshAbilityLadder();
+}
+
+/** Only show the targeting fields the chosen shape actually uses. */
+function refreshAbShapeFields() {
+  const shape = document.getElementById('ab-shape').value;
+  document.getElementById('ab-radius-wrap').style.display = (shape === 'aoe-circle' || shape === 'aoe-line') ? 'block' : 'none';
+  document.getElementById('ab-angle-wrap').style.display = shape === 'aoe-cone' ? 'block' : 'none';
+  document.getElementById('ab-chain-wrap').style.display = shape === 'chain' ? 'block' : 'none';
+}
+
+/** Push every scalar field back onto the ability being edited. */
+function applyAbilityFields() {
+  const ability = editingAbility();
+  if (!ability) return;
+  ability.name = document.getElementById('ab-name').value.trim() || 'Unnamed';
+  const icon = document.getElementById('ab-icon').value.trim();
+  if (icon) ability.icon = icon; else delete ability.icon;
+  ability.description = document.getElementById('ab-description').value;
+  ability.kind = document.getElementById('ab-kind').value;
+  ability.cooldownMs = Math.max(0, parseFloat(document.getElementById('ab-cooldown').value) || 0);
+  ability.windupMs = Math.max(0, parseFloat(document.getElementById('ab-windup').value) || 0);
+  ability.effectMs = Math.max(0, parseFloat(document.getElementById('ab-effect').value) || 0);
+  ability.recoveryMs = Math.max(0, parseFloat(document.getElementById('ab-recovery').value) || 0);
+
+  const shape = document.getElementById('ab-shape').value;
+  const targeting = { range: parseFloat(document.getElementById('ab-range').value) || 1, shape };
+  if (shape === 'aoe-circle' || shape === 'aoe-line') targeting.radius = parseFloat(document.getElementById('ab-radius').value) || 1;
+  if (shape === 'aoe-cone') targeting.angleDeg = parseFloat(document.getElementById('ab-angle').value) || 45;
+  if (shape === 'chain') targeting.chainCount = parseInt(document.getElementById('ab-chain').value, 10) || 1;
+  ability.targeting = targeting;
+
+  const vfx = {};
+  const cast = document.getElementById('ab-cast-vfx').value;
+  const impact = document.getElementById('ab-impact-vfx').value;
+  const travel = document.getElementById('ab-travel-vfx').value;
+  if (cast) { vfx.castVfxId = cast; vfx.castAnchor = document.getElementById('ab-cast-anchor').value; }
+  if (impact) { vfx.impactVfxId = impact; vfx.impactAnchor = document.getElementById('ab-impact-anchor').value; }
+  if (travel) vfx.travelVfxId = travel;
+  if (Object.keys(vfx).length) ability.vfx = vfx; else delete ability.vfx;
+
+  syncAbilityPower(ability);
+  document.getElementById('ab-title').textContent = `Lv${ability.unlockLevel} — ${ability.name}`;
+  refreshAbShapeFields();
+  refreshAbilityLadder();
+}
+
+/**
+ * `power` is the number the SERVER actually deals (server/index.js applies
+ * `attackEvent.damage` straight from it), so it is kept in lockstep with the
+ * first damage/dot effect rather than being a second, silently-diverging field
+ * the author has to remember to update. An ability with no damage effect at all
+ * (a pure stun/taunt) reports 0 and says so.
+ */
+function syncAbilityPower(ability) {
+  const dmg = (ability.effects || []).find((e) => e.type === 'damage');
+  const dot = (ability.effects || []).find((e) => e.type === 'dot');
+  ability.power = dmg ? (dmg.amount || 0) : 0;
+  const note = document.getElementById('ab-power-note');
+  if (dmg) {
+    note.style.display = 'none';
+  } else {
+    note.style.display = 'block';
+    note.textContent = dot
+      ? '⚠ No direct damage — this hit deals 0 on impact; only the damage-over-time ticks.'
+      : '⚠ No damage effect: this ability lands for 0 damage. Add a "damage" effect if that is not deliberate.';
+  }
+}
+
+for (const [id] of AB_FIELDS) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', applyAbilityFields);
+}
+for (const id of ['ab-range', 'ab-shape', 'ab-radius', 'ab-angle', 'ab-chain', 'ab-cast-vfx', 'ab-impact-vfx', 'ab-travel-vfx', 'ab-cast-anchor', 'ab-impact-anchor']) {
+  document.getElementById(id).addEventListener('input', applyAbilityFields);
+  document.getElementById(id).addEventListener('change', applyAbilityFields);
+}
+
+document.getElementById('ab-delete').addEventListener('click', () => {
+  const ability = editingAbility();
+  if (ability) deleteAbilityAtLevel(ability.unlockLevel);
+});
+
+// --- Effects list ---------------------------------------------------------
+// Which extra fields each effect type carries. Driving the rows off a table
+// (rather than a switch per type) means adding an effect type to skillDefs.js
+// makes it authorable here with no UI work.
+const EFFECT_FIELDS = {
+  damage: [['amount', 'Amount', 'num'], ['damageType', 'Damage type', DAMAGE_TYPES]],
+  heal: [['amount', 'Amount', 'num']],
+  stun: [['durationMs', 'Duration (ms)', 'num']],
+  freeze: [['durationMs', 'Duration (ms)', 'num']],
+  sleep: [['durationMs', 'Duration (ms)', 'num']],
+  slow: [['durationMs', 'Duration (ms)', 'num'], ['slowPercent', 'Slow (0-1)', 'num']],
+  dot: [['damagePerTick', 'Damage / tick', 'num'], ['tickMs', 'Tick every (ms)', 'num'], ['durationMs', 'Duration (ms)', 'num'], ['damageType', 'Damage type', DAMAGE_TYPES]],
+  hot: [['healPerTick', 'Heal / tick', 'num'], ['tickMs', 'Tick every (ms)', 'num'], ['durationMs', 'Duration (ms)', 'num']],
+  buff: [['stat', 'Stat', BUFF_STATS], ['amount', 'Amount', 'num'], ['durationMs', 'Duration (ms)', 'num']],
+  shield: [['amount', 'Absorb', 'num'], ['durationMs', 'Duration (ms)', 'num']],
+  taunt: [['durationMs', 'Duration (ms)', 'num']],
+  knockback: [['distance', 'Distance (m)', 'num']],
+  pull: [['distance', 'Distance (m)', 'num']],
+};
+const EFFECT_DEFAULTS = {
+  damage: { amount: 10, damageType: 'physical' },
+  heal: { amount: 10 },
+  stun: { durationMs: 1000 },
+  freeze: { durationMs: 1500 },
+  sleep: { durationMs: 3000 },
+  slow: { durationMs: 3000, slowPercent: 0.4 },
+  dot: { damagePerTick: 3, tickMs: 1000, durationMs: 5000, damageType: 'poison' },
+  hot: { healPerTick: 3, tickMs: 1000, durationMs: 5000 },
+  buff: { stat: 'armor', amount: 10, durationMs: 5000 },
+  shield: { amount: 20, durationMs: 5000 },
+  taunt: { durationMs: 4000 },
+  knockback: { distance: 3 },
+  pull: { distance: 3 },
+};
+
+function refreshAbEffectList() {
+  const host = document.getElementById('ab-effect-list');
+  host.innerHTML = '';
+  const ability = editingAbility();
+  if (!ability) return;
+  ability.effects = ability.effects || [];
+  if (!ability.effects.length) {
+    host.innerHTML = '<div class="hint">No effects — this ability currently does nothing. Add one below.</div>';
+    return;
+  }
+  ability.effects.forEach((effect, i) => {
+    const row = document.createElement('div');
+    row.className = 'ab-effect-row';
+    const head = document.createElement('div');
+    head.className = 'ab-effect-head';
+    const title = document.createElement('strong');
+    title.textContent = effect.type;
+    head.appendChild(title);
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.addEventListener('click', () => {
+      ability.effects.splice(i, 1);
+      syncAbilityPower(ability);
+      refreshAbEffectList();
+      refreshAbilityLadder();
+    });
+    head.appendChild(del);
+    row.appendChild(head);
+
+    for (const [key, label, kind] of EFFECT_FIELDS[effect.type] || []) {
+      const wrap = document.createElement('label');
+      wrap.textContent = label;
+      let input;
+      if (Array.isArray(kind)) {
+        input = document.createElement('select');
+        fillSelect(input, kind);
+        input.value = effect[key] ?? kind[0];
+        input.addEventListener('change', () => { effect[key] = input.value; refreshAbilityLadder(); });
+      } else {
+        input = document.createElement('input');
+        input.type = 'number';
+        input.step = key === 'slowPercent' ? 0.05 : 1;
+        input.value = effect[key] ?? 0;
+        input.addEventListener('input', () => {
+          effect[key] = parseFloat(input.value) || 0;
+          syncAbilityPower(ability);
+          refreshAbilityLadder();
+        });
+      }
+      wrap.appendChild(input);
+      row.appendChild(wrap);
+    }
+    host.appendChild(row);
+  });
+}
+
+document.getElementById('ab-effect-add').addEventListener('click', () => {
+  const ability = editingAbility();
+  if (!ability) return;
+  const type = document.getElementById('ab-effect-add-type').value;
+  ability.effects = ability.effects || [];
+  ability.effects.push({ type, ...structuredClone(EFFECT_DEFAULTS[type] || {}) });
+  syncAbilityPower(ability);
+  refreshAbEffectList();
+  refreshAbilityLadder();
+});
+
+// --- Per-ability animation ------------------------------------------------
+function refreshAbTimelineSummary() {
+  const ability = editingAbility();
+  const el = document.getElementById('ab-timeline-summary');
+  const n = ability?.timeline?.length || 0;
+  el.textContent = n
+    ? `${n} keyframe/VFX event(s) authored — this ability drives its own animation.`
+    : 'No animation authored — falls back to this monster’s Attack clip.';
+}
+
+document.getElementById('ab-edit-timeline').addEventListener('click', () => {
+  const ability = editingAbility();
+  if (!ability) return;
+  ability.timeline = ability.timeline || [];
+  showTab('model');
+  selectMbPartTab('settings');
+  selectMbClipType(`ability:${ability.id}`);
+});
+
+document.getElementById('ab-clear-timeline').addEventListener('click', () => {
+  const ability = editingAbility();
+  if (!ability) return;
+  delete ability.timeline;
+  if (mbClipType === `ability:${ability.id}`) selectMbClipType('attackClip');
+  refreshAbTimelineSummary();
+  refreshAbilityLadder();
+});
 
 // --- Type-level loot table (General tab) ---
 // Same add/remove-a-row shape as the World Editor's per-placement loot list,
@@ -1164,14 +1538,15 @@ function loadMonsterTypeIntoModal(mt) {
   document.getElementById('mb-aggroRange').value = currentMonsterType.baseStats.aggroRange;
   document.getElementById('mb-attackRange').value = currentMonsterType.baseStats.attackRange;
   document.getElementById('mb-stance').value = currentMonsterType.stance;
-  document.getElementById('mb-preview-anim').value = currentMonsterType.previewAnimation || 'idle';
   document.getElementById('mb-weapon-warning').style.display = currentMonsterType.stance !== 'humanoid' ? 'block' : 'none';
   document.getElementById('mb-configured-level').value = currentMonsterType.configuredLevel;
   document.getElementById('mb-status').textContent = '';
   refreshMbLootList();
+  closeAbilityEditor(); // an editor left open would be pointed at the previous monster's ability
   refreshAbilityLadder();
-  kfSelectClipType('walkClip');
   rebuildMbWorkspace();
+  mbScrubTimeMs = 0;
+  selectMbClipType('walkClip');
   const roles = SLOTS_BY_STANCE[currentMonsterType.stance] || SLOTS_BY_STANCE.humanoid;
   selectMbPartTab(roles[0]);
 }
@@ -1269,16 +1644,19 @@ document.getElementById('mb-catalog-list').addEventListener('click', async (e) =
 renderMbBodyPresetGrid(); // static built-in data, render once — cached thumbnails after that
 
 async function boot() {
-  const [monsterTypes, items, quests] = await Promise.all([
+  const [monsterTypes, items, quests, vfx] = await Promise.all([
     fetch('/api/monster-types').then((r) => r.json()).catch(() => []),
     fetch('/api/items').then((r) => r.json()).catch(() => []),
     fetch('/api/quests').then((r) => r.json()).catch(() => []),
+    fetch('/api/vfx').then((r) => r.json()).catch(() => []),
   ]);
   monsterTypeCatalog = monsterTypes;
   itemCatalog = items;
   questCatalog = quests;
+  vfxCatalog = Array.isArray(vfx) ? vfx : [];
   refreshMbCatalogList();
   refreshMbLootItemOptions();
+  refreshAbVfxPickers();
   loadMonsterTypeIntoModal(monsterTypeCatalog[0] || null);
 }
 

@@ -146,6 +146,36 @@ export function buildShapeMesh(shapeDef) {
   return mesh;
 }
 
+/**
+ * Restyle an ALREADY-BUILT shape mesh's opacity — the live counterpart to the
+ * `transparent`/`opacity` pair buildShapeMesh sets at construction.
+ *
+ * `material.transparent` is part of three.js's shader-program cache key, so
+ * flipping it on a material that has already been compiled does nothing at all
+ * until the material is marked dirty: the old, blend-disabled program keeps
+ * getting used. Every opacity slider in the builders hit exactly that — the
+ * value landed on the material and in the saved data, and the viewport never
+ * changed, which reads as "opacity does nothing".
+ *
+ * Exists here rather than in each editor because buildShapeMesh owns the
+ * opacity convention, and two copies of this had already drifted into the
+ * Monster Builder and the World Editor's Object Builder.
+ * @param {import('three').Mesh} mesh
+ * @param {number} opacity 0..1
+ */
+export function setShapeOpacity(mesh, opacity) {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const wantsTransparent = opacity < 1;
+  for (const material of materials) {
+    if (!material) continue;
+    material.opacity = opacity;
+    if (material.transparent !== wantsTransparent) {
+      material.transparent = wantsTransparent;
+      material.needsUpdate = true; // recompile: `transparent` changes the program, not just a uniform
+    }
+  }
+}
+
 /** A saved object's full shape list -> one THREE.Group, ready for buildPropPlaceholder's position/rotation/scale/tint pass. */
 export function generateCustomObject(shapes) {
   const group = new THREE.Group();

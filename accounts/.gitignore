@@ -1,0 +1,9 @@
+# Account records — password hashes, salts and email addresses. Unlike every
+# other JSON store in this project (items, quests, monsters…), this is user
+# data, not authored content, so it must never be committed.
+#
+# The folder and accounts.json are recreated automatically on server start
+# (see createAccountStore in server/accounts.js), so nothing is lost by
+# ignoring them.
+accounts.json
+accounts.json.bak

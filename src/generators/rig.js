@@ -193,70 +193,75 @@ export function applyAttackPose(rig, attackPoseDef, t01) {
  * @typedef {import('../sim/creatureTypeDefs.js').KeyframeClip} KeyframeClip
  */
 
-const lerp = (a, b, u) => a + (b - a) * u;
-/** Lerps an optional {x,y,z}, defaulting either side to `fallback` on missing axes/keyframes. */
-function lerpVec(a, b, u, fallback) {
-  return {
-    x: lerp(a?.x ?? fallback, b?.x ?? fallback, u),
-    y: lerp(a?.y ?? fallback, b?.y ?? fallback, u),
-    z: lerp(a?.z ?? fallback, b?.z ?? fallback, u),
-  };
+/**
+ * Pose every rig part named by a `pose`-type timeline event at time `t` —
+ * interpolated linearly between that part's surrounding keyframes (holding
+ * rest pose before its first authored keyframe, so a raised limb reads as a
+ * motion starting from idle rather than a pose that's already mid-raise the
+ * instant playback starts). Lives here — rather than render/scene.js, which
+ * imports FROM this module — so both the Skill Builder's ability-timeline
+ * preview and applyKeyframeClip below share one implementation: authoring
+ * preview can never drift from what live playback actually does.
+ * @param {Record<string, import('three').Object3D>} rig
+ * @param {Array<{type:string, atMs:number, part:string, rotationDeg:{x:number,y:number,z:number}}>} timeline
+ * @param {number} t ms since the timeline started
+ */
+export function applyPoseTimeline(rig, timeline, t) {
+  if (!rig || !timeline) return;
+  const parts = new Set(timeline.filter((e) => e.type === 'pose').map((e) => e.part));
+  const R2D = 180 / Math.PI;
+  for (const part of parts) {
+    const pivot = rig[part];
+    if (!pivot) continue;
+    const keys = timeline
+      .filter((e) => e.type === 'pose' && e.part === part)
+      .sort((a, b) => a.atMs - b.atMs);
+    const base = pivot.userData.basePose;
+    let prev = {
+      atMs: 0,
+      rotationDeg: base
+        ? { x: base.x * R2D, y: base.y * R2D, z: base.z * R2D }
+        : { x: 0, y: 0, z: 0 },
+    };
+    let next = keys[0] || prev;
+    for (const k of keys) {
+      if (k.atMs <= t) prev = k;
+      if (k.atMs >= t) { next = k; break; }
+    }
+    const span = next.atMs - prev.atMs;
+    const p = span > 0 ? Math.min(1, Math.max(0, (t - prev.atMs) / span)) : 1;
+    const D2R = Math.PI / 180;
+    pivot.rotation.set(
+      (prev.rotationDeg.x + (next.rotationDeg.x - prev.rotationDeg.x) * p) * D2R,
+      (prev.rotationDeg.y + (next.rotationDeg.y - prev.rotationDeg.y) * p) * D2R,
+      (prev.rotationDeg.z + (next.rotationDeg.z - prev.rotationDeg.z) * p) * D2R
+    );
+  }
 }
 
 /**
- * Hand-authored position/rotation/scale keyframe playback — the counterpart
- * to applyGaitPose's procedural sine gait, for poses sine math can't express
- * (a jump's crouch/launch/land, an asymmetric telegraphed swing). Position
- * offsets ADD onto the pivot's base anchor, rotation offsets ADD onto its
- * base pose (same "compose on top of the weapon hold pose" convention
- * applyGaitPose uses), and scale multiplies the pivot's rest scale of 1.
+ * Hand-authored pose-keyframe playback — the counterpart to applyGaitPose's
+ * procedural sine gait, for poses sine math can't express (a jump's crouch/
+ * launch/land, an asymmetric telegraphed swing). `clip.timeline` is the same
+ * pose-event shape the Skill Builder's Timeline tab authors and
+ * applyPoseTimeline plays back — `clip.durationMs`/`clip.loop` just wrap that
+ * with a playhead: looped modulo playback for idle/walk, clamped one-shot
+ * for attack.
  *
- * Does NOT reset untouched pivots to rest first (unlike applyGaitPose) —
- * callers that want a full-body reset before overlaying a clip should call
- * applyIdlePose(rig) themselves first (see updateWalkCycle). This lets an
- * attack clip overlay only the parts it animates on top of whatever the
- * walk/idle pass already set for that frame, rather than stomping it.
+ * Does NOT reset untouched pivots to rest first — callers that want a
+ * full-body reset before overlaying a clip should call applyIdlePose(rig)
+ * themselves first (see updateWalkCycle). This lets an attack clip overlay
+ * only the parts it animates on top of whatever the walk/idle pass already
+ * set for that frame, rather than stomping it.
  * @param {Record<string, import('three').Object3D>} rig
  * @param {KeyframeClip} clip
  * @param {number} elapsedMs
  */
 export function applyKeyframeClip(rig, clip, elapsedMs) {
-  if (!clip || !Array.isArray(clip.tracks) || !clip.tracks.length) return;
+  if (!clip || !Array.isArray(clip.timeline) || !clip.timeline.length) return;
   const duration = clip.durationMs > 0 ? clip.durationMs : 1;
   const loop = clip.loop ?? true;
-  let tFrac = elapsedMs / duration;
-  tFrac = loop ? tFrac - Math.floor(tFrac) : Math.min(1, Math.max(0, tFrac));
-
-  for (const track of clip.tracks) {
-    const pivot = rig[track.part];
-    const frames = track.keyframes;
-    if (!pivot || !frames || frames.length < 2) continue;
-
-    let lo = frames[0];
-    let hi = frames[frames.length - 1];
-    for (let i = 0; i < frames.length - 1; i++) {
-      if (tFrac >= frames[i].t && tFrac <= frames[i + 1].t) {
-        lo = frames[i];
-        hi = frames[i + 1];
-        break;
-      }
-    }
-    const span = hi.t - lo.t;
-    const u = span > 0 ? (tFrac - lo.t) / span : 0;
-
-    const anchor = baseAnchorOf(pivot);
-    const posOffset = lerpVec(lo.position, hi.position, u, 0);
-    pivot.position.set(anchor.x + posOffset.x, anchor.y + posOffset.y, anchor.z + posOffset.z);
-
-    const b = baseOf(pivot);
-    const rotOffsetDeg = lerpVec(lo.rotation, hi.rotation, u, 0);
-    pivot.rotation.set(
-      b.x + rotOffsetDeg.x * DEG2RAD,
-      b.y + rotOffsetDeg.y * DEG2RAD,
-      b.z + rotOffsetDeg.z * DEG2RAD
-    );
-
-    const scaleMul = lerpVec(lo.scale, hi.scale, u, 1);
-    pivot.scale.set(scaleMul.x, scaleMul.y, scaleMul.z);
-  }
+  let t = loop ? elapsedMs % duration : Math.min(duration, Math.max(0, elapsedMs));
+  if (t < 0) t += duration;
+  applyPoseTimeline(rig, clip.timeline, t);
 }

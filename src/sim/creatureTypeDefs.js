@@ -19,6 +19,7 @@
 import { SHAPE_KINDS } from './shapeKinds.js';
 import { getWeaponTypeDef, validateLoadout } from './weaponTypes.js';
 import { validateLootTable } from './lootTables.js';
+import { TARGETING_SHAPES, EFFECT_TYPES, DAMAGE_TYPES } from './skillDefs.js';
 
 export const CREATURE_KINDS = ['monster', 'npc', 'character'];
 export const CREATURE_STANCES = ['humanoid', 'quadruped'];
@@ -81,16 +82,18 @@ export const ARM_ROLES = ['armL', 'armR'];
  */
 
 /**
- * @typedef {Object} PartKeyframeTrack
+ * @typedef {Object} PoseTimelineEvent
+ * @property {'pose'} type
+ * @property {number} atMs
  * @property {string} part a slot role — the smallest animatable unit is a whole slot's pivot
- * @property {PoseKeyframe[]} keyframes
+ * @property {{x:number,y:number,z:number}} rotationDeg
  */
 
 /**
  * @typedef {Object} KeyframeClip
  * @property {number} durationMs
  * @property {boolean} [loop] default true (walk/idle loop; attack typically plays once)
- * @property {PartKeyframeTrack[]} tracks
+ * @property {PoseTimelineEvent[]} timeline
  */
 
 /**
@@ -116,11 +119,11 @@ export const ARM_ROLES = ['armL', 'armR'];
  * @property {SlotDef[]} slots
  * @property {{walk?: AnimEntry[], walkClip?: KeyframeClip, idleClip?: KeyframeClip, attackClip?: KeyframeClip}} [animation]
  *   `walk` is the procedural sine gait; absent = the generic stance gait. The
- *   `*Clip` fields are hand-authored keyframe clips (position/rotation/scale)
- *   that take priority over the procedural walk/rest pose, and over the
- *   burst-only attack VFX, when present — see src/generators/rig.js's
- *   applyKeyframeClip. All three are independently optional.
- * @property {string} [previewAnimation] 'idle'|'walk'|'attack' — Model Editor preview only
+ *   `*Clip` fields are hand-authored pose-rotation timelines (Monster
+ *   Builder's Timeline (advanced) editor, same pose-event shape the Skill
+ *   Builder authors) that take priority over the procedural walk/rest pose,
+ *   and over the burst-only attack VFX, when present — see
+ *   src/generators/rig.js's applyKeyframeClip. All three are independently optional.
  * @property {string} [previewWeapon] weapon type id shown in the Model Editor preview only
  *
  * monster-only:
@@ -202,26 +205,15 @@ function validateKeyframeClip(clip, label) {
   if (clip.loop !== undefined && typeof clip.loop !== 'boolean') {
     throw new Error(`${label} loop must be a boolean`);
   }
-  if (!Array.isArray(clip.tracks)) throw new Error(`${label} tracks must be an array`);
-  for (const track of clip.tracks) {
-    if (!isObj(track)) throw new Error(`${label} has a non-object track entry`);
-    if (!track.part) throw new Error(`${label} track missing "part"`);
-    if (!Array.isArray(track.keyframes) || track.keyframes.length < 2) {
-      throw new Error(`${label} track "${track.part}" needs at least 2 keyframes`);
+  if (!Array.isArray(clip.timeline)) throw new Error(`${label} timeline must be an array`);
+  for (const event of clip.timeline) {
+    if (!isObj(event)) throw new Error(`${label} has a non-object timeline event`);
+    if (event.type !== 'pose') throw new Error(`${label} timeline event must have type "pose"`);
+    if (!event.part) throw new Error(`${label} timeline event missing "part"`);
+    if (typeof event.atMs !== 'number' || event.atMs < 0) {
+      throw new Error(`${label} timeline event "${event.part}" needs a numeric atMs >= 0`);
     }
-    for (const kf of track.keyframes) {
-      if (!isObj(kf)) throw new Error(`${label} track "${track.part}" has a non-object keyframe`);
-      if (typeof kf.t !== 'number' || kf.t < 0 || kf.t > 1) {
-        throw new Error(`${label} track "${track.part}" keyframe has invalid t (must be 0..1)`);
-      }
-      if (kf.position !== undefined) validateVec3(kf.position, `${label} track "${track.part}" keyframe position`);
-      if (kf.rotation !== undefined) validateVec3(kf.rotation, `${label} track "${track.part}" keyframe rotation`);
-      if (kf.scale !== undefined) validateVec3(kf.scale, `${label} track "${track.part}" keyframe scale`);
-    }
-    const first = track.keyframes[0], last = track.keyframes[track.keyframes.length - 1];
-    if (first.t !== 0 || last.t !== 1) {
-      throw new Error(`${label} track "${track.part}" must start at t=0 and end at t=1`);
-    }
+    validateVec3(event.rotationDeg, `${label} timeline event "${event.part}" rotationDeg`);
   }
 }
 
@@ -253,6 +245,54 @@ function validateEquipment(c, label) {
   }
 }
 
+/**
+ * The optional richer half of a monster ability, authored by the Monster
+ * Builder's Abilities tab: who it hits and how (`targeting`), what it applies
+ * (`effects`), what plays (`vfx`, `timeline`). Deliberately the same vocabulary
+ * as a class skill — see src/sim/skillDefs.js — so the two can never drift into
+ * two dialects of the same idea. All of it is optional: an ability that only
+ * has {id, name, kind, power, cooldownMs} is exactly what shipped before and
+ * still validates.
+ */
+function validateAbilityExtras(ab, label) {
+  if (ab.targeting !== undefined) {
+    if (!isObj(ab.targeting)) throw new Error(`${label} targeting must be an object`);
+    if (ab.targeting.shape !== undefined && !TARGETING_SHAPES.includes(ab.targeting.shape)) {
+      throw new Error(`${label} targeting has unknown shape "${ab.targeting.shape}"`);
+    }
+    if (ab.targeting.range !== undefined && typeof ab.targeting.range !== 'number') {
+      throw new Error(`${label} targeting.range must be a number`);
+    }
+  }
+  if (ab.effects !== undefined) {
+    if (!Array.isArray(ab.effects)) throw new Error(`${label} effects must be an array`);
+    for (const e of ab.effects) {
+      if (!isObj(e)) throw new Error(`${label} has a non-object effect entry`);
+      if (!EFFECT_TYPES.includes(e.type)) throw new Error(`${label} has an effect with unknown type "${e.type}"`);
+      if (e.damageType !== undefined && !DAMAGE_TYPES.includes(e.damageType)) {
+        throw new Error(`${label} effect "${e.type}" has unknown damageType "${e.damageType}"`);
+      }
+    }
+  }
+  if (ab.vfx !== undefined && !isObj(ab.vfx)) throw new Error(`${label} vfx must be an object`);
+  if (ab.timeline !== undefined) {
+    if (!Array.isArray(ab.timeline)) throw new Error(`${label} timeline must be an array`);
+    for (const event of ab.timeline) {
+      if (!isObj(event)) throw new Error(`${label} has a non-object timeline event`);
+      if (typeof event.atMs !== 'number' || event.atMs < 0) throw new Error(`${label} timeline event needs a numeric atMs >= 0`);
+      // Only `pose` carries a rotation; cast/travel/impact events carry a vfxId
+      // and are validated by the VFX layer, not here.
+      if (event.type === 'pose') {
+        if (!event.part) throw new Error(`${label} pose event missing "part"`);
+        validateVec3(event.rotationDeg, `${label} pose event "${event.part}" rotationDeg`);
+      }
+    }
+  }
+  for (const key of ['power', 'cooldownMs', 'windupMs', 'effectMs', 'recoveryMs']) {
+    if (ab[key] !== undefined && typeof ab[key] !== 'number') throw new Error(`${label} ${key} must be a number`);
+  }
+}
+
 function validateMonsterFields(c, label) {
   for (const key of ['configuredLevel', 'abilitySlots', 'baseStats']) {
     if (c[key] === undefined || c[key] === null) throw new Error(`${label} missing required field: "${key}"`);
@@ -265,6 +305,7 @@ function validateMonsterFields(c, label) {
       throw new Error(`${label} ability "${ab.id}" has invalid unlockLevel`);
     }
     if (!ABILITY_KINDS.includes(ab.kind)) throw new Error(`${label} ability "${ab.id}" has unknown kind "${ab.kind}"`);
+    validateAbilityExtras(ab, `${label} ability "${ab.id}"`);
   }
   if (!isObj(c.baseStats)) throw new Error(`${label} baseStats must be an object`);
   // Type-level loot: every spawn of this type drops from it. Per-placement

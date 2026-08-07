@@ -98,12 +98,57 @@
     .anim-head span:nth-child(3) { flex: 1; }
     .anim-head span:nth-child(4) { flex: 1; }
 
+    .inline-check { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    #pt-scrubber-time { font-size: 12px; color: #8a6423; margin-top: 6px; text-align: right; }
+    #pt-scrubber-track {
+      position: relative; height: 28px; margin-top: 3px; background: #241a10;
+      border: 1px solid var(--panel-border); border-radius: 5px; cursor: pointer; user-select: none;
+    }
+    #pt-scrubber-events { position: absolute; inset: 0; }
+    .pt-scrub-marker {
+      position: absolute; top: 7px; width: 12px; height: 12px; margin-left: -6px;
+      transform: rotate(45deg); background: #f4d78a; border: 1px solid #1b140d; cursor: grab; z-index: 2;
+    }
+    .pt-scrub-marker.selected { outline: 2px solid #fff; }
+    #pt-scrubber-playhead {
+      position: absolute; top: 0; bottom: 0; width: 2px; background: #d9a441;
+      box-shadow: 0 0 6px rgba(217,164,65,0.8); pointer-events: none; z-index: 3;
+    }
+    #pt-selected-part-label { font-weight: 400; opacity: 0.7; margin-left: 4px; font-size: 12px; }
+
     .ability-ladder-row {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between; gap: 4px;
       padding: 6px 8px; border: 1px solid rgba(217,164,65,0.2); border-radius: 4px; margin-bottom: 5px; font-size: 14px;
     }
+    .ability-ladder-row.editing { border-color: var(--accent-hover); background: #2a1f13; }
     .ability-ladder-row .level-badge { color: #6a8; font-weight: bold; width: 34px; flex: 0 0 auto; }
     .warn-text { color: #e08a4a; font-size: 14px; margin-top: 6px; }
+
+    /* --- Abilities tab: ladder on the left, a real editor on the right (the
+           Skill Builder's shape), instead of the old chain of window.prompt() --- */
+    .ab-layout { display: flex; gap: 16px; align-items: flex-start; }
+    .ab-list-pane { flex: 1 1 300px; min-width: 240px; max-width: 420px; }
+    .ab-form-pane { flex: 2 1 460px; min-width: 300px; border-left: 1px solid rgba(217,164,65,0.2); padding-left: 16px; }
+    .ab-form-head {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 16px; color: #f4d78a; padding-bottom: 8px; margin-bottom: 6px;
+      border-bottom: 1px solid rgba(217,164,65,0.25);
+    }
+    textarea {
+      width: 100%; box-sizing: border-box; padding: 6px 7px; background: #241a10; color: #e8d9b5;
+      border: 1px solid var(--panel-border); border-radius: 5px; font-family: inherit; font-size: 14px; resize: vertical;
+    }
+    .ab-effect-row {
+      border: 1px solid rgba(217,164,65,0.22); border-radius: 5px; padding: 6px 8px; margin-bottom: 6px; background: #201709;
+    }
+    .ab-effect-row .ab-effect-head { display: flex; align-items: center; gap: 6px; }
+    .ab-effect-row .ab-effect-head strong { flex: 1; color: #f4d78a; font-weight: 600; }
+    .ab-effect-row label { margin: 6px 0 2px; font-size: 13px; }
+    @media (max-width: 900px) {
+      .ab-layout { flex-direction: column; }
+      .ab-form-pane { border-left: none; padding-left: 0; border-top: 1px solid rgba(217,164,65,0.2); padding-top: 12px; }
+      .ab-list-pane { max-width: none; }
+    }
   </style>
 </head>
 <body>
@@ -164,10 +209,86 @@
   </div>
 
   <div id="mb-tab-abilities" class="mb-tab-panel" style="display:none">
-    <label>Configured level <span class="hint">(authoring dial, not a runtime stat — abilities below unlock up to this level)</span></label>
-    <input type="number" id="mb-configured-level" value="2" min="2" max="20" step="2" />
-    <h3>Moveset</h3>
-    <div id="mb-ability-ladder"></div>
+    <div class="ab-layout">
+      <div class="ab-list-pane">
+        <label>Configured level <span class="hint">(authoring dial, not a runtime stat — abilities below unlock up to this level)</span></label>
+        <input type="number" id="mb-configured-level" value="2" min="2" max="20" step="2" />
+        <h3>Moveset</h3>
+        <p class="hint">The monster uses the first ability that is off cooldown, in ladder order — so the top of this list is its opener.</p>
+        <div id="mb-ability-ladder"></div>
+      </div>
+
+      <div class="ab-form-pane">
+        <div id="mb-ability-empty" class="hint" style="padding:20px 0;">Pick a level on the left and hit <b>+ Create</b> to author an ability.</div>
+        <div id="mb-ability-form" style="display:none">
+          <div class="ab-form-head">
+            <span id="ab-title">Ability</span>
+            <button id="ab-close" style="padding:3px 9px;">✕ Close</button>
+          </div>
+
+          <div class="row">
+            <div style="flex:2"><label>Name</label><input type="text" id="ab-name" placeholder="e.g. Rending Bite" /></div>
+            <div style="flex:0 0 90px"><label>Icon</label><input type="text" id="ab-icon" placeholder="🗡" /></div>
+          </div>
+          <label>Description <span class="hint">(shown in the combat log / tooltips)</span></label>
+          <textarea id="ab-description" rows="2" placeholder="What this move does, in one line."></textarea>
+
+          <h3>Delivery</h3>
+          <div class="row">
+            <div><label>Kind</label><select id="ab-kind"></select></div>
+            <div><label>Unlocks at level</label><input type="number" id="ab-unlock" disabled /></div>
+          </div>
+          <div class="row">
+            <div><label>Range (m)</label><input type="number" id="ab-range" value="2" min="0.5" step="0.5" /></div>
+            <div><label>Cooldown (ms)</label><input type="number" id="ab-cooldown" value="2000" min="100" step="100" /></div>
+          </div>
+          <div class="row">
+            <div><label>Shape</label><select id="ab-shape"></select></div>
+            <div id="ab-radius-wrap"><label>Radius (m)</label><input type="number" id="ab-radius" value="3" min="0.5" step="0.5" /></div>
+            <div id="ab-angle-wrap"><label>Cone half-angle°</label><input type="number" id="ab-angle" value="45" min="5" max="180" step="5" /></div>
+            <div id="ab-chain-wrap"><label>Chain bounces</label><input type="number" id="ab-chain" value="2" min="1" step="1" /></div>
+          </div>
+
+          <h3>Timing <span class="hint">(windup telegraphs, effect lands, recovery gates the next move)</span></h3>
+          <div class="row">
+            <div><label>Windup (ms)</label><input type="number" id="ab-windup" value="150" min="0" step="50" /></div>
+            <div><label>Effect (ms)</label><input type="number" id="ab-effect" value="150" min="0" step="50" /></div>
+            <div><label>Recovery (ms)</label><input type="number" id="ab-recovery" value="200" min="0" step="50" /></div>
+          </div>
+
+          <h3>Effects <span class="hint">(each entry resolves independently — "damage AND stun" is two rows)</span></h3>
+          <p class="warn-text" id="ab-power-note" style="display:none"></p>
+          <div id="ab-effect-list"></div>
+          <div class="row">
+            <select id="ab-effect-add-type" style="flex:1"></select>
+            <button id="ab-effect-add" style="flex:0 0 auto;">+ Add effect</button>
+          </div>
+
+          <h3>Visuals</h3>
+          <div class="row">
+            <div><label>Cast VFX</label><select id="ab-cast-vfx"></select></div>
+            <div><label>Cast anchor</label><select id="ab-cast-anchor"></select></div>
+          </div>
+          <div class="row">
+            <div><label>Impact VFX</label><select id="ab-impact-vfx"></select></div>
+            <div><label>Impact anchor</label><select id="ab-impact-anchor"></select></div>
+          </div>
+          <div class="row">
+            <div><label>Travel VFX <span class="hint">(projectile trail)</span></label><select id="ab-travel-vfx"></select></div>
+          </div>
+
+          <h3>Animation</h3>
+          <p class="hint">An ability can drive its own pose timeline, exactly like a class skill does in the Skill Builder. Without one it falls back to this monster's Attack clip.</p>
+          <div class="row">
+            <button id="ab-edit-timeline" style="flex:1;">🎬 Edit this ability's animation</button>
+            <button id="ab-clear-timeline" style="flex:0 0 auto;">Clear</button>
+          </div>
+          <p class="hint" id="ab-timeline-summary"></p>
+
+          <button id="ab-delete" style="width:100%; margin-top:14px; background:#883f3f; border-color:#883f3f;">Delete Ability</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="mb-tab-model" class="mb-tab-panel" style="display:none">
@@ -246,76 +367,36 @@
               <option value="humanoid">Humanoid (2 legs, 2 arms)</option>
               <option value="quadruped">Quadruped (4 legs)</option>
             </select>
-            <label>Preview animation</label>
-            <select id="mb-preview-anim">
-              <option value="idle">Idle</option>
-              <option value="walk">Walk</option>
-              <option value="attack">Attack</option>
-              <option value="walk-clip">Walk Clip</option>
-              <option value="idle-clip">Idle Clip</option>
-              <option value="attack-clip">Attack Clip</option>
-            </select>
             <p class="warn-text" id="mb-weapon-warning" style="display:none">⚠ Cannot use weapons: not humanoid</p>
 
-            <h3>Walk Animation</h3>
-            <p class="hint">Each body part swings as a sine wave while the monster walks. Amplitude 0 = the part stays still. Phase 180° puts a part exactly opposite another (that's how legs alternate). Switch Preview animation to <em>Walk</em> to see it live.</p>
-            <div id="mb-anim-rows"></div>
-            <button id="mb-anim-reset" style="width:100%; margin-top:8px;">↺ Reset to default gait for this stance</button>
-
-            <h3>Keyframe Animation <span class="hint">(advanced)</span></h3>
-            <p class="hint">Hand-pose exact frames instead of a sine wave — a start pose, an end pose, optional poses in between. A clip here overrides the sine gait above for that state (Walk/Idle) or plays alongside the attack flash (Attack) while it exists. Pick Preview animation → <em>Walk/Idle/Attack Clip</em> below to watch it loop.</p>
+            <h3>Timeline (advanced)</h3>
+            <p class="hint">Pick which animation you're editing below, then pick a body part, drag its rotate handle in the preview, and "Set Keyframe" at the playhead's time. Drag the playhead to scrub — the preview poses live at that instant. Idle/Walk loop; Attack plays once.</p>
             <div class="row">
-              <button id="kf-clip-walk" class="active" style="flex:1;">Walk</button>
-              <button id="kf-clip-idle" style="flex:1;">Idle</button>
-              <button id="kf-clip-attack" style="flex:1;">Attack</button>
+              <button id="pt-tab-idle" style="flex:1;">Idle</button>
+              <button id="pt-tab-walk" class="active" style="flex:1;">Walk</button>
+              <button id="pt-tab-attack" style="flex:1;">Attack</button>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <button id="pt-play" style="flex:0 0 110px;">▶ Play</button>
+              <button id="pt-gen-defaults" style="flex:1;">✨ Generate default clips</button>
+            </div>
+            <div id="pt-clip-label" style="display:none; margin-top:7px; padding:5px 8px; border-radius:4px; background:#3a2717; border:1px solid var(--accent-hover); color:#f4d78a; font-size:13px;"></div>
+            <label class="inline-check"><input type="checkbox" id="pt-loop" style="width:auto;" /> Loop</label>
+
+            <div id="pt-scrubber-time">0 / 0 ms</div>
+            <div id="pt-scrubber-track">
+              <div id="pt-scrubber-events"></div>
+              <div id="pt-scrubber-playhead"></div>
             </div>
 
-            <div id="kf-clip-empty" class="hint" style="margin-top:8px;">No <span id="kf-clip-empty-label">walk</span> clip yet.</div>
-            <button id="kf-clip-create" style="width:100%; margin-top:6px;">+ Create Clip</button>
-
-            <div id="kf-clip-editor" style="display:none">
-              <label>Duration (ms)</label>
-              <input type="number" id="kf-duration" value="1000" min="50" step="50" />
-              <label><input type="checkbox" id="kf-loop" style="width:auto;" /> Loop</label>
-              <button id="kf-clip-clear" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete This Clip</button>
-
-              <h4 style="margin-bottom:4px;">Tracks <span class="hint">(one per body part)</span></h4>
-              <div class="row">
-                <select id="kf-add-track-part" style="flex:1;"></select>
-                <button id="kf-add-track">+ Add Track</button>
-              </div>
-              <div id="kf-track-list" style="margin-top:6px;"></div>
-
-              <div id="kf-keyframe-section" style="display:none; margin-top:10px; border-top: 1px solid #1c2838; padding-top: 10px;">
-                <h4 style="margin-bottom:4px;">Keyframes for "<span id="kf-track-part-label"></span>"</h4>
-                <button id="kf-add-keyframe" style="width:100%;">+ Add Keyframe (midpoint)</button>
-                <div id="kf-keyframe-list" style="margin-top:6px;"></div>
-
-                <div id="kf-keyframe-controls" style="display:none">
-                  <label>t <span class="hint">(0 = start, 1 = end; first/last are fixed)</span></label>
-                  <input type="number" id="kf-t" min="0" max="1" step="0.05" />
-                  <label>Position offset (local X / Y / Z)</label>
-                  <div class="row">
-                    <input type="number" id="kf-pos-x" step="0.02" />
-                    <input type="number" id="kf-pos-y" step="0.02" />
-                    <input type="number" id="kf-pos-z" step="0.02" />
-                  </div>
-                  <label>Rotation offset (deg, X / Y / Z)</label>
-                  <div class="row">
-                    <input type="number" id="kf-rot-x" step="5" />
-                    <input type="number" id="kf-rot-y" step="5" />
-                    <input type="number" id="kf-rot-z" step="5" />
-                  </div>
-                  <label>Scale multiplier (X / Y / Z)</label>
-                  <div class="row">
-                    <input type="number" id="kf-scale-x" min="0.02" step="0.02" />
-                    <input type="number" id="kf-scale-y" min="0.02" step="0.02" />
-                    <input type="number" id="kf-scale-z" min="0.02" step="0.02" />
-                  </div>
-                  <button id="kf-delete-keyframe" style="width:100%; margin-top:6px; background:#883f3f; border-color:#883f3f;">Delete Keyframe</button>
-                </div>
-              </div>
+            <label>Body part<span id="pt-selected-part-label"></span></label>
+            <select id="pt-part-select"></select>
+            <div class="row" style="margin-top:8px;">
+              <button id="pt-set-keyframe" style="flex:1;">📍 Set Keyframe</button>
+              <button id="pt-add-event" style="flex:1;">+ Keyframe here</button>
             </div>
+            <div id="pt-timeline-list" style="margin-top:8px;"></div>
+            <button id="pt-clip-clear" style="width:100%; margin-top:8px; background:#883f3f; border-color:#883f3f;">Delete all keyframes for this animation</button>
           </div>
 
         </div>
@@ -342,7 +423,9 @@
     {
       "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/",
+        "three.quarks": "https://cdn.jsdelivr.net/npm/three.quarks@0.17.1/dist/three.quarks.esm.js",
+        "quarks.core": "https://cdn.jsdelivr.net/npm/quarks.core@0.17.1/dist/quarks.core.esm.js"
       }
     }
   </script>

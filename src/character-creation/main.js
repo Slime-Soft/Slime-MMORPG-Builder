@@ -202,7 +202,7 @@ enterBtn.addEventListener('click', () => {
   if (!selectedClass) return;
   const character = { ...currentParams(), classId: selectedClass };
   localStorage.setItem('fantasy-mmo-character', JSON.stringify(character));
-  window.location.href = '/';
+  window.location.href = '/play'; // '/' is the landing site now — the game lives here
 });
 
 rebuildPreview();

@@ -118,7 +118,7 @@ Promise.all([
   // crashed buildGroundMesh on a still-null `world`.
   if (world) rebuildAll();
 }).catch((err) => console.error('Failed to load building catalogs:', err));
-import { buildShapeMesh } from '../generators/custom.js';
+import { buildShapeMesh, setShapeOpacity } from '../generators/custom.js';
 import { createTabbedModal } from './modal.js';
 import { initGuides } from './guides.js';
 import { ITEM_IDS, getItemDef } from '../sim/items.js';
@@ -7038,8 +7038,7 @@ function applyBuilderShapeFields() {
   mesh.rotation.y = (ref.rotationDeg * Math.PI) / 180;
   mesh.scale.set(ref.scale.x, ref.scale.y, ref.scale.z);
   mesh.material.color.setHex(ref.color);
-  mesh.material.opacity = ref.opacity;
-  mesh.material.transparent = ref.opacity < 1;
+  setShapeOpacity(mesh, ref.opacity); // not a plain assignment — see its doc comment
   builderSelectionHighlight.update();
 }
 [bsPosX, bsPosY, bsPosZ, bsRotation, bsScaleX, bsScaleY, bsScaleZ, bsColor, bsOpacity].forEach((el) =>
