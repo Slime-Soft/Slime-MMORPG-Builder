@@ -1,0 +1,9 @@
+# Live guild records — rosters keyed by account id, bank contents, purchased
+# buffs. Player data, not authored content (unlike guild-buffs/, which IS
+# authored and is committed), so it must never be committed.
+#
+# The folder and guilds.json are recreated automatically on server start
+# (see createGuildStore in server/guilds.js), so nothing is lost by ignoring
+# them.
+guilds.json
+guilds.json.bak

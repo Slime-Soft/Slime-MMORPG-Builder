@@ -7,6 +7,18 @@ import {
 import { EYE_STYLES, EYE_STYLE_LABELS, MOUTH_STYLES } from '../generators/faceTexture.js';
 import { applyWeaponTuning } from '../sim/weaponTypes.js';
 import { CLASS_META, CLASS_IDS } from '../sim/classMeta.js';
+import { persistCharacter, resolveCharacter } from '../web/character.js';
+import { normalizeCharacterName, validateCharacterName } from '../web/characterName.js';
+import { currentUser } from '../web/auth.js';
+
+// You get one character. Someone who already has one is sent straight back to
+// the game instead of being shown a form whose save the server would refuse
+// anyway (server/accounts.js setCharacter). Checked before the preview scene
+// is built below so nothing renders in the moment before the redirect lands.
+if (await resolveCharacter()) {
+  window.location.href = '/play';
+  throw new Error('Character already created — returning to the game.');
+}
 
 // The class bodies authored in the Character & NPC Builder. Fetched, not
 // hardcoded, so a body tuned there shows up here without a code change; the
@@ -126,6 +138,7 @@ mouthStyleEl.value = 'smile';
 
 function currentParams() {
   return {
+    name: normalizeCharacterName(nameEl.value),
     gender: genderEl.value,
     bodyId: bodyEl.value || undefined,
     hairStyle: hairStyleEl.value,
@@ -191,17 +204,68 @@ CLASS_IDS.forEach((classId) => {
     selectedClass = classId;
     [...classCardsEl.children].forEach((c) => c.classList.remove('selected'));
     card.classList.add('selected');
-    enterBtn.disabled = false;
+    refreshEnterState(); // picking a class is no longer sufficient on its own — the name has to be valid too
     rebuildPreview();
   });
   classCardsEl.appendChild(card);
 });
 
 // --- Persist + enter world ---
-enterBtn.addEventListener('click', () => {
+// --- Name ---
+const nameEl = document.getElementById('char-name');
+const nameErrorEl = document.getElementById('name-error');
+
+/** Shows the name problem (if any) and returns whether it is currently valid. */
+function syncNameValidity({ quiet = false } = {}) {
+  const problem = validateCharacterName(nameEl.value);
+  // While typing, an empty field is "not finished yet", not an error — nagging
+  // someone before they have typed anything is just noise.
+  nameErrorEl.textContent = quiet && !nameEl.value.trim() ? '' : (problem || '');
+  nameEl.classList.toggle('invalid', Boolean(problem) && Boolean(nameEl.value.trim()));
+  return problem === null;
+}
+
+function refreshEnterState() {
+  enterBtn.disabled = !selectedClass || validateCharacterName(nameEl.value) !== null;
+}
+
+nameEl.addEventListener('input', () => {
+  syncNameValidity({ quiet: true });
+  refreshEnterState();
+});
+nameEl.addEventListener('blur', () => syncNameValidity());
+
+// Prefill with the account name — anyone reaching this page has no character
+// yet (the guard at the top of this file sends everyone else back to the
+// game), so a signed-in player's username is the best available guess.
+(async () => {
+  const user = await currentUser();
+  if (user && validateCharacterName(user.username) === null) nameEl.value = user.username;
+  refreshEnterState();
+})();
+
+enterBtn.addEventListener('click', async () => {
   if (!selectedClass) return;
+  if (!syncNameValidity()) {
+    nameEl.focus();
+    return;
+  }
   const character = { ...currentParams(), classId: selectedClass };
-  localStorage.setItem('fantasy-mmo-character', JSON.stringify(character));
+  // Awaited, not fire-and-forget: navigating mid-request would cancel it and
+  // a signed-in player's character would silently fail to save.
+  enterBtn.disabled = true;
+  enterBtn.textContent = 'Saving…';
+  const result = await persistCharacter(character);
+  if (!result.ok) {
+    // Almost always "that name is taken" — shown on the name field, since
+    // that is the thing they have to change.
+    nameErrorEl.textContent = result.error;
+    nameEl.classList.add('invalid');
+    nameEl.focus();
+    enterBtn.disabled = false;
+    enterBtn.textContent = 'Enter World';
+    return;
+  }
   window.location.href = '/play'; // '/' is the landing site now — the game lives here
 });
 

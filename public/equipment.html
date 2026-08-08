@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Equipment Builder — Fantasy MMO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/theme.css" />
+  <style>
+    :root {
+      --panel-bg: linear-gradient(180deg, #2b1e12 0%, #1b140d 100%);
+      --panel-border: #8a6423;
+      --accent-hover: #d9a441;
+    }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0f0b07; font-family: 'Lusitana', serif; color: #e8d9b5; }
+    body { display: flex; flex-direction: column; }
+    a { color: #d9a441; }
+
+    label { display: block; margin: 8px 0 3px; font-size: 13px; }
+    input, select, textarea {
+      width: 100%; box-sizing: border-box; padding: 5px 7px; background: #241a10; color: #e8d9b5;
+      border: 1px solid var(--panel-border); border-radius: 5px; font-family: inherit; font-size: 13px;
+    }
+    input[type=color] { padding: 1px; height: 26px; }
+    input[type=checkbox] { width: auto; }
+    button {
+      font-family: 'Lusitana', serif; font-weight: 600; padding: 6px 9px;
+      background: linear-gradient(180deg, #4a3620, #3a2717); color: #f4d78a;
+      border: 1px solid var(--panel-border); border-radius: 5px; cursor: pointer; font-size: 13px;
+    }
+    button:hover { border-color: var(--accent-hover); box-shadow: 0 0 6px rgba(244,215,138,0.3); }
+    button.active { background: linear-gradient(180deg, #5a4326, #241a10); border-color: var(--accent-hover); }
+    button.danger { background: linear-gradient(180deg, #5a2a20, #3a1a14); }
+    .row { display: flex; gap: 6px; }
+    .row > * { flex: 1; min-width: 0; }
+    .row > .fixed { flex: 0 0 auto; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+    .hint { color: rgba(232,217,181,0.62); font-size: 12px; line-height: 1.5; margin: 5px 0; }
+    h3 {
+      font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #8a6423;
+      margin: 16px 0 6px; border-bottom: 1px solid rgba(217,164,65,0.25); padding-bottom: 3px;
+    }
+    h3:first-of-type { margin-top: 4px; }
+
+    #page-header {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 9px 16px; border-bottom: 1px solid rgba(217,164,65,0.25); font-size: 16px; color: #f4d78a;
+      flex: 0 0 auto; background: var(--panel-bg);
+    }
+    #page-header .links { font-size: 12px; display: flex; gap: 12px; }
+    #main { flex: 1 1 auto; display: flex; min-height: 0; }
+    #stage { flex: 1 1 auto; position: relative; min-width: 0; }
+    #stage canvas { display: block; width: 100%; height: 100%; }
+    #viewport-hint {
+      position: absolute; left: 12px; bottom: 10px; font-size: 12px;
+      color: rgba(232,217,181,0.7); text-shadow: 0 1px 2px #000; pointer-events: none;
+    }
+    #preview-bar {
+      position: absolute; left: 12px; top: 12px; right: 12px; display: flex; gap: 8px; align-items: center;
+      background: rgba(27,20,13,0.86); border: 1px solid rgba(217,164,65,0.3); border-radius: 6px; padding: 6px 9px;
+    }
+    #preview-bar label { margin: 0; font-size: 12px; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    #preview-bar select { width: auto; min-width: 120px; }
+
+    #panel {
+      flex: 0 0 344px; overflow-y: auto; padding: 12px 14px; background: var(--panel-bg);
+      border-left: 2px solid var(--panel-border); box-shadow: inset 1px 0 0 rgba(217,164,65,0.2);
+    }
+    .list {
+      border: 1px solid var(--panel-border); border-radius: 5px; max-height: 148px; overflow-y: auto; font-size: 12px;
+    }
+    .list div.entry {
+      display: flex; justify-content: space-between; align-items: center; gap: 5px;
+      padding: 4px 7px; cursor: pointer; border-bottom: 1px solid rgba(217,164,65,0.14);
+    }
+    .list div.entry:hover { background: #3a2717; }
+    .list div.entry.active { background: linear-gradient(180deg, #5a4326, #3a2717); color: #f4d78a; }
+    .list div.entry button { padding: 1px 6px; font-size: 11px; flex: 0 0 auto; }
+    .list .meta { color: rgba(232,217,181,0.55); font-size: 11px; }
+    .role-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .role-tabs button { padding: 5px 2px; font-size: 12px; }
+    .role-tabs button.has-shapes { border-color: var(--accent-hover); }
+    .role-tabs button.suggested { color: #f4d78a; }
+    .glow-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .glow-swatches button { padding: 4px 2px; font-size: 11px; }
+    #status { min-height: 16px; font-size: 12px; color: #9dd08a; margin-top: 6px; }
+    #status.err { color: #e0955a; }
+    .stack { display: flex; flex-direction: column; gap: 4px; }
+    .modrow { display: grid; grid-template-columns: 1fr 68px 24px; gap: 4px; align-items: center; }
+    .modrow select, .modrow input { padding: 3px 4px; font-size: 12px; }
+    .modrow button { padding: 2px; font-size: 11px; }
+    fieldset { border: 1px solid rgba(217,164,65,0.25); border-radius: 5px; padding: 6px 8px 9px; margin: 6px 0 0; }
+    legend { font-size: 11px; color: #8a6423; text-transform: uppercase; letter-spacing: .06em; padding: 0 4px; }
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <span>⚔️ Equipment Builder</span>
+    <span class="links">
+      <a href="/editor.html">World Editor</a>
+      <a href="/characters.html">Characters</a>
+      <a href="/monsters.html">Monsters</a>
+      <a href="/skills.html">Skills</a>
+      <a href="/">Home</a>
+    </span>
+  </div>
+
+  <div id="main">
+    <div id="stage">
+      <canvas id="eb-canvas"></canvas>
+      <div id="preview-bar">
+        <label>Body
+          <select id="preview-body"></select>
+        </label>
+        <label>Gender
+          <select id="preview-gender">
+            <option value="masc">Masculine</option>
+            <option value="fem">Feminine</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="preview-set" /> Wear rest of set</label>
+        <label><input type="checkbox" id="preview-walk" /> Walk</label>
+        <label><input type="checkbox" id="preview-emitter" /> Emission box</label>
+      </div>
+      <div id="viewport-hint">click a gear piece to select · G move · R rotate · S scale · Esc deselect · drag to orbit · scroll to zoom</div>
+    </div>
+
+    <div id="panel">
+      <h3>Equipment Catalog (<span id="catalog-count">0</span>)</h3>
+      <input type="text" id="catalog-filter" placeholder="filter by name or id…" />
+      <div class="list" id="catalog-list" style="margin-top:5px;"></div>
+      <div class="row" style="margin-top:6px;">
+        <button id="new-btn">＋ New</button>
+        <button id="dup-btn">⧉ Duplicate</button>
+        <button id="del-btn" class="danger">✕ Delete</button>
+      </div>
+
+      <h3>Presets</h3>
+      <p class="hint">A preset expands into ordinary catalog items — droppable, sellable, craftable like anything else.</p>
+      <select id="preset-set"></select>
+      <div class="row" style="margin-top:6px;">
+        <button id="preset-load-set">Add whole set to catalog</button>
+        <button id="preset-load-piece">Copy this slot's look</button>
+      </div>
+
+      <h3>Item</h3>
+      <div class="row">
+        <label style="flex:2;">Id<input type="text" id="item-id" placeholder="eq_my_helm" /></label>
+        <label style="flex:1;">Type
+          <select id="item-type">
+            <option value="armor">armor</option>
+            <option value="weapon">weapon</option>
+          </select>
+        </label>
+      </div>
+      <label>Name<input type="text" id="item-name" /></label>
+      <div class="row">
+        <label>Slot<select id="item-slot"></select></label>
+        <label id="armor-type-wrap">Armor type<select id="item-armor-type"></select></label>
+        <label id="weapon-type-wrap" style="display:none;">Weapon<select id="item-weapon-type"></select></label>
+      </div>
+      <div class="row">
+        <label>Rarity<select id="item-rarity"></select></label>
+        <label>Sell price<input type="number" id="item-sell-price" min="0" step="1" /></label>
+        <label class="fixed" style="width:58px;">Tint<input type="color" id="item-tint" /></label>
+      </div>
+      <label>Description<input type="text" id="item-description" /></label>
+      <label><input type="checkbox" id="item-starter" /> Starting gear for class
+        <select id="item-starter-class" style="margin-top:4px;"></select>
+      </label>
+
+      <h3>Stat Modifiers</h3>
+      <div class="stack" id="stat-mod-list"></div>
+      <button id="stat-mod-add" style="width:100%; margin-top:5px;">＋ Add stat modifier</button>
+
+      <div id="appearance-section">
+      <h3>Appearance</h3>
+      <p class="hint" id="appearance-hint"></p>
+      <div class="role-tabs" id="role-tabs"></div>
+      <div class="row" style="margin-top:6px;">
+        <select id="shape-kind"></select>
+        <button id="shape-add" class="fixed">＋ Shape</button>
+      </div>
+      <div class="list" id="shape-list" style="margin-top:5px;"></div>
+
+      <fieldset id="shape-props" style="display:none;">
+        <legend>Selected shape</legend>
+        <label>Kind<select id="sp-kind"></select></label>
+        <label>Position (x / y / z)</label>
+        <div class="grid3">
+          <input type="number" id="sp-px" step="0.01" /><input type="number" id="sp-py" step="0.01" /><input type="number" id="sp-pz" step="0.01" />
+        </div>
+        <label>Scale (x / y / z)</label>
+        <div class="grid3">
+          <input type="number" id="sp-sx" step="0.01" /><input type="number" id="sp-sy" step="0.01" /><input type="number" id="sp-sz" step="0.01" />
+        </div>
+        <label>Rotation° (x / y / z)</label>
+        <div class="grid3">
+          <input type="number" id="sp-rx" step="1" /><input type="number" id="sp-ry" step="1" /><input type="number" id="sp-rz" step="1" />
+        </div>
+        <div class="row">
+          <label>Color<input type="color" id="sp-color" /></label>
+          <label>Opacity<input type="number" id="sp-opacity" min="0" max="1" step="0.05" /></label>
+        </div>
+        <div class="row">
+          <label>Metalness<input type="number" id="sp-metalness" min="0" max="1" step="0.05" placeholder="auto" /></label>
+          <label>Roughness<input type="number" id="sp-roughness" min="0" max="1" step="0.05" placeholder="auto" /></label>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button id="sp-mirror">⇄ Mirror to other side</button>
+          <button id="sp-delete" class="danger fixed">✕</button>
+        </div>
+      </fieldset>
+
+      <h3>Replaced Body Parts</h3>
+      <p class="hint">
+        A worn piece REPLACES the class outfit underneath it — leaving both in place puts two surfaces
+        a few millimetres apart, which flickers in game. These are ticked to the standard set for the
+        slot; add to them if your piece covers more.
+      </p>
+      <button id="hide-defaults" style="width:100%; margin-bottom:5px;">Reset to the standard set for this slot</button>
+      <div class="list" id="hide-list" style="max-height:110px;"></div>
+      </div>
+
+      <div id="glow-section">
+        <h3>Enchantment</h3>
+        <p class="hint">Particles around the blade, plus a lit-up edge. Weapons and shields only. <b>Style</b> is what they are and how they move; <b>behaviour</b> is how the whole cloud brightens.</p>
+        <div class="glow-swatches" id="glow-presets"></div>
+        <div class="row">
+          <label>Style<select id="glow-style"></select></label>
+          <label>Behaviour<select id="glow-mode"></select></label>
+        </div>
+        <div class="row">
+          <label class="fixed" style="width:58px;">Core<input type="color" id="glow-color" /></label>
+          <label class="fixed" style="width:58px;">Fade<input type="color" id="glow-secondary" /></label>
+          <label>Blade glow<input type="number" id="glow-intensity" min="0" max="2" step="0.05" /></label>
+        </div>
+        <div class="row">
+          <label>Particles<input type="number" id="glow-density" min="0" max="200" step="1" /></label>
+          <label>Particle size<input type="number" id="glow-size" min="0.01" max="0.3" step="0.005" /></label>
+          <label>Speed<input type="number" id="glow-speed" min="0.1" max="5" step="0.05" /></label>
+        </div>
+
+        <label style="margin-top:10px;">Emission offset (x / y / z, metres)</label>
+        <div class="grid3">
+          <input type="number" id="glow-ox" step="0.02" /><input type="number" id="glow-oy" step="0.02" /><input type="number" id="glow-oz" step="0.02" />
+        </div>
+        <label>Emission size — width / height / length</label>
+        <div class="grid3">
+          <input type="number" id="glow-ex" min="0" step="0.02" placeholder="auto" /><input type="number" id="glow-ey" min="0" step="0.02" placeholder="auto" /><input type="number" id="glow-ez" min="0" step="0.02" placeholder="auto" />
+        </div>
+        <p class="hint">
+          In the weapon's own space: <b>+Y runs up the weapon</b>, so height is how far the effect
+          travels along a blade. Leave a box at 0 to keep measuring that axis from the weapon.
+          Tick <i>Emission box</i> above to see it.
+        </p>
+        <button id="glow-box-reset" style="width:100%;">Fit the emission box back to the weapon</button>
+      </div>
+
+      <div id="grip-section" style="display:none;">
+        <h3>Grip</h3>
+        <p class="hint">Nudges this item on top of its weapon type's shared grip — click the weapon in the viewport to drag it, or type exact numbers.</p>
+        <label>Offset (x / y / z)</label>
+        <div class="grid3">
+          <input type="number" id="grip-px" step="0.01" /><input type="number" id="grip-py" step="0.01" /><input type="number" id="grip-pz" step="0.01" />
+        </div>
+        <label>Rotation° (x / y / z)</label>
+        <div class="grid3">
+          <input type="number" id="grip-rx" step="1" /><input type="number" id="grip-ry" step="1" /><input type="number" id="grip-rz" step="1" />
+        </div>
+        <label>Scale<input type="number" id="grip-scale" min="0.2" max="3" step="0.05" /></label>
+        <button id="grip-reset" style="width:100%; margin-top:6px;">Reset to the weapon type's grip</button>
+      </div>
+
+      <h3>Save</h3>
+      <button id="save-btn" style="width:100%;">💾 Save to item catalog</button>
+      <p id="status"></p>
+      <p class="hint">
+        Saves into the one shared item catalog (<code>items/items.json</code>) that the World Editor's Items tab,
+        monster loot tables, merchant stores and crafting recipes all read — so anything built here is immediately
+        droppable, sellable and craftable.
+      </p>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/",
+        "three.quarks": "https://cdn.jsdelivr.net/npm/three.quarks@0.17.1/dist/three.quarks.esm.js",
+        "quarks.core": "https://cdn.jsdelivr.net/npm/quarks.core@0.17.1/dist/quarks.core.esm.js"
+      }
+    }
+  </script>
+  <script type="module" src="/src/equipment-builder/main.js"></script>
+</body>
+</html>

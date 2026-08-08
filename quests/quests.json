@@ -2,7 +2,7 @@
   {
     "id": "TalkToTheGuildMaster",
     "name": "Meet the Guild Master",
-    "description": "Welcome, Adventurer! The Guild Master is already waiting for you! You can find him infront of the adventurers guild in the eastern part of the city.",
+    "description": "Welcome to Asteria, Adventurer! So your dream is to climb the highest Floor of the Asteria Tower? Well, you have a long way ahead of you! start by meeting Guild Master of the Adventurers Guild, you can find him by following the street and then go east.",
     "giverNpcId": "npc-964531375",
     "objective": {
       "type": "talk",
@@ -11,7 +11,7 @@
     },
     "turnInAtTarget": true,
     "dialogActive": "Did you talk to the Guild Master yet?",
-    "dialogReady": "You met the Guild Master? Great! Good luck on your Adventure!",
+    "dialogReady": "Good luck on your Adventure!",
     "dialogComplete": "Good luck on your Adventure!",
     "rewards": {
       "xp": 50,

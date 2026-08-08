@@ -7,3 +7,6 @@
 # ignoring them.
 accounts.json
 accounts.json.bak
+# Live session tokens. A token IS a credential — anyone holding one is signed
+# in as that account until it expires, so this must never reach a repo.
+sessions.json

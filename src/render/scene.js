@@ -8,6 +8,7 @@ import { generateRock } from '../generators/environment/rock.js';
 import { generateGrassPatch, generateFlower } from '../generators/environment/grass.js';
 import { generateCharacter } from '../generators/character.js';
 import { buildPlayerCharacter } from '../generators/playerCharacter.js';
+import { updateWeaponEnchants } from '../generators/weaponEnchant.js';
 import { generateBuildingShell, generateWallSegment } from '../generators/environment/structures.js';
 import { buildBuildingFromParts } from '../generators/buildingRig.js';
 import { generateFurniture } from '../generators/interior/furniture.js';
@@ -1187,8 +1188,12 @@ export function renderUiOverlay(renderer, scene, camera) {
  * even when the character is partly behind other geometry, which is the
  * usual convention for MMO overhead nameplates.
  */
-export function buildNameLabel(text, headHeight = 3.2) {
-  const fontSize = 48;
+// How far above a player's origin their plate sits. Lower than the NPC
+// default (3.2): a player's plate carries a guild strip on top of it, so
+// anchoring both at NPC height floated the whole stack well clear of the head.
+export const PLAYER_NAMEPLATE_HEIGHT = 2.45;
+
+export function buildNameLabel(text, headHeight = 3.2, { color = '#dce8ff', labelHeight = 0.7, fontSize = 48 } = {}) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = `bold ${fontSize}px system-ui, sans-serif`;
@@ -1202,7 +1207,7 @@ export function buildNameLabel(text, headHeight = 3.2) {
   ctx.lineWidth = 6;
   ctx.strokeStyle = 'rgba(0,0,0,0.65)';
   ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
-  ctx.fillStyle = '#dce8ff';
+  ctx.fillStyle = color;
   ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -1210,12 +1215,129 @@ export function buildNameLabel(text, headHeight = 3.2) {
   const sprite = new THREE.Sprite(
     new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true })
   );
-  const labelHeight = 0.7; // world units tall
   sprite.scale.set((canvas.width / canvas.height) * labelHeight, labelHeight, 1);
   sprite.position.y = headHeight;
   sprite.renderOrder = 998;
   sprite.layers.set(UI_OVERLAY_LAYER); // keeps the nameplate out of bloom
   return sprite;
+}
+
+// Guild crests are small uploaded images (see /api/guilds/logo). Decoded once
+// per URL and reused — a 40-strong guild standing in a town square would
+// otherwise decode the same PNG forty times.
+const guildLogoImages = new Map();
+function loadGuildLogo(url) {
+  let promise = guildLogoImages.get(url);
+  if (!promise) {
+    promise = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null); // a deleted/broken crest just draws the text-only banner
+      img.src = url;
+    });
+    guildLogoImages.set(url, promise);
+  }
+  return promise;
+}
+
+/**
+ * The guild strip: crest on the left, guild name in gold on a dark plate.
+ *
+ * One canvas, not a text sprite plus an image sprite, because the two have to
+ * sit flush against each other at every distance and camera angle — two
+ * separate billboards drift apart the moment the plate is scaled, and there is
+ * no way to draw a shared background behind them.
+ *
+ * The crest arrives asynchronously, so the banner paints text-only first and
+ * repaints once the image decodes. Sizing does NOT depend on the image (the
+ * crest box is a fixed square), so the late repaint never resizes the canvas
+ * or changes the sprite's aspect — it just fills in the square.
+ */
+function buildGuildBanner(guild, y) {
+  const H = 68;        // canvas pixels; the sprite scale below is what sets world size
+  const PAD = 9;
+  const CREST = 48;
+  const GAP = 9;
+  const FONT = 38;
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `bold ${FONT}px system-ui, sans-serif`;
+  const textWidth = Math.ceil(ctx.measureText(guild.name).width);
+  const crestWidth = guild.logoUrl ? CREST + GAP : 0;
+  canvas.width = PAD * 2 + crestWidth + textWidth;
+  canvas.height = H;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+
+  const paint = (crest) => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.roundRect(1, 1, canvas.width - 2, canvas.height - 2, 8);
+    ctx.fillStyle = 'rgba(18,12,7,0.72)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(217,164,65,0.7)';
+    ctx.stroke();
+
+    if (crest) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(PAD, (H - CREST) / 2, CREST, CREST, 5);
+      ctx.clip();
+      ctx.drawImage(crest, PAD, (H - CREST) / 2, CREST, CREST);
+      ctx.restore();
+    }
+
+    ctx.font = `bold ${FONT}px system-ui, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f4d78a';
+    ctx.fillText(guild.name, PAD + crestWidth, H / 2 + 1);
+    texture.needsUpdate = true;
+  };
+  paint(null);
+  if (guild.logoUrl) loadGuildLogo(guild.logoUrl).then((img) => img && paint(img));
+
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true }));
+  const bannerHeight = 0.3; // world units — deliberately shorter than the name below it, so the name reads first
+  sprite.scale.set((canvas.width / canvas.height) * bannerHeight, bannerHeight, 1);
+  sprite.position.y = y;
+  sprite.renderOrder = 998;
+  sprite.layers.set(UI_OVERLAY_LAYER);
+  return sprite;
+}
+
+/**
+ * The full overhead plate for a PLAYER: character name, with the guild strip
+ * (crest + guild name) sitting just above it when they're in one.
+ *
+ * Returned as a Group so distance culling is a single `.visible` toggle on
+ * the parent, the same reason NPC nameplates are grouped (a Three.js child
+ * stays hidden if any ancestor is invisible, so per-sprite toggling would
+ * fight the group's own state).
+ *
+ * Rebuilt, never mutated, when the name or guild changes: these are
+ * canvas-textured sprites whose geometry depends on the rendered text width,
+ * so "just repaint it" isn't cheaper than making a new one, and it happens a
+ * handful of times per session rather than per frame.
+ */
+export function buildPlayerNameplate({ name, guild } = {}, headHeight = PLAYER_NAMEPLATE_HEIGHT) {
+  const group = new THREE.Group();
+  group.add(buildNameLabel(name || 'Adventurer', headHeight, { labelHeight: 0.34, fontSize: 44 }));
+  if (guild?.name) group.add(buildGuildBanner(guild, headHeight + 0.31));
+  group.userData.isNameplate = true;
+  return group;
+}
+
+/** Frees the canvas textures a nameplate group owns. Each plate paints its own canvases (the crest is cached as an IMAGE, not as a texture), so everything here is this plate's to free. */
+export function disposeNameplate(group) {
+  if (!group) return;
+  for (const child of group.children) {
+    child.material?.map?.dispose();
+    child.material?.dispose();
+  }
 }
 
 // Quest indicator states, in the order they're checked — 'ready' (turn-in)
@@ -1381,6 +1503,15 @@ const WALK_BLEND_EASE = 8; // how fast the walk pose fades in/out, per second
  * @param {number} dt seconds since the last call
  */
 export function updateWalkCycle(mesh, isMoving, t, dt) {
+  // An enchanted weapon's particle cloud is advanced here rather than from the
+  // main animate loop because this is already the one function every character
+  // mesh — local player, remote players, NPCs, and every builder's preview — is
+  // handed once per frame. A glowing sword therefore animates everywhere a
+  // character is drawn, with no separate registry of live effects to keep in
+  // sync and nothing to leak when a mesh is thrown away. No-op on the (vast)
+  // majority of meshes, which carry no enchantment at all.
+  updateWeaponEnchants(mesh, t, dt);
+
   const rig = mesh.userData.rig;
   if (!rig) return; // not a rigged mesh (e.g. an unrigged prop/monster) — nothing to animate
 

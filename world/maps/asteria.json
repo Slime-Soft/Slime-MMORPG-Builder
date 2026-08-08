@@ -339770,6 +339770,17 @@
         "y": -16,
         "z": 0
       }
+    },
+    {
+      "type": "workstation-hearth",
+      "seed": 690291745,
+      "position": {
+        "x": -17.739979126450777,
+        "y": 0,
+        "z": -58.58186299275546
+      },
+      "rotationDeg": 0,
+      "scale": 1
     }
   ],
   "buildings": [],
@@ -381401,110 +381412,6 @@
       ]
     },
     {
-      "id": "event-6",
-      "name": "TalkToTheGuildMaster",
-      "position": {
-        "x": 3.4139365723807966,
-        "y": 0,
-        "z": 106.93721057626543
-      },
-      "attachedType": "npc",
-      "start": {
-        "type": "talk"
-      },
-      "sheets": [
-        {
-          "id": "quest-done",
-          "condition": {
-            "kind": "questPhase",
-            "questId": "wolffang1",
-            "phase": "done"
-          },
-          "runOnce": false,
-          "commands": [
-            {
-              "type": "showDialog",
-              "text": "Visit the farm in the South East, the Mine in the North and the Forest in the North East and help out the locals!"
-            }
-          ]
-        },
-        {
-          "id": "quest-ready",
-          "condition": {
-            "kind": "questPhase",
-            "questId": "wolffang1",
-            "phase": "ready"
-          },
-          "runOnce": false,
-          "commands": [
-            {
-              "type": "turnInQuest",
-              "questId": "wolffang1"
-            },
-            {
-              "type": "showDialog",
-              "text": "Well done, rookie! But more quests await you! Visit the farm in the South East, the Mine in the North and the Forest in the North East and help out the locals!"
-            }
-          ]
-        },
-        {
-          "id": "quest-active",
-          "condition": {
-            "kind": "questPhase",
-            "questId": "wolffang1",
-            "phase": "active"
-          },
-          "runOnce": false,
-          "commands": [
-            {
-              "type": "showDialog",
-              "text": "Bring me 10 Wolf Fangs. You can find Wolfes outside of Asteria."
-            }
-          ]
-        },
-        {
-          "id": "quest-offer",
-          "condition": {
-            "kind": "questPhase",
-            "questId": "wolffang1",
-            "phase": "offer"
-          },
-          "runOnce": false,
-          "commands": [
-            {
-              "type": "showDialog",
-              "text": "Kill the wolves outside of Asteria and bring 10 Wolf Fangs to the Guild Master",
-              "choices": [
-                {
-                  "text": "Accept",
-                  "next": 1
-                },
-                {
-                  "text": "Not now"
-                }
-              ]
-            },
-            {
-              "type": "acceptQuest",
-              "questId": "wolffang1"
-            }
-          ]
-        },
-        {
-          "id": "quest-locked",
-          "runOnce": false,
-          "commands": [
-            {
-              "type": "showDialog",
-              "text": "Welcome to Asteria, Adventurer!"
-            }
-          ]
-        }
-      ],
-      "attachedId": "npc-964531375",
-      "quest": "wolffang1"
-    },
-    {
       "id": "event-9",
       "name": "Wolf Fangs",
       "position": {
@@ -382017,6 +381924,136 @@
         }
       ],
       "attachedId": "npc-720612880"
+    },
+    {
+      "id": "event-11",
+      "name": "TalkToTheGuildMaster",
+      "position": {
+        "x": 3.4139365723807966,
+        "y": 0,
+        "z": 106.93721057626543
+      },
+      "attachedType": "npc",
+      "start": {
+        "type": "talk"
+      },
+      "sheets": [
+        {
+          "id": "quest-done",
+          "condition": {
+            "kind": "questPhase",
+            "questId": "TalkToTheGuildMaster",
+            "phase": "done"
+          },
+          "runOnce": false,
+          "commands": [
+            {
+              "type": "showDialog",
+              "text": "Good luck on your Adventure!"
+            }
+          ]
+        },
+        {
+          "id": "quest-ready",
+          "condition": {
+            "kind": "questPhase",
+            "questId": "TalkToTheGuildMaster",
+            "phase": "ready"
+          },
+          "runOnce": false,
+          "commands": [
+            {
+              "type": "showDialog",
+              "text": "Did you talk to the Guild Master yet?"
+            }
+          ]
+        },
+        {
+          "id": "quest-active",
+          "condition": {
+            "kind": "questPhase",
+            "questId": "TalkToTheGuildMaster",
+            "phase": "active"
+          },
+          "runOnce": false,
+          "commands": [
+            {
+              "type": "showDialog",
+              "text": "Did you talk to the Guild Master yet?"
+            }
+          ]
+        },
+        {
+          "id": "quest-offer",
+          "condition": {
+            "kind": "questPhase",
+            "questId": "TalkToTheGuildMaster",
+            "phase": "offer"
+          },
+          "runOnce": false,
+          "commands": [
+            {
+              "type": "showDialog",
+              "text": "Welcome to Asteria, Adventurer! So your dream is to climb the highest Floor of the Asteria Tower? Well, you have a long way ahead of you! start by meeting Guild Master of the Adventurers Guild, you can find him by following the street and then go east.",
+              "choices": [
+                {
+                  "text": "Accept",
+                  "next": 1
+                },
+                {
+                  "text": "Not now"
+                }
+              ]
+            },
+            {
+              "type": "acceptQuest",
+              "questId": "TalkToTheGuildMaster"
+            }
+          ]
+        },
+        {
+          "id": "quest-locked",
+          "runOnce": false,
+          "commands": [
+            {
+              "type": "showDialog",
+              "text": "Welcome to Asteria, Adventurer!"
+            }
+          ]
+        }
+      ],
+      "attachedId": "npc-964531375",
+      "quest": "TalkToTheGuildMaster"
+    },
+    {
+      "id": "event-6",
+      "name": "Cooking",
+      "position": {
+        "x": -18,
+        "y": 0,
+        "z": -58
+      },
+      "attachedType": null,
+      "start": {
+        "type": "talk",
+        "prompt": "Start Cooking (Press E)"
+      },
+      "sheets": [
+        {
+          "commands": [
+            {
+              "type": "openCraftingStation",
+              "stationTypeId": "STATION_CAMPFIRE_TIER_1"
+            }
+          ],
+          "runOnce": false
+        }
+      ],
+      "range": {
+        "width": 3,
+        "length": 4,
+        "height": 3
+      }
     }
   ],
   "waterBodies": [

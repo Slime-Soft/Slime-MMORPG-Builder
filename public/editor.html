@@ -885,7 +885,9 @@
     <!-- ITEMS MODE -->
     <div id="mode-items" class="mode-panel" style="display:none">
       <h3>Item</h3>
-      <p class="hint">Authoring only for now — items aren't grantable/equippable in-game yet (no loot system, no equip slots). This defines the catalog for when those exist.</p>
+      <p class="hint">The one item catalog everything reads: monster loot tables, merchant stock, crafting recipes and player equipment slots all resolve ids from here.</p>
+      <a href="/equipment.html" target="_blank" rel="noopener" style="display:block; text-align:center; width:100%; margin:6px 0 10px; padding:6px 5px; background:linear-gradient(180deg, #4a3620, #3a2717); color:#f4d78a; border:1px solid var(--panel-border); border-radius:5px; text-decoration:none; font-size:14px;">⚔️ Open Equipment Builder</a>
+      <p class="hint">This form owns an item's stats, price and recipe. How a weapon or armor piece <em>looks on a character</em> — its 3D shapes and enchantment glow — is authored in the Equipment Builder, on the same rows. Saving here leaves that model untouched.</p>
       <label>Id</label>
       <input type="text" id="item-id" placeholder="e.g. iron-sword" />
       <label>Name</label>

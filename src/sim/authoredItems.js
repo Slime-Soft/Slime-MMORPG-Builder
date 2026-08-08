@@ -18,8 +18,16 @@
 // nothing consumes this yet, same "authored, not wired" status as
 // statModifiers), and a quest-item sell/trade lock.
 
+// Revised 2026-08-07 (Equipment Builder): weapon/armor items gained an
+// optional `appearance` (src/sim/gearVisuals.js) — the primitive shapes the
+// piece hangs off the wearer's body plus an optional glow. That's what turned
+// `tintColor`/`armorType` from "authored, inert" into gear you can actually see
+// on a character. It's a field on the SAME item, not a parallel catalog, so a
+// piece built in the Equipment Builder is the same row the World Editor's Items
+// mode edits, monster loot tables drop, merchants sell and recipes craft.
 import { PRIMARY_STAT_IDS } from './statDefs.js';
 import { WEAPON_TYPES } from './weaponTypes.js';
+import { parseGearAppearance } from './gearVisuals.js';
 
 export const ITEM_TYPES = ['weapon', 'armor', 'consumable', 'quest', 'misc'];
 export const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -92,6 +100,8 @@ export const ITEM_EFFECT_KINDS = ['restoreHealth', 'restoreMana', 'buff'];
  * @property {ItemUsageConfig} [usageConfig] consumable only
  * @property {boolean} [questLocked] prevents sell/trade/drop once inventory enforces it
  * @property {ItemCraftRecipe} [craftable]
+ * @property {import('./gearVisuals.js').GearAppearance} [appearance] weapon/armor only — how the piece looks ON a wearer (Equipment Builder)
+ * @property {string[]} [starterForClasses] class ids this piece is granted to (and auto-equipped on) at character creation
  */
 
 /** @param {any} data @returns {AuthoredItem[]} */
@@ -150,6 +160,28 @@ export function parseAuthoredItems(data) {
             throw new Error(`${label} usageConfig.effectTrigger kind "buff" requires a positive durationSeconds`);
           }
         }
+      }
+    }
+    if (item.appearance !== undefined && item.appearance !== null) {
+      if (item.type !== 'weapon' && item.type !== 'armor') {
+        throw new Error(`${label} has an appearance but type "${item.type}" is not worn — only weapon/armor render on a body`);
+      }
+      parseGearAppearance(item.appearance, label);
+      // An enchantment glow is a particle effect on a HELD weapon (or shield,
+      // which is an off-hand weapon here) — see the GLOW_MODES doc comment in
+      // gearVisuals.js for why armor deliberately doesn't get one. Rejected
+      // rather than ignored: a glow silently doing nothing is the kind of thing
+      // someone spends twenty minutes tuning before noticing.
+      if (item.appearance.glow && item.appearance.glow.mode !== 'none' && item.type !== 'weapon') {
+        throw new Error(`${label} has an enchantment glow, which only weapons and shields can carry`);
+      }
+    }
+    if (item.starterForClasses !== undefined) {
+      if (!Array.isArray(item.starterForClasses) || item.starterForClasses.some((c) => typeof c !== 'string' || !c)) {
+        throw new Error(`${label} starterForClasses must be an array of class ids`);
+      }
+      if (item.type !== 'weapon' && item.type !== 'armor') {
+        throw new Error(`${label} has starterForClasses but type "${item.type}" cannot be equipped`);
       }
     }
     if (item.craftable !== undefined) {

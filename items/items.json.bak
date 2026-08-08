@@ -37,7 +37,7 @@
     "rarity": "common",
     "description": "Can be sold to merchants",
     "sellPrice": 25,
-    "iconUrl": "/assets/icons/icon-1785318980711-173968777.png"
+    "iconUrl": "/assets/icons/icon-1785784383496-330652380.png"
   },
   {
     "id": "wolffang1",
@@ -94,5 +94,4530 @@
     "rarity": "common",
     "description": "Fur used for Crafting",
     "sellPrice": 0
+  },
+  {
+    "id": "eq_warrior-ironclad_head",
+    "name": "Ironclad Helm",
+    "type": "armor",
+    "slot": "head",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Warrior Ironclad set.",
+    "tintColor": 8159884,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 8
+      },
+      {
+        "stat": "STR",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "head",
+          "shapes": [
+            {
+              "id": "helmTop",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.2,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.56,
+                "y": 0.24,
+                "z": 0.52
+              },
+              "color": 8159884
+            },
+            {
+              "id": "helmBack",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": -0.21
+              },
+              "scale": {
+                "x": 0.54,
+                "y": 0.4,
+                "z": 0.14
+              },
+              "color": 8159884
+            },
+            {
+              "id": "cheekL",
+              "kind": "box",
+              "position": {
+                "x": -0.25,
+                "y": -0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.14,
+                "y": 0.34,
+                "z": 0.54
+              },
+              "color": 8159884
+            },
+            {
+              "id": "cheekR",
+              "kind": "box",
+              "position": {
+                "x": 0.25,
+                "y": -0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.14,
+                "y": 0.34,
+                "z": 0.54
+              },
+              "color": 8159884
+            },
+            {
+              "id": "nasal",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0.22
+              },
+              "scale": {
+                "x": 0.06,
+                "y": 0.3,
+                "z": 0.12
+              },
+              "color": 4869976
+            },
+            {
+              "id": "crest",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": 0.4,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.09,
+                "y": 0.2,
+                "z": 0.56
+              },
+              "color": 11550762
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "helmTop",
+        "helmBack",
+        "helmL",
+        "helmR",
+        "nasal",
+        "crest",
+        "brim",
+        "cone",
+        "tip",
+        "fold",
+        "cap",
+        "capBrim",
+        "feather",
+        "hoodTop",
+        "hoodBack",
+        "hoodL",
+        "hoodR",
+        "hoodBrow",
+        "hairTop",
+        "hairBack",
+        "hairSideL",
+        "hairSideR",
+        "hairBun",
+        "hairTail1",
+        "hairTail2",
+        "hairSpike1",
+        "hairSpike2",
+        "hairSpike3",
+        "hairCap",
+        "hairBangs",
+        "hairTuftL",
+        "hairTuftR",
+        "hairFringe",
+        "hairSwoop",
+        "hairTwinL",
+        "hairTwinR",
+        "beard",
+        "stache"
+      ],
+      "referenceBodyId": "warrior"
+    },
+    "starterForClasses": [
+      "warrior"
+    ]
+  },
+  {
+    "id": "eq_warrior-ironclad_chest",
+    "name": "Ironclad Chestpiece",
+    "type": "armor",
+    "slot": "chest",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Warrior Ironclad set.",
+    "tintColor": 8159884,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 16
+      },
+      {
+        "stat": "STR",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "cuirass",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.58,
+                "y": 0.7,
+                "z": 0.44
+              },
+              "color": 8159884
+            },
+            {
+              "id": "placket",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0.21
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.56,
+                "z": 0.06
+              },
+              "color": 4869976
+            },
+            {
+              "id": "gorget",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.32,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.44,
+                "y": 0.12,
+                "z": 0.4
+              },
+              "color": 11550762
+            }
+          ]
+        },
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "pauldron",
+              "kind": "sphere",
+              "position": {
+                "x": 0.02,
+                "y": 0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.34,
+                "y": 0.3,
+                "z": 0.34
+              },
+              "color": 8159884
+            },
+            {
+              "id": "pauldronRim",
+              "kind": "cylinder",
+              "position": {
+                "x": 0.02,
+                "y": -0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.33,
+                "y": 0.05,
+                "z": 0.33
+              },
+              "color": 11550762
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "pauldron",
+              "kind": "sphere",
+              "position": {
+                "x": -0.02,
+                "y": 0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.34,
+                "y": 0.3,
+                "z": 0.34
+              },
+              "color": 8159884
+            },
+            {
+              "id": "pauldronRim",
+              "kind": "cylinder",
+              "position": {
+                "x": -0.02,
+                "y": -0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.33,
+                "y": 0.05,
+                "z": 0.33
+              },
+              "color": 11550762
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "chest",
+        "collar",
+        "placket",
+        "gorget",
+        "scaleA",
+        "scaleB",
+        "scaleC",
+        "strapL",
+        "strapR",
+        "buckle",
+        "sash",
+        "gem",
+        "stole",
+        "amulet",
+        "trim",
+        "skirt",
+        "shoulder",
+        "pauldron"
+      ],
+      "referenceBodyId": "warrior"
+    },
+    "starterForClasses": [
+      "warrior"
+    ]
+  },
+  {
+    "id": "eq_warrior-ironclad_gloves",
+    "name": "Ironclad Gauntlets",
+    "type": "armor",
+    "slot": "gloves",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Warrior Ironclad set.",
+    "tintColor": 8159884,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "STR",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "bracer",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.18,
+                "z": 0.21
+              },
+              "color": 8159884
+            },
+            {
+              "id": "gauntlet",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.18,
+                "z": 0.2
+              },
+              "color": 4869976
+            },
+            {
+              "id": "knuckle",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.58,
+                "z": 0.09
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.07,
+                "z": 0.06
+              },
+              "color": 11550762
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "bracer",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.18,
+                "z": 0.21
+              },
+              "color": 8159884
+            },
+            {
+              "id": "gauntlet",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.18,
+                "z": 0.2
+              },
+              "color": 4869976
+            },
+            {
+              "id": "knuckle",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.58,
+                "z": 0.09
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.07,
+                "z": 0.06
+              },
+              "color": 11550762
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "hand",
+        "bracer",
+        "cuff",
+        "vambrace"
+      ],
+      "referenceBodyId": "warrior"
+    },
+    "starterForClasses": [
+      "warrior"
+    ]
+  },
+  {
+    "id": "eq_warrior-ironclad_pants",
+    "name": "Ironclad Legguards",
+    "type": "armor",
+    "slot": "pants",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Warrior Ironclad set.",
+    "tintColor": 8159884,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 10
+      },
+      {
+        "stat": "STR",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "tasset",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.54,
+                "y": 0.24,
+                "z": 0.4
+              },
+              "color": 4869976
+            }
+          ]
+        },
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "hipPlate",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.23,
+                "y": 0.23,
+                "z": 0.23
+              },
+              "color": 4869976
+            },
+            {
+              "id": "cuisse",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.46,
+                "z": 0.2
+              },
+              "color": 8159884
+            },
+            {
+              "id": "poleyn",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": -0.42,
+                "z": 0.03
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.15,
+                "z": 0.2
+              },
+              "color": 11550762
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "hipPlate",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.23,
+                "y": 0.23,
+                "z": 0.23
+              },
+              "color": 4869976
+            },
+            {
+              "id": "cuisse",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.46,
+                "z": 0.2
+              },
+              "color": 8159884
+            },
+            {
+              "id": "poleyn",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": -0.42,
+                "z": 0.03
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.15,
+                "z": 0.2
+              },
+              "color": 11550762
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "belt",
+        "tasset",
+        "hip",
+        "thigh",
+        "shin"
+      ],
+      "referenceBodyId": "warrior"
+    },
+    "starterForClasses": [
+      "warrior"
+    ]
+  },
+  {
+    "id": "eq_warrior-ironclad_shoes",
+    "name": "Ironclad Boots",
+    "type": "armor",
+    "slot": "shoes",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Warrior Ironclad set.",
+    "tintColor": 8159884,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "STR",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "ankle",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.13,
+                "z": 0.22
+              },
+              "color": 4869976
+            },
+            {
+              "id": "sabaton",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.18,
+                "z": 0.32
+              },
+              "color": 8159884
+            },
+            {
+              "id": "toe",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": -0.52,
+                "z": 0.19
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.1,
+                "z": 0.08
+              },
+              "color": 11550762,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "ankle",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.13,
+                "z": 0.22
+              },
+              "color": 4869976
+            },
+            {
+              "id": "sabaton",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.18,
+                "z": 0.32
+              },
+              "color": 8159884
+            },
+            {
+              "id": "toe",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": -0.52,
+                "z": 0.19
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.1,
+                "z": 0.08
+              },
+              "color": 11550762,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "boot",
+        "bootTop",
+        "bootCuff",
+        "bootSole",
+        "greave"
+      ],
+      "referenceBodyId": "warrior"
+    },
+    "starterForClasses": [
+      "warrior"
+    ]
+  },
+  {
+    "id": "eq_warrior-ironclad_mainhand",
+    "name": "Ironclad Greatsword",
+    "type": "weapon",
+    "slot": "mainHand",
+    "weaponTypeId": "greatsword",
+    "rarity": "common",
+    "description": "Part of the Warrior Ironclad set.",
+    "tintColor": 11550762,
+    "sellPrice": 30,
+    "statModifiers": [
+      {
+        "stat": "weaponMinDamage",
+        "value": 4
+      },
+      {
+        "stat": "weaponMaxDamage",
+        "value": 7
+      },
+      {
+        "stat": "STR",
+        "value": 2
+      }
+    ],
+    "starterForClasses": [
+      "warrior"
+    ],
+    "appearance": {
+      "glow": {
+        "mode": "flicker",
+        "style": "flame",
+        "color": 16765066,
+        "secondaryColor": 12855814,
+        "intensity": 1,
+        "density": 40,
+        "size": 0.11,
+        "speed": 1.5,
+        "offset": {
+          "x": 0,
+          "y": -0.3,
+          "z": 0
+        },
+        "extent": {
+          "x": 0.55,
+          "y": 2.4,
+          "z": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "eq_guardian-bulwark_head",
+    "name": "Bulwark Helm",
+    "type": "armor",
+    "slot": "head",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Guardian Bulwark set.",
+    "tintColor": 10133674,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 8
+      },
+      {
+        "stat": "VIT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "head",
+          "shapes": [
+            {
+              "id": "helmTop",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.2,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.56,
+                "y": 0.24,
+                "z": 0.52
+              },
+              "color": 10133674
+            },
+            {
+              "id": "helmBack",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": -0.21
+              },
+              "scale": {
+                "x": 0.54,
+                "y": 0.4,
+                "z": 0.14
+              },
+              "color": 10133674
+            },
+            {
+              "id": "cheekL",
+              "kind": "box",
+              "position": {
+                "x": -0.25,
+                "y": -0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.14,
+                "y": 0.34,
+                "z": 0.54
+              },
+              "color": 10133674
+            },
+            {
+              "id": "cheekR",
+              "kind": "box",
+              "position": {
+                "x": 0.25,
+                "y": -0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.14,
+                "y": 0.34,
+                "z": 0.54
+              },
+              "color": 10133674
+            },
+            {
+              "id": "nasal",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0.22
+              },
+              "scale": {
+                "x": 0.06,
+                "y": 0.3,
+                "z": 0.12
+              },
+              "color": 5922922
+            },
+            {
+              "id": "crest",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": 0.4,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.09,
+                "y": 0.2,
+                "z": 0.56
+              },
+              "color": 14264618
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "helmTop",
+        "helmBack",
+        "helmL",
+        "helmR",
+        "nasal",
+        "crest",
+        "brim",
+        "cone",
+        "tip",
+        "fold",
+        "cap",
+        "capBrim",
+        "feather",
+        "hoodTop",
+        "hoodBack",
+        "hoodL",
+        "hoodR",
+        "hoodBrow",
+        "hairTop",
+        "hairBack",
+        "hairSideL",
+        "hairSideR",
+        "hairBun",
+        "hairTail1",
+        "hairTail2",
+        "hairSpike1",
+        "hairSpike2",
+        "hairSpike3",
+        "hairCap",
+        "hairBangs",
+        "hairTuftL",
+        "hairTuftR",
+        "hairFringe",
+        "hairSwoop",
+        "hairTwinL",
+        "hairTwinR",
+        "beard",
+        "stache"
+      ],
+      "referenceBodyId": "guardian"
+    },
+    "starterForClasses": [
+      "guardian"
+    ]
+  },
+  {
+    "id": "eq_guardian-bulwark_chest",
+    "name": "Bulwark Chestpiece",
+    "type": "armor",
+    "slot": "chest",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Guardian Bulwark set.",
+    "tintColor": 10133674,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 16
+      },
+      {
+        "stat": "VIT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "cuirass",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.58,
+                "y": 0.7,
+                "z": 0.44
+              },
+              "color": 10133674
+            },
+            {
+              "id": "placket",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0.21
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.56,
+                "z": 0.06
+              },
+              "color": 5922922
+            },
+            {
+              "id": "gorget",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.32,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.44,
+                "y": 0.12,
+                "z": 0.4
+              },
+              "color": 14264618
+            }
+          ]
+        },
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "pauldron",
+              "kind": "sphere",
+              "position": {
+                "x": 0.02,
+                "y": 0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.34,
+                "y": 0.3,
+                "z": 0.34
+              },
+              "color": 10133674
+            },
+            {
+              "id": "pauldronRim",
+              "kind": "cylinder",
+              "position": {
+                "x": 0.02,
+                "y": -0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.33,
+                "y": 0.05,
+                "z": 0.33
+              },
+              "color": 14264618
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "pauldron",
+              "kind": "sphere",
+              "position": {
+                "x": -0.02,
+                "y": 0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.34,
+                "y": 0.3,
+                "z": 0.34
+              },
+              "color": 10133674
+            },
+            {
+              "id": "pauldronRim",
+              "kind": "cylinder",
+              "position": {
+                "x": -0.02,
+                "y": -0.06,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.33,
+                "y": 0.05,
+                "z": 0.33
+              },
+              "color": 14264618
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "chest",
+        "collar",
+        "placket",
+        "gorget",
+        "scaleA",
+        "scaleB",
+        "scaleC",
+        "strapL",
+        "strapR",
+        "buckle",
+        "sash",
+        "gem",
+        "stole",
+        "amulet",
+        "trim",
+        "skirt",
+        "shoulder",
+        "pauldron"
+      ],
+      "referenceBodyId": "guardian"
+    },
+    "starterForClasses": [
+      "guardian"
+    ]
+  },
+  {
+    "id": "eq_guardian-bulwark_gloves",
+    "name": "Bulwark Gauntlets",
+    "type": "armor",
+    "slot": "gloves",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Guardian Bulwark set.",
+    "tintColor": 10133674,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "VIT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "bracer",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.18,
+                "z": 0.21
+              },
+              "color": 10133674
+            },
+            {
+              "id": "gauntlet",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.18,
+                "z": 0.2
+              },
+              "color": 5922922
+            },
+            {
+              "id": "knuckle",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.58,
+                "z": 0.09
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.07,
+                "z": 0.06
+              },
+              "color": 14264618
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "bracer",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.18,
+                "z": 0.21
+              },
+              "color": 10133674
+            },
+            {
+              "id": "gauntlet",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.18,
+                "z": 0.2
+              },
+              "color": 5922922
+            },
+            {
+              "id": "knuckle",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.58,
+                "z": 0.09
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.07,
+                "z": 0.06
+              },
+              "color": 14264618
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "hand",
+        "bracer",
+        "cuff",
+        "vambrace"
+      ],
+      "referenceBodyId": "guardian"
+    },
+    "starterForClasses": [
+      "guardian"
+    ]
+  },
+  {
+    "id": "eq_guardian-bulwark_pants",
+    "name": "Bulwark Legguards",
+    "type": "armor",
+    "slot": "pants",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Guardian Bulwark set.",
+    "tintColor": 10133674,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 10
+      },
+      {
+        "stat": "VIT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "tasset",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.54,
+                "y": 0.24,
+                "z": 0.4
+              },
+              "color": 5922922
+            }
+          ]
+        },
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "hipPlate",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.23,
+                "y": 0.23,
+                "z": 0.23
+              },
+              "color": 5922922
+            },
+            {
+              "id": "cuisse",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.46,
+                "z": 0.2
+              },
+              "color": 10133674
+            },
+            {
+              "id": "poleyn",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": -0.42,
+                "z": 0.03
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.15,
+                "z": 0.2
+              },
+              "color": 14264618
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "hipPlate",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.23,
+                "y": 0.23,
+                "z": 0.23
+              },
+              "color": 5922922
+            },
+            {
+              "id": "cuisse",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.46,
+                "z": 0.2
+              },
+              "color": 10133674
+            },
+            {
+              "id": "poleyn",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": -0.42,
+                "z": 0.03
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.15,
+                "z": 0.2
+              },
+              "color": 14264618
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "belt",
+        "tasset",
+        "hip",
+        "thigh",
+        "shin"
+      ],
+      "referenceBodyId": "guardian"
+    },
+    "starterForClasses": [
+      "guardian"
+    ]
+  },
+  {
+    "id": "eq_guardian-bulwark_shoes",
+    "name": "Bulwark Boots",
+    "type": "armor",
+    "slot": "shoes",
+    "armorType": "plate",
+    "rarity": "common",
+    "description": "Part of the Guardian Bulwark set.",
+    "tintColor": 10133674,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "VIT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "ankle",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.13,
+                "z": 0.22
+              },
+              "color": 5922922
+            },
+            {
+              "id": "sabaton",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.18,
+                "z": 0.32
+              },
+              "color": 10133674
+            },
+            {
+              "id": "toe",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": -0.52,
+                "z": 0.19
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.1,
+                "z": 0.08
+              },
+              "color": 14264618,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "ankle",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.13,
+                "z": 0.22
+              },
+              "color": 5922922
+            },
+            {
+              "id": "sabaton",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.18,
+                "z": 0.32
+              },
+              "color": 10133674
+            },
+            {
+              "id": "toe",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": -0.52,
+                "z": 0.19
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.1,
+                "z": 0.08
+              },
+              "color": 14264618,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "boot",
+        "bootTop",
+        "bootCuff",
+        "bootSole",
+        "greave"
+      ],
+      "referenceBodyId": "guardian"
+    },
+    "starterForClasses": [
+      "guardian"
+    ]
+  },
+  {
+    "id": "eq_guardian-bulwark_mainhand",
+    "name": "Bulwark Sword",
+    "type": "weapon",
+    "slot": "mainHand",
+    "weaponTypeId": "sword",
+    "rarity": "common",
+    "description": "Part of the Guardian Bulwark set.",
+    "tintColor": 14264618,
+    "sellPrice": 30,
+    "statModifiers": [
+      {
+        "stat": "weaponMinDamage",
+        "value": 4
+      },
+      {
+        "stat": "weaponMaxDamage",
+        "value": 7
+      },
+      {
+        "stat": "VIT",
+        "value": 2
+      }
+    ],
+    "starterForClasses": [
+      "guardian"
+    ]
+  },
+  {
+    "id": "eq_guardian-bulwark_offhand",
+    "name": "Bulwark Shield",
+    "type": "weapon",
+    "slot": "offHand",
+    "weaponTypeId": "shield",
+    "rarity": "common",
+    "description": "Part of the Guardian Bulwark set.",
+    "tintColor": 14264618,
+    "sellPrice": 30,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 10
+      }
+    ],
+    "starterForClasses": [
+      "guardian"
+    ]
+  },
+  {
+    "id": "eq_mage-apprentice_head",
+    "name": "Apprentice Hood",
+    "type": "armor",
+    "slot": "head",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Mage Apprentice set.",
+    "tintColor": 4156357,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 3
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "head",
+          "shapes": [
+            {
+              "id": "hoodTop",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.15,
+                "z": -0.02
+              },
+              "scale": {
+                "x": 0.58,
+                "y": 0.26,
+                "z": 0.6
+              },
+              "color": 4156357
+            },
+            {
+              "id": "hoodBack",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.02,
+                "z": -0.22
+              },
+              "scale": {
+                "x": 0.6,
+                "y": 0.34,
+                "z": 0.16
+              },
+              "color": 4156357
+            },
+            {
+              "id": "hoodL",
+              "kind": "box",
+              "position": {
+                "x": -0.26,
+                "y": -0.02,
+                "z": -0.01
+              },
+              "scale": {
+                "x": 0.18,
+                "y": 0.34,
+                "z": 0.58
+              },
+              "color": 4156357
+            },
+            {
+              "id": "hoodR",
+              "kind": "box",
+              "position": {
+                "x": 0.26,
+                "y": -0.02,
+                "z": -0.01
+              },
+              "scale": {
+                "x": 0.18,
+                "y": 0.34,
+                "z": 0.58
+              },
+              "color": 4156357
+            },
+            {
+              "id": "hoodBrow",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": 0.2,
+                "z": 0.18
+              },
+              "scale": {
+                "x": 0.5,
+                "y": 0.18,
+                "z": 0.22
+              },
+              "color": 14264618,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "helmTop",
+        "helmBack",
+        "helmL",
+        "helmR",
+        "nasal",
+        "crest",
+        "brim",
+        "cone",
+        "tip",
+        "fold",
+        "cap",
+        "capBrim",
+        "feather",
+        "hoodTop",
+        "hoodBack",
+        "hoodL",
+        "hoodR",
+        "hoodBrow",
+        "hairTop",
+        "hairBack",
+        "hairSideL",
+        "hairSideR",
+        "hairBun",
+        "hairTail1",
+        "hairTail2",
+        "hairSpike1",
+        "hairSpike2",
+        "hairSpike3",
+        "hairCap",
+        "hairBangs",
+        "hairTuftL",
+        "hairTuftR",
+        "hairFringe",
+        "hairSwoop",
+        "hairTwinL",
+        "hairTwinR",
+        "beard",
+        "stache"
+      ],
+      "referenceBodyId": "mage"
+    },
+    "starterForClasses": [
+      "mage"
+    ]
+  },
+  {
+    "id": "eq_mage-apprentice_chest",
+    "name": "Apprentice Robe",
+    "type": "armor",
+    "slot": "chest",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Mage Apprentice set.",
+    "tintColor": 4156357,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "robe",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.55,
+                "y": 0.7,
+                "z": 0.41
+              },
+              "color": 4156357
+            },
+            {
+              "id": "skirt",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.88,
+                "y": 0.64,
+                "z": 0.68
+              },
+              "color": 2375790
+            },
+            {
+              "id": "trim",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.3,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.46,
+                "y": 0.14,
+                "z": 0.4
+              },
+              "color": 14264618
+            },
+            {
+              "id": "sash",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.06,
+                "z": 0.21
+              },
+              "scale": {
+                "x": 0.13,
+                "y": 0.6,
+                "z": 0.05
+              },
+              "color": 14264618,
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 12
+              }
+            }
+          ]
+        },
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "sleeve",
+              "kind": "sphere",
+              "position": {
+                "x": 0.01,
+                "y": 0.03,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.29,
+                "y": 0.25,
+                "z": 0.29
+              },
+              "color": 4156357
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "sleeve",
+              "kind": "sphere",
+              "position": {
+                "x": -0.01,
+                "y": 0.03,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.29,
+                "y": 0.25,
+                "z": 0.29
+              },
+              "color": 4156357
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "chest",
+        "collar",
+        "placket",
+        "gorget",
+        "scaleA",
+        "scaleB",
+        "scaleC",
+        "strapL",
+        "strapR",
+        "buckle",
+        "sash",
+        "gem",
+        "stole",
+        "amulet",
+        "trim",
+        "skirt",
+        "shoulder",
+        "pauldron"
+      ],
+      "referenceBodyId": "mage"
+    },
+    "starterForClasses": [
+      "mage"
+    ]
+  },
+  {
+    "id": "eq_mage-apprentice_gloves",
+    "name": "Apprentice Gloves",
+    "type": "armor",
+    "slot": "gloves",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Mage Apprentice set.",
+    "tintColor": 4156357,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 2
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "cuff",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.32,
+                "y": 0.24,
+                "z": 0.32
+              },
+              "color": 2375790
+            },
+            {
+              "id": "wrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.15,
+                "z": 0.17
+              },
+              "color": 4156357
+            },
+            {
+              "id": "band",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.04,
+                "z": 0.18
+              },
+              "color": 14264618
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "cuff",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.32,
+                "y": 0.24,
+                "z": 0.32
+              },
+              "color": 2375790
+            },
+            {
+              "id": "wrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.15,
+                "z": 0.17
+              },
+              "color": 4156357
+            },
+            {
+              "id": "band",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.04,
+                "z": 0.18
+              },
+              "color": 14264618
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "hand",
+        "bracer",
+        "cuff",
+        "vambrace"
+      ],
+      "referenceBodyId": "mage"
+    },
+    "starterForClasses": [
+      "mage"
+    ]
+  },
+  {
+    "id": "eq_mage-apprentice_pants",
+    "name": "Apprentice Leggings",
+    "type": "armor",
+    "slot": "pants",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Mage Apprentice set.",
+    "tintColor": 4156357,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 4
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "cord",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.235,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.56,
+                "y": 0.1,
+                "z": 0.42
+              },
+              "color": 14264618
+            }
+          ]
+        },
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 2375790
+            },
+            {
+              "id": "trouser",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 4156357
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 2375790
+            },
+            {
+              "id": "trouser",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 4156357
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "belt",
+        "tasset",
+        "hip",
+        "thigh",
+        "shin"
+      ],
+      "referenceBodyId": "mage"
+    },
+    "starterForClasses": [
+      "mage"
+    ]
+  },
+  {
+    "id": "eq_mage-apprentice_shoes",
+    "name": "Apprentice Shoes",
+    "type": "armor",
+    "slot": "shoes",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Mage Apprentice set.",
+    "tintColor": 4156357,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 2
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "slipper",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.16,
+                "z": 0.3
+              },
+              "color": 4156357
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.05,
+                "z": 0.25
+              },
+              "color": 14264618
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "slipper",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.16,
+                "z": 0.3
+              },
+              "color": 4156357
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.05,
+                "z": 0.25
+              },
+              "color": 14264618
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "boot",
+        "bootTop",
+        "bootCuff",
+        "bootSole",
+        "greave"
+      ],
+      "referenceBodyId": "mage"
+    },
+    "starterForClasses": [
+      "mage"
+    ]
+  },
+  {
+    "id": "eq_mage-apprentice_mainhand",
+    "name": "Apprentice Staff",
+    "type": "weapon",
+    "slot": "mainHand",
+    "weaponTypeId": "staff",
+    "rarity": "common",
+    "description": "Part of the Mage Apprentice set.",
+    "tintColor": 14264618,
+    "sellPrice": 30,
+    "statModifiers": [
+      {
+        "stat": "weaponMinDamage",
+        "value": 4
+      },
+      {
+        "stat": "weaponMaxDamage",
+        "value": 7
+      },
+      {
+        "stat": "INT",
+        "value": 2
+      }
+    ],
+    "starterForClasses": [
+      "mage"
+    ]
+  },
+  {
+    "id": "eq_warlock-initiate_head",
+    "name": "Initiate Hood",
+    "type": "armor",
+    "slot": "head",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Warlock Initiate set.",
+    "tintColor": 3940952,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 3
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "head",
+          "shapes": [
+            {
+              "id": "hoodTop",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.15,
+                "z": -0.02
+              },
+              "scale": {
+                "x": 0.58,
+                "y": 0.26,
+                "z": 0.6
+              },
+              "color": 3940952
+            },
+            {
+              "id": "hoodBack",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.02,
+                "z": -0.22
+              },
+              "scale": {
+                "x": 0.6,
+                "y": 0.34,
+                "z": 0.16
+              },
+              "color": 3940952
+            },
+            {
+              "id": "hoodL",
+              "kind": "box",
+              "position": {
+                "x": -0.26,
+                "y": -0.02,
+                "z": -0.01
+              },
+              "scale": {
+                "x": 0.18,
+                "y": 0.34,
+                "z": 0.58
+              },
+              "color": 3940952
+            },
+            {
+              "id": "hoodR",
+              "kind": "box",
+              "position": {
+                "x": 0.26,
+                "y": -0.02,
+                "z": -0.01
+              },
+              "scale": {
+                "x": 0.18,
+                "y": 0.34,
+                "z": 0.58
+              },
+              "color": 3940952
+            },
+            {
+              "id": "hoodBrow",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": 0.2,
+                "z": 0.18
+              },
+              "scale": {
+                "x": 0.5,
+                "y": 0.18,
+                "z": 0.22
+              },
+              "color": 6963098,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "helmTop",
+        "helmBack",
+        "helmL",
+        "helmR",
+        "nasal",
+        "crest",
+        "brim",
+        "cone",
+        "tip",
+        "fold",
+        "cap",
+        "capBrim",
+        "feather",
+        "hoodTop",
+        "hoodBack",
+        "hoodL",
+        "hoodR",
+        "hoodBrow",
+        "hairTop",
+        "hairBack",
+        "hairSideL",
+        "hairSideR",
+        "hairBun",
+        "hairTail1",
+        "hairTail2",
+        "hairSpike1",
+        "hairSpike2",
+        "hairSpike3",
+        "hairCap",
+        "hairBangs",
+        "hairTuftL",
+        "hairTuftR",
+        "hairFringe",
+        "hairSwoop",
+        "hairTwinL",
+        "hairTwinR",
+        "beard",
+        "stache"
+      ],
+      "referenceBodyId": "warlock"
+    },
+    "starterForClasses": [
+      "warlock"
+    ]
+  },
+  {
+    "id": "eq_warlock-initiate_chest",
+    "name": "Initiate Robe",
+    "type": "armor",
+    "slot": "chest",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Warlock Initiate set.",
+    "tintColor": 3940952,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "robe",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.55,
+                "y": 0.7,
+                "z": 0.41
+              },
+              "color": 3940952
+            },
+            {
+              "id": "skirt",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.88,
+                "y": 0.64,
+                "z": 0.68
+              },
+              "color": 1315866
+            },
+            {
+              "id": "trim",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.3,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.46,
+                "y": 0.14,
+                "z": 0.4
+              },
+              "color": 6963098
+            },
+            {
+              "id": "sash",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.06,
+                "z": 0.21
+              },
+              "scale": {
+                "x": 0.13,
+                "y": 0.6,
+                "z": 0.05
+              },
+              "color": 6963098,
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 12
+              }
+            }
+          ]
+        },
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "sleeve",
+              "kind": "sphere",
+              "position": {
+                "x": 0.01,
+                "y": 0.03,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.29,
+                "y": 0.25,
+                "z": 0.29
+              },
+              "color": 3940952
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "sleeve",
+              "kind": "sphere",
+              "position": {
+                "x": -0.01,
+                "y": 0.03,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.29,
+                "y": 0.25,
+                "z": 0.29
+              },
+              "color": 3940952
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "chest",
+        "collar",
+        "placket",
+        "gorget",
+        "scaleA",
+        "scaleB",
+        "scaleC",
+        "strapL",
+        "strapR",
+        "buckle",
+        "sash",
+        "gem",
+        "stole",
+        "amulet",
+        "trim",
+        "skirt",
+        "shoulder",
+        "pauldron"
+      ],
+      "referenceBodyId": "warlock"
+    },
+    "starterForClasses": [
+      "warlock"
+    ]
+  },
+  {
+    "id": "eq_warlock-initiate_gloves",
+    "name": "Initiate Gloves",
+    "type": "armor",
+    "slot": "gloves",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Warlock Initiate set.",
+    "tintColor": 3940952,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 2
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "cuff",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.32,
+                "y": 0.24,
+                "z": 0.32
+              },
+              "color": 1315866
+            },
+            {
+              "id": "wrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.15,
+                "z": 0.17
+              },
+              "color": 3940952
+            },
+            {
+              "id": "band",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.04,
+                "z": 0.18
+              },
+              "color": 6963098
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "cuff",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.32,
+                "y": 0.24,
+                "z": 0.32
+              },
+              "color": 1315866
+            },
+            {
+              "id": "wrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.15,
+                "z": 0.17
+              },
+              "color": 3940952
+            },
+            {
+              "id": "band",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.04,
+                "z": 0.18
+              },
+              "color": 6963098
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "hand",
+        "bracer",
+        "cuff",
+        "vambrace"
+      ],
+      "referenceBodyId": "warlock"
+    },
+    "starterForClasses": [
+      "warlock"
+    ]
+  },
+  {
+    "id": "eq_warlock-initiate_pants",
+    "name": "Initiate Leggings",
+    "type": "armor",
+    "slot": "pants",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Warlock Initiate set.",
+    "tintColor": 3940952,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 4
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "cord",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.235,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.56,
+                "y": 0.1,
+                "z": 0.42
+              },
+              "color": 6963098
+            }
+          ]
+        },
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 1315866
+            },
+            {
+              "id": "trouser",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 3940952
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 1315866
+            },
+            {
+              "id": "trouser",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 3940952
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "belt",
+        "tasset",
+        "hip",
+        "thigh",
+        "shin"
+      ],
+      "referenceBodyId": "warlock"
+    },
+    "starterForClasses": [
+      "warlock"
+    ]
+  },
+  {
+    "id": "eq_warlock-initiate_shoes",
+    "name": "Initiate Shoes",
+    "type": "armor",
+    "slot": "shoes",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Warlock Initiate set.",
+    "tintColor": 3940952,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 2
+      },
+      {
+        "stat": "INT",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "slipper",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.16,
+                "z": 0.3
+              },
+              "color": 3940952
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.05,
+                "z": 0.25
+              },
+              "color": 6963098
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "slipper",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.16,
+                "z": 0.3
+              },
+              "color": 3940952
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.05,
+                "z": 0.25
+              },
+              "color": 6963098
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "boot",
+        "bootTop",
+        "bootCuff",
+        "bootSole",
+        "greave"
+      ],
+      "referenceBodyId": "warlock"
+    },
+    "starterForClasses": [
+      "warlock"
+    ]
+  },
+  {
+    "id": "eq_warlock-initiate_mainhand",
+    "name": "Initiate Staff",
+    "type": "weapon",
+    "slot": "mainHand",
+    "weaponTypeId": "staff",
+    "rarity": "common",
+    "description": "Part of the Warlock Initiate set.",
+    "tintColor": 6963098,
+    "sellPrice": 30,
+    "statModifiers": [
+      {
+        "stat": "weaponMinDamage",
+        "value": 4
+      },
+      {
+        "stat": "weaponMaxDamage",
+        "value": 7
+      },
+      {
+        "stat": "INT",
+        "value": 2
+      }
+    ],
+    "starterForClasses": [
+      "warlock"
+    ]
+  },
+  {
+    "id": "eq_priest-acolyte_head",
+    "name": "Acolyte Hood",
+    "type": "armor",
+    "slot": "head",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Priest Acolyte set.",
+    "tintColor": 15262936,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 3
+      },
+      {
+        "stat": "WIS",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "head",
+          "shapes": [
+            {
+              "id": "hoodTop",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.15,
+                "z": -0.02
+              },
+              "scale": {
+                "x": 0.58,
+                "y": 0.26,
+                "z": 0.6
+              },
+              "color": 15262936
+            },
+            {
+              "id": "hoodBack",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.02,
+                "z": -0.22
+              },
+              "scale": {
+                "x": 0.6,
+                "y": 0.34,
+                "z": 0.16
+              },
+              "color": 15262936
+            },
+            {
+              "id": "hoodL",
+              "kind": "box",
+              "position": {
+                "x": -0.26,
+                "y": -0.02,
+                "z": -0.01
+              },
+              "scale": {
+                "x": 0.18,
+                "y": 0.34,
+                "z": 0.58
+              },
+              "color": 15262936
+            },
+            {
+              "id": "hoodR",
+              "kind": "box",
+              "position": {
+                "x": 0.26,
+                "y": -0.02,
+                "z": -0.01
+              },
+              "scale": {
+                "x": 0.18,
+                "y": 0.34,
+                "z": 0.58
+              },
+              "color": 15262936
+            },
+            {
+              "id": "hoodBrow",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": 0.2,
+                "z": 0.18
+              },
+              "scale": {
+                "x": 0.5,
+                "y": 0.18,
+                "z": 0.22
+              },
+              "color": 7317736,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "helmTop",
+        "helmBack",
+        "helmL",
+        "helmR",
+        "nasal",
+        "crest",
+        "brim",
+        "cone",
+        "tip",
+        "fold",
+        "cap",
+        "capBrim",
+        "feather",
+        "hoodTop",
+        "hoodBack",
+        "hoodL",
+        "hoodR",
+        "hoodBrow",
+        "hairTop",
+        "hairBack",
+        "hairSideL",
+        "hairSideR",
+        "hairBun",
+        "hairTail1",
+        "hairTail2",
+        "hairSpike1",
+        "hairSpike2",
+        "hairSpike3",
+        "hairCap",
+        "hairBangs",
+        "hairTuftL",
+        "hairTuftR",
+        "hairFringe",
+        "hairSwoop",
+        "hairTwinL",
+        "hairTwinR",
+        "beard",
+        "stache"
+      ],
+      "referenceBodyId": "priest"
+    },
+    "starterForClasses": [
+      "priest"
+    ]
+  },
+  {
+    "id": "eq_priest-acolyte_chest",
+    "name": "Acolyte Robe",
+    "type": "armor",
+    "slot": "chest",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Priest Acolyte set.",
+    "tintColor": 15262936,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "WIS",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "robe",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.55,
+                "y": 0.7,
+                "z": 0.41
+              },
+              "color": 15262936
+            },
+            {
+              "id": "skirt",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.88,
+                "y": 0.64,
+                "z": 0.68
+              },
+              "color": 12170404
+            },
+            {
+              "id": "trim",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.3,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.46,
+                "y": 0.14,
+                "z": 0.4
+              },
+              "color": 7317736
+            },
+            {
+              "id": "sash",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.06,
+                "z": 0.21
+              },
+              "scale": {
+                "x": 0.13,
+                "y": 0.6,
+                "z": 0.05
+              },
+              "color": 7317736,
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 12
+              }
+            }
+          ]
+        },
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "sleeve",
+              "kind": "sphere",
+              "position": {
+                "x": 0.01,
+                "y": 0.03,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.29,
+                "y": 0.25,
+                "z": 0.29
+              },
+              "color": 15262936
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "sleeve",
+              "kind": "sphere",
+              "position": {
+                "x": -0.01,
+                "y": 0.03,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.29,
+                "y": 0.25,
+                "z": 0.29
+              },
+              "color": 15262936
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "chest",
+        "collar",
+        "placket",
+        "gorget",
+        "scaleA",
+        "scaleB",
+        "scaleC",
+        "strapL",
+        "strapR",
+        "buckle",
+        "sash",
+        "gem",
+        "stole",
+        "amulet",
+        "trim",
+        "skirt",
+        "shoulder",
+        "pauldron"
+      ],
+      "referenceBodyId": "priest"
+    },
+    "starterForClasses": [
+      "priest"
+    ]
+  },
+  {
+    "id": "eq_priest-acolyte_gloves",
+    "name": "Acolyte Gloves",
+    "type": "armor",
+    "slot": "gloves",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Priest Acolyte set.",
+    "tintColor": 15262936,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 2
+      },
+      {
+        "stat": "WIS",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "cuff",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.32,
+                "y": 0.24,
+                "z": 0.32
+              },
+              "color": 12170404
+            },
+            {
+              "id": "wrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.15,
+                "z": 0.17
+              },
+              "color": 15262936
+            },
+            {
+              "id": "band",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.04,
+                "z": 0.18
+              },
+              "color": 7317736
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "cuff",
+              "kind": "cone",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.32,
+                "y": 0.24,
+                "z": 0.32
+              },
+              "color": 12170404
+            },
+            {
+              "id": "wrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.15,
+                "z": 0.17
+              },
+              "color": 15262936
+            },
+            {
+              "id": "band",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.04,
+                "z": 0.18
+              },
+              "color": 7317736
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "hand",
+        "bracer",
+        "cuff",
+        "vambrace"
+      ],
+      "referenceBodyId": "priest"
+    },
+    "starterForClasses": [
+      "priest"
+    ]
+  },
+  {
+    "id": "eq_priest-acolyte_pants",
+    "name": "Acolyte Leggings",
+    "type": "armor",
+    "slot": "pants",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Priest Acolyte set.",
+    "tintColor": 15262936,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 4
+      },
+      {
+        "stat": "WIS",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "cord",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.235,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.56,
+                "y": 0.1,
+                "z": 0.42
+              },
+              "color": 7317736
+            }
+          ]
+        },
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 12170404
+            },
+            {
+              "id": "trouser",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 15262936
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 12170404
+            },
+            {
+              "id": "trouser",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 15262936
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "belt",
+        "tasset",
+        "hip",
+        "thigh",
+        "shin"
+      ],
+      "referenceBodyId": "priest"
+    },
+    "starterForClasses": [
+      "priest"
+    ]
+  },
+  {
+    "id": "eq_priest-acolyte_shoes",
+    "name": "Acolyte Shoes",
+    "type": "armor",
+    "slot": "shoes",
+    "armorType": "cloth",
+    "rarity": "common",
+    "description": "Part of the Priest Acolyte set.",
+    "tintColor": 15262936,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 2
+      },
+      {
+        "stat": "WIS",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "slipper",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.16,
+                "z": 0.3
+              },
+              "color": 15262936
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.05,
+                "z": 0.25
+              },
+              "color": 7317736
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "slipper",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.16,
+                "z": 0.3
+              },
+              "color": 15262936
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.02
+              },
+              "scale": {
+                "x": 0.2,
+                "y": 0.05,
+                "z": 0.25
+              },
+              "color": 7317736
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "boot",
+        "bootTop",
+        "bootCuff",
+        "bootSole",
+        "greave"
+      ],
+      "referenceBodyId": "priest"
+    },
+    "starterForClasses": [
+      "priest"
+    ]
+  },
+  {
+    "id": "eq_priest-acolyte_mainhand",
+    "name": "Acolyte Staff",
+    "type": "weapon",
+    "slot": "mainHand",
+    "weaponTypeId": "staff",
+    "rarity": "common",
+    "description": "Part of the Priest Acolyte set.",
+    "tintColor": 7317736,
+    "sellPrice": 30,
+    "statModifiers": [
+      {
+        "stat": "weaponMinDamage",
+        "value": 4
+      },
+      {
+        "stat": "weaponMaxDamage",
+        "value": 7
+      },
+      {
+        "stat": "WIS",
+        "value": 2
+      }
+    ],
+    "starterForClasses": [
+      "priest"
+    ]
+  },
+  {
+    "id": "eq_archer-scout_head",
+    "name": "Scout Cap",
+    "type": "armor",
+    "slot": "head",
+    "armorType": "leather",
+    "rarity": "common",
+    "description": "Part of the Archer Scout set.",
+    "tintColor": 6965802,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 5
+      },
+      {
+        "stat": "DEX",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "head",
+          "shapes": [
+            {
+              "id": "cap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.62,
+                "y": 0.17,
+                "z": 0.58
+              },
+              "color": 6965802
+            },
+            {
+              "id": "capBrim",
+              "kind": "wedge",
+              "position": {
+                "x": 0,
+                "y": 0.18,
+                "z": 0.25
+              },
+              "scale": {
+                "x": 0.5,
+                "y": 0.1,
+                "z": 0.18
+              },
+              "color": 4140058,
+              "rotation": {
+                "x": 90,
+                "y": 0,
+                "z": 0
+              }
+            },
+            {
+              "id": "band",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.14,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.64,
+                "y": 0.06,
+                "z": 0.6
+              },
+              "color": 4160058
+            },
+            {
+              "id": "feather",
+              "kind": "cone",
+              "position": {
+                "x": 0.16,
+                "y": 0.37,
+                "z": -0.06
+              },
+              "scale": {
+                "x": 0.07,
+                "y": 0.26,
+                "z": 0.07
+              },
+              "color": 4160058,
+              "rotation": {
+                "x": -30,
+                "y": 0,
+                "z": 22
+              }
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "helmTop",
+        "helmBack",
+        "helmL",
+        "helmR",
+        "nasal",
+        "crest",
+        "brim",
+        "cone",
+        "tip",
+        "fold",
+        "cap",
+        "capBrim",
+        "feather",
+        "hoodTop",
+        "hoodBack",
+        "hoodL",
+        "hoodR",
+        "hoodBrow",
+        "hairTop",
+        "hairBack",
+        "hairSideL",
+        "hairSideR",
+        "hairBun",
+        "hairTail1",
+        "hairTail2",
+        "hairSpike1",
+        "hairSpike2",
+        "hairSpike3",
+        "hairCap",
+        "hairBangs",
+        "hairTuftL",
+        "hairTuftR",
+        "hairFringe",
+        "hairSwoop",
+        "hairTwinL",
+        "hairTwinR",
+        "beard",
+        "stache"
+      ],
+      "referenceBodyId": "archer"
+    },
+    "starterForClasses": [
+      "archer"
+    ]
+  },
+  {
+    "id": "eq_archer-scout_chest",
+    "name": "Scout Jerkin",
+    "type": "armor",
+    "slot": "chest",
+    "armorType": "leather",
+    "rarity": "common",
+    "description": "Part of the Archer Scout set.",
+    "tintColor": 6965802,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 10
+      },
+      {
+        "stat": "DEX",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "jerkin",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": 0.02,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.56,
+                "y": 0.7,
+                "z": 0.42
+              },
+              "color": 6965802
+            },
+            {
+              "id": "strapL",
+              "kind": "box",
+              "position": {
+                "x": -0.13,
+                "y": 0.04,
+                "z": 0.21
+              },
+              "scale": {
+                "x": 0.09,
+                "y": 0.62,
+                "z": 0.05
+              },
+              "color": 4140058,
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": -10
+              }
+            },
+            {
+              "id": "strapR",
+              "kind": "box",
+              "position": {
+                "x": 0.13,
+                "y": 0.04,
+                "z": 0.21
+              },
+              "scale": {
+                "x": 0.09,
+                "y": 0.62,
+                "z": 0.05
+              },
+              "color": 4140058,
+              "rotation": {
+                "x": 0,
+                "y": 0,
+                "z": 10
+              }
+            },
+            {
+              "id": "buckle",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0.23
+              },
+              "scale": {
+                "x": 0.11,
+                "y": 0.11,
+                "z": 0.05
+              },
+              "color": 4160058
+            }
+          ]
+        },
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "spaulder",
+              "kind": "sphere",
+              "position": {
+                "x": 0.02,
+                "y": 0.04,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.3,
+                "y": 0.22,
+                "z": 0.3
+              },
+              "color": 4140058
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "spaulder",
+              "kind": "sphere",
+              "position": {
+                "x": -0.02,
+                "y": 0.04,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.3,
+                "y": 0.22,
+                "z": 0.3
+              },
+              "color": 4140058
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "chest",
+        "collar",
+        "placket",
+        "gorget",
+        "scaleA",
+        "scaleB",
+        "scaleC",
+        "strapL",
+        "strapR",
+        "buckle",
+        "sash",
+        "gem",
+        "stole",
+        "amulet",
+        "trim",
+        "skirt",
+        "shoulder",
+        "pauldron"
+      ],
+      "referenceBodyId": "archer"
+    },
+    "starterForClasses": [
+      "archer"
+    ]
+  },
+  {
+    "id": "eq_archer-scout_gloves",
+    "name": "Scout Bracers",
+    "type": "armor",
+    "slot": "gloves",
+    "armorType": "leather",
+    "rarity": "common",
+    "description": "Part of the Archer Scout set.",
+    "tintColor": 6965802,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 4
+      },
+      {
+        "stat": "DEX",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "armR",
+          "shapes": [
+            {
+              "id": "bracer",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.22,
+                "z": 0.19
+              },
+              "color": 6965802
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.1
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.2,
+                "z": 0.03
+              },
+              "color": 4160058
+            },
+            {
+              "id": "glove",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.16,
+                "z": 0.18
+              },
+              "color": 4140058
+            }
+          ]
+        },
+        {
+          "role": "armL",
+          "shapes": [
+            {
+              "id": "bracer",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.22,
+                "z": 0.19
+              },
+              "color": 6965802
+            },
+            {
+              "id": "strap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.43,
+                "z": 0.1
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.2,
+                "z": 0.03
+              },
+              "color": 4160058
+            },
+            {
+              "id": "glove",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.56,
+                "z": 0.01
+              },
+              "scale": {
+                "x": 0.17,
+                "y": 0.16,
+                "z": 0.18
+              },
+              "color": 4140058
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "hand",
+        "bracer",
+        "cuff",
+        "vambrace"
+      ],
+      "referenceBodyId": "archer"
+    },
+    "starterForClasses": [
+      "archer"
+    ]
+  },
+  {
+    "id": "eq_archer-scout_pants",
+    "name": "Scout Leggings",
+    "type": "armor",
+    "slot": "pants",
+    "armorType": "leather",
+    "rarity": "common",
+    "description": "Part of the Archer Scout set.",
+    "tintColor": 6965802,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 6
+      },
+      {
+        "stat": "DEX",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "torso",
+          "shapes": [
+            {
+              "id": "belt",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.25,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.58,
+                "y": 0.14,
+                "z": 0.44
+              },
+              "color": 4160058
+            }
+          ]
+        },
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 4140058
+            },
+            {
+              "id": "legging",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 6965802
+            },
+            {
+              "id": "kneePad",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0.07
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.12,
+                "z": 0.06
+              },
+              "color": 4140058
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "hipWrap",
+              "kind": "sphere",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.22,
+                "z": 0.22
+              },
+              "color": 4140058
+            },
+            {
+              "id": "legging",
+              "kind": "capsule",
+              "position": {
+                "x": 0,
+                "y": -0.24,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.19,
+                "y": 0.46,
+                "z": 0.19
+              },
+              "color": 6965802
+            },
+            {
+              "id": "kneePad",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.4,
+                "z": 0.07
+              },
+              "scale": {
+                "x": 0.16,
+                "y": 0.12,
+                "z": 0.06
+              },
+              "color": 4140058
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "belt",
+        "tasset",
+        "hip",
+        "thigh",
+        "shin"
+      ],
+      "referenceBodyId": "archer"
+    },
+    "starterForClasses": [
+      "archer"
+    ]
+  },
+  {
+    "id": "eq_archer-scout_shoes",
+    "name": "Scout Boots",
+    "type": "armor",
+    "slot": "shoes",
+    "armorType": "leather",
+    "rarity": "common",
+    "description": "Part of the Archer Scout set.",
+    "tintColor": 6965802,
+    "sellPrice": 18,
+    "statModifiers": [
+      {
+        "stat": "armor",
+        "value": 4
+      },
+      {
+        "stat": "DEX",
+        "value": 1
+      }
+    ],
+    "appearance": {
+      "parts": [
+        {
+          "role": "legR",
+          "shapes": [
+            {
+              "id": "bootTop",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.38,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.2,
+                "z": 0.21
+              },
+              "color": 4140058
+            },
+            {
+              "id": "boot",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.17,
+                "z": 0.31
+              },
+              "color": 6965802
+            },
+            {
+              "id": "bootStrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0.05
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.04,
+                "z": 0.3
+              },
+              "color": 4160058
+            }
+          ]
+        },
+        {
+          "role": "legL",
+          "shapes": [
+            {
+              "id": "bootTop",
+              "kind": "cylinder",
+              "position": {
+                "x": 0,
+                "y": -0.38,
+                "z": 0
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.2,
+                "z": 0.21
+              },
+              "color": 4140058
+            },
+            {
+              "id": "boot",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.5,
+                "z": 0.04
+              },
+              "scale": {
+                "x": 0.21,
+                "y": 0.17,
+                "z": 0.31
+              },
+              "color": 6965802
+            },
+            {
+              "id": "bootStrap",
+              "kind": "box",
+              "position": {
+                "x": 0,
+                "y": -0.44,
+                "z": 0.05
+              },
+              "scale": {
+                "x": 0.22,
+                "y": 0.04,
+                "z": 0.3
+              },
+              "color": 4160058
+            }
+          ]
+        }
+      ],
+      "hideBodyShapes": [
+        "boot",
+        "bootTop",
+        "bootCuff",
+        "bootSole",
+        "greave"
+      ],
+      "referenceBodyId": "archer"
+    },
+    "starterForClasses": [
+      "archer"
+    ]
+  },
+  {
+    "id": "eq_archer-scout_mainhand",
+    "name": "Scout Bow",
+    "type": "weapon",
+    "slot": "mainHand",
+    "weaponTypeId": "bow",
+    "rarity": "common",
+    "description": "Part of the Archer Scout set.",
+    "tintColor": 4160058,
+    "sellPrice": 30,
+    "statModifiers": [
+      {
+        "stat": "weaponMinDamage",
+        "value": 4
+      },
+      {
+        "stat": "weaponMaxDamage",
+        "value": 7
+      },
+      {
+        "stat": "DEX",
+        "value": 2
+      }
+    ],
+    "starterForClasses": [
+      "archer"
+    ]
   }
 ]

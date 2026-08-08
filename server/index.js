@@ -41,6 +41,7 @@ import {
 } from '../src/sim/equipment.js';
 import { getItemDef } from '../src/sim/items.js';
 import { parseAuthoredItems } from '../src/sim/authoredItems.js';
+import { starterEquipmentItems, starterItemsForClass } from '../src/sim/equipmentPresets.js';
 import { parseObjectDefs } from '../src/sim/objectDefs.js';
 import { parseMonsterTypeDefs } from '../src/sim/monsterTypeDefs.js';
 import { parseQuests, initQuestState, canAccept, acceptQuest, applyKill, applyTalk, isReadyToTurnIn, isActive, isCompleted, turnInQuest, turnInNpcId, applyQuestSwitch } from '../src/sim/quests.js';
@@ -56,6 +57,9 @@ import { initEventRuntimeState, initEventObjectWorldState, startEventScript, ste
 import { initTowerProgress, clearedFloorCount, isFloorUnlocked, markFloorCleared, isFloorRequirementMet } from '../src/sim/towerDungeon.js';
 import { CHARACTER_PRESETS } from '../src/generators/characterPresets.js';
 import { createAccountStore, mountAuthRoutes } from './accounts.js';
+import { createGuildStore } from './guilds.js';
+import { parseGuildBuffs, hasPermission as guildHasPermission, rankOf as guildRankOf, neutralGuildMultipliers, GUILD_PERMISSION_IDS, MAX_GUILD_MEMBERS } from '../src/sim/guilds.js';
+import { normalizeCharacterName, validateCharacterName } from '../src/web/characterName.js';
 import { mountSiteRoutes } from './site.js';
 import { parseBuildingPartDefs } from '../src/sim/buildingPartDefs.js';
 import { parseBuildingTypeDefs } from '../src/sim/buildingTypeDefs.js';
@@ -339,7 +343,7 @@ function forceCloseDungeonInstance(instanceId) {
       .filter(([pid, op]) => pid !== id && op.currentFloor === 0 && !op.inStore && !op.mapId)
       .map(([pid, op]) => ({ id: pid, position: op.position, character: op.character, equipmentLoadout: weaponLoadoutFor(op) }));
     sock.emit('map-entered', { mapId: defaultOverworldMapId, world, position: p.position, facing: p.facingAngle, existingMapPlayers: existingPlayers, isDefaultOverworld: true });
-    sock.broadcast.emit('player-joined', { id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) });
+    sock.broadcast.emit('player-joined', { id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) });
   }
   if (inst.closeTimer) clearTimeout(inst.closeTimer);
   dungeonInstances.delete(instanceId);
@@ -373,7 +377,7 @@ function enterDungeonMap(socket, player, mapId, targetPosition, targetFacing = n
 
   const existingMapPlayers = [...players.entries()]
     .filter(([id, p]) => id !== socket.id && p.dungeonInstanceId === instanceId)
-    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
   socket.emit('map-entered', {
     mapId,
     world: maps.get(mapId).world,
@@ -383,7 +387,7 @@ function enterDungeonMap(socket, player, mapId, targetPosition, targetFacing = n
     isDefaultOverworld: false,
     monsters: inst.monsters,
   });
-  socket.to(room).emit('map-player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player) });
+  socket.to(room).emit('map-player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player), guild: guildBadgeFor(player) });
 }
 
 const TOWER_ZONE = world.zones.find((z) => z.type === 'tower');
@@ -426,6 +430,23 @@ mkdirSync(ICONS_DIR, { recursive: true });
 const SKYBOX_DIR = path.join(ROOT, 'public/assets/skybox');
 mkdirSync(SKYBOX_DIR, { recursive: true });
 let authoredItems = parseAuthoredItems(JSON.parse(readFileSync(ITEMS_PATH, 'utf-8')));
+// Seed the built-in starter equipment sets (src/sim/equipmentPresets.js) —
+// same idea as character-types.json seeding from CHARACTER_PRESETS below.
+// Additive and id-keyed: a piece already in the file is left exactly as it is,
+// so re-authoring the Warrior's helm in the Equipment Builder survives every
+// restart, and a piece deleted on purpose stays deleted only until the next
+// boot (the alternative — a "deleted" tombstone list — is more machinery than
+// a starter set is worth; rename it instead of deleting it).
+{
+  const existing = new Set(authoredItems.map((i) => i.id));
+  const missing = starterEquipmentItems().filter((i) => !existing.has(i.id));
+  if (missing.length) {
+    authoredItems = parseAuthoredItems([...authoredItems, ...missing]);
+    if (existsSync(ITEMS_PATH)) copyFileSync(ITEMS_PATH, ITEMS_PATH + '.bak');
+    writeFileSync(ITEMS_PATH, JSON.stringify(authoredItems, null, 2));
+    console.log(`Seeded items.json with ${missing.length} starter equipment pieces`);
+  }
+}
 // Live lookups by id for src/sim/equipment.js's canEquip/equipItem/computeGearStatBonus —
 // Proxies (not a cached Object.fromEntries snapshot) so they always reflect
 // the CURRENT authoredItems array (reassigned whole on every /api/items save)
@@ -434,9 +455,88 @@ let authoredItems = parseAuthoredItems(JSON.parse(readFileSync(ITEMS_PATH, 'utf-
 const authoredItemById = new Proxy({}, { get: (_, id) => authoredItems.find((i) => i.id === id) });
 const weaponTypeById = new Proxy({}, { get: (_, id) => getWeaponTypeDef(id) });
 
-/** A player's mainHand/offHand weapon-type-id pair — what other clients need to render the weapon they're actually holding. Relayed alongside `character` (cosmetics) in every roster/join broadcast so other players see it too, not just the equipping player's own preview. */
+/**
+ * What other clients need to render a player's equipment: the
+ * mainHand/offHand weapon-TYPE-id pair (so the right procedural weapon is
+ * built), plus `slots` — the raw EquipmentState of item ids.
+ *
+ * `slots` was added with the Equipment Builder. Worn armor now has a visual
+ * (src/sim/gearVisuals.js), and unlike a weapon it can't be reduced to a pair
+ * of type ids: the look lives on the ITEM, so the receiving client has to
+ * resolve the item id against its own /api/items catalog. Sending ids rather
+ * than the resolved shapes keeps the broadcast small and means a piece
+ * re-authored in the Equipment Builder looks different to everyone on their
+ * next reload without the server re-broadcasting anything.
+ *
+ * Relayed alongside `character` (cosmetics) in every roster/join broadcast.
+ */
 function weaponLoadoutFor(player) {
-  return equipmentToWeaponLoadout(player.equipment || initEquipmentState(), authoredItemById);
+  const equipment = player.equipment || initEquipmentState();
+  return { ...equipmentToWeaponLoadout(equipment, authoredItemById), slots: equipment };
+}
+
+/**
+ * Give a player the starting gear their class is supposed to be wearing, once.
+ *
+ * WHY THIS EXISTS. Every class row in character-types.json has always carried a
+ * default weapon loadout, but that's a property of the BODY MESH — it's what
+ * makes a Warrior in the character creator hold a greatsword. The equipment
+ * PANEL reads a completely different thing (src/sim/equipment.js's
+ * EquipmentState, backed by real inventory items), and nothing ever put an item
+ * in it. So a new character looked armed in the world and owned nothing: an
+ * empty bag, twelve empty slots, and no way to get gear short of a lucky drop.
+ * This closes that gap by granting real items, which means the sword in their
+ * hand is now the same object the panel shows, the merchant will buy, and the
+ * stat readout counts.
+ *
+ * Idempotent per class, tracked on `player.starterKitsGranted` (persisted) —
+ * logging back in doesn't re-grant, and neither does re-picking a class you've
+ * already played. Picking a NEW class does grant that class's kit, since the
+ * old one's plate is no use to a mage.
+ *
+ * Auto-equips into EMPTY slots only, so a returning player who deliberately
+ * unequipped something doesn't have it forced back on. canEquip is still
+ * consulted per piece rather than trusted: a set whose off-hand is a shield
+ * must not land while a two-hander occupies the main hand.
+ */
+function grantStarterKit(socket, player, classId) {
+  if (!classId) return;
+  if (!Array.isArray(player.starterKitsGranted)) player.starterKitsGranted = [];
+  if (player.starterKitsGranted.includes(classId)) return;
+
+  const kit = starterItemsForClass(authoredItems, classId);
+  if (!kit.length) return; // no starter set authored for this class — nothing to do, not an error
+  player.starterKitsGranted.push(classId);
+
+  for (const itemDef of kit) {
+    player.inventory[itemDef.id] = (player.inventory[itemDef.id] || 0) + 1;
+    const targetSlot = findAutoTargetSlot(player.equipment, itemDef.slot);
+    if (!targetSlot || player.equipment[targetSlot]) continue; // occupied — it stays in the bag
+    if (!canEquip(itemDef, targetSlot, player.equipment, authoredItemById, weaponTypeById).ok) continue;
+    const result = equipItem(player.equipment, itemDef.id, itemDef, targetSlot, authoredItemById, weaponTypeById);
+    if (!result.ok) continue;
+    player.inventory[itemDef.id] -= 1;
+    // A 2H main-hand can bump the off hand back to the bag mid-kit — honored
+    // rather than assumed away, so a set that mixes a greatsword and a shield
+    // ends up in a legal state instead of a silently dropped item.
+    for (const returnedId of result.returnedToInventory) {
+      player.inventory[returnedId] = (player.inventory[returnedId] || 0) + 1;
+    }
+    player.equipment = result.equipment;
+  }
+  for (const [itemId, qty] of Object.entries(player.inventory)) if (qty <= 0) delete player.inventory[itemId];
+
+  refreshPlayerMaxHealth(player);
+  // Reuses the equipment-result channel the equip/unequip handlers already
+  // emit on, so the client's one handler applies inventory + equipment +
+  // derived stats and rebuilds the mesh exactly as it does for a manual equip.
+  // `action: 'starter-kit'` is what tells it to skip the per-item toast.
+  socket.emit('equipment-result', {
+    ok: true, action: 'starter-kit',
+    equipment: player.equipment, inventory: player.inventory,
+    maxHealth: player.maxHealth, health: player.health, derived: getPlayerDerivedStats(player),
+  });
+  socket.broadcast.emit('player-weapon-loadout', { id: socket.id, loadout: weaponLoadoutFor(player) });
 }
 
 /** Base sell price for an itemId across BOTH catalogs (hardcoded materials, then the authored gear/quest/consumable catalog) — null if the id isn't in either, or has no sellPrice. Used by the general store (materials only, historically) and the openMerchantStore sell-to-merchant path (either catalog). */
@@ -807,6 +907,48 @@ app.use('/assets/web', express.static(path.join(ROOT, 'assets/web'), { setHeader
 const accountStore = createAccountStore(ROOT);
 mountAuthRoutes(app, accountStore);
 console.log(`Account store ready (${accountStore.count} account(s))`);
+
+// --- Guilds (see server/guilds.js) ---
+// The store owns guilds.json; the authored buff catalog it spends bank gold
+// on is a separate file with the same load/validate/save/.bak shape every
+// other catalog here uses.
+const guildStore = createGuildStore(ROOT);
+const GUILD_LOGOS_DIR = path.join(ROOT, 'public/assets/guilds');
+mkdirSync(GUILD_LOGOS_DIR, { recursive: true });
+const GUILD_BUFFS_PATH = path.join(ROOT, 'guild-buffs/guild-buffs.json');
+mkdirSync(path.dirname(GUILD_BUFFS_PATH), { recursive: true });
+let guildBuffCatalog = [];
+try {
+  if (existsSync(GUILD_BUFFS_PATH)) guildBuffCatalog = parseGuildBuffs(JSON.parse(readFileSync(GUILD_BUFFS_PATH, 'utf-8')));
+} catch (err) {
+  console.error(`[guilds] guild-buffs.json is unusable (${err.message}) — starting with an empty buff catalog`);
+}
+console.log(`Guild store ready (${guildStore.all.length} guild(s), ${guildBuffCatalog.length} authored buff(s))`);
+
+app.get('/api/guild-buffs', (_req, res) => res.json(guildBuffCatalog));
+
+app.post('/api/guild-buffs', (req, res) => {
+  let validated;
+  try {
+    validated = parseGuildBuffs(req.body);
+  } catch (err) {
+    return res.status(400).json({ error: `Invalid guild buff data: ${err.message}` });
+  }
+  try {
+    if (existsSync(GUILD_BUFFS_PATH)) copyFileSync(GUILD_BUFFS_PATH, GUILD_BUFFS_PATH + '.bak');
+    writeFileSync(GUILD_BUFFS_PATH, JSON.stringify(validated, null, 2));
+    guildBuffCatalog = validated;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: `Failed to write guild-buffs.json: ${err.message}` });
+  }
+});
+
+// A read-only directory of guilds, for the site/roster screens. Deliberately
+// narrow: names, logos, member counts — never the bank or the member list.
+app.get('/api/guilds', (_req, res) => {
+  res.json(guildStore.all.map((g) => ({ id: g.id, name: g.name, logoUrl: g.logoUrl, members: g.members.length, createdAt: g.createdAt })));
+});
 
 // --- Landing page data (release notes + catalog counts) ---
 // Read live off the same catalogs the game uses, so the numbers on the site
@@ -1739,6 +1881,35 @@ app.post('/api/skills/icon', iconUpload.single('icon'), (req, res) => {
   res.json({ url: `/assets/icons/${req.file.filename}` });
 });
 
+// Guild buff icon upload — same generic "upload an image, get a URL back"
+// idiom as /api/items/icon, reusing the same icon storage.
+app.post('/api/guild-buffs/icon', iconUpload.single('icon'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No icon file uploaded (expected an image, field name "icon")' });
+  res.json({ url: `/assets/icons/${req.file.filename}` });
+});
+
+// Guild logo upload. Its own directory rather than the shared icon one so
+// setLogo() can whitelist by path prefix — a guild logo is the one uploaded
+// image that ends up rendered above people's heads for every player nearby,
+// so "is this a URL we minted?" has to be answerable from the string alone.
+const guildLogoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, GUILD_LOGOS_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const safeExt = ['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext) ? ext : '.png';
+      cb(null, `guild-${Date.now()}-${Math.floor(Math.random() * 1e9)}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 }, // it renders at ~48px over a head; 2MB is already generous
+  fileFilter: (_req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+});
+
+app.post('/api/guilds/logo', guildLogoUpload.single('logo'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No logo uploaded (expected an image, field name "logo")' });
+  res.json({ url: `/assets/guilds/${req.file.filename}` });
+});
+
 // Guide body images (World Editor "?" help panel) — embedded inline in a
 // guide's rich-text content, so larger than an icon but still small.
 const guideImageUpload = multer({
@@ -2247,6 +2418,115 @@ function removeFromParty(playerId) {
   }
 }
 
+// --- Guilds ---------------------------------------------------------------
+//
+// Parties are per-session and live in memory; guilds are per-ACCOUNT and live
+// on disk (server/guilds.js), so everything below keys off player.accountId
+// and a guest simply has no guild. What's kept in memory here is only the
+// ephemeral part: pending invites, which are meaningless across a restart.
+
+const GUILD_INVITE_TTL_MS = 60_000;
+/** @type {Map<string, {guildId:string, inviterName:string, expiresAt:number}>} invitee SOCKET id -> pending invite */
+const pendingGuildInvites = new Map();
+
+/** The small public blob shown over a player's head: name, guild name, guild logo. Null guild fields are normal (guildless/guest). */
+function guildBadgeFor(player) {
+  const guild = player?.accountId ? guildStore.byAccount(player.accountId) : null;
+  if (!guild) return null;
+  return { id: guild.id, name: guild.name, logoUrl: guild.logoUrl || '' };
+}
+
+/** Everything the nameplate needs for one player, in the shape every roster/join payload carries. */
+function nameplateFor(player) {
+  return { name: player?.character?.name || null, guild: guildBadgeFor(player) };
+}
+
+/** Buff multipliers in effect for this player right now. Neutral (all 1) for guests and the guildless, so every call site can multiply unconditionally. */
+function guildMultipliersFor(player) {
+  if (!player?.accountId) return neutralGuildMultipliers();
+  return guildStore.multipliersFor(player.accountId);
+}
+
+/** Every connected socket whose account belongs to `guildId`. */
+function socketsInGuild(guildId) {
+  const out = [];
+  for (const [id, p] of players) {
+    if (!p.accountId) continue;
+    if (guildStore.byAccount(p.accountId)?.id === guildId) out.push({ socketId: id, player: p });
+  }
+  return out;
+}
+
+/**
+ * What one member is allowed to see and do. The permission map is resolved
+ * SERVER-side and sent along, so the client renders buttons off the same
+ * answer the handlers enforce with — a client that draws a Kick button it
+ * isn't allowed to use is just a confusing client.
+ */
+function guildStateFor(player) {
+  const guild = player?.accountId ? guildStore.byAccount(player.accountId) : null;
+  if (!guild) return { guild: null, myRankId: null, permissions: {}, canFound: !!player?.accountId };
+  const online = new Set(socketsInGuild(guild.id).map(({ player: p }) => p.accountId));
+  const permissions = Object.fromEntries(
+    GUILD_PERMISSION_IDS.map((p) => [p, guildHasPermission(guild, player.accountId, p)]),
+  );
+  return {
+    guild: {
+      id: guild.id,
+      name: guild.name,
+      logoUrl: guild.logoUrl,
+      motd: guild.motd,
+      createdAt: guild.createdAt,
+      leaderAccountId: guild.leaderAccountId,
+      ranks: guild.ranks,
+      members: guild.members.map((m) => ({ ...m, online: online.has(m.accountId) })),
+      bank: guild.bank,
+      activeBuffs: guild.activeBuffs,
+      maxMembers: MAX_GUILD_MEMBERS,
+    },
+    myAccountId: player.accountId,
+    myRankId: guildRankOf(guild, player.accountId)?.id || null,
+    permissions,
+    canFound: false,
+  };
+}
+/** Push fresh guild state to one socket. */
+function sendGuildState(socketId) {
+  const player = players.get(socketId);
+  if (!player) return;
+  io.sockets.sockets.get(socketId)?.emit('guild-state', { ...guildStateFor(player), buffCatalog: guildBuffCatalog });
+}
+
+/** Push fresh guild state to every online member of `guildId` — after any roster/rank/bank/buff change. */
+function broadcastGuildState(guildId) {
+  for (const { socketId } of socketsInGuild(guildId)) sendGuildState(socketId);
+}
+
+/**
+ * Tell everyone that this player's overhead badge changed (joined a guild,
+ * left one, new logo). Broadcast to all, not just nearby: a client keeps a
+ * mesh for every remote player it knows about, and "nearby" is its own
+ * distance culling problem, not a networking one.
+ */
+function broadcastGuildBadge(socketId) {
+  const player = players.get(socketId);
+  if (!player) return;
+  io.emit('player-guild', { id: socketId, ...nameplateFor(player) });
+}
+
+/** Re-badges every online member of a guild at once (logo change, rename, disband). */
+function broadcastGuildBadgesFor(guildId, extraSocketIds = []) {
+  for (const { socketId } of socketsInGuild(guildId)) broadcastGuildBadge(socketId);
+  for (const id of extraSocketIds) broadcastGuildBadge(id);
+}
+
+// Expired buffs are swept on a slow timer rather than only on read, so a
+// guild whose members are all offline doesn't come back next week still
+// showing a buff that ran out days ago.
+setInterval(() => {
+  for (const guildId of guildStore.sweepAllBuffs()) broadcastGuildState(guildId);
+}, 30_000);
+
 /** Members eligible to share a kill's rewards: the killer, plus same-location party members within range of the kill. */
 function killCreditRecipients(killerId, killerPlayer, monster) {
   const recipients = [{ id: killerId, player: killerPlayer }];
@@ -2321,7 +2601,7 @@ function applySkillEffect(target, effect, now, casterId, casterLevel, casterPosi
       const isPhysical = !effect.damageType || effect.damageType === 'physical';
       const statBonus = casterStats ? (isPhysical ? casterStats.physPower : casterStats.spellPower) * DAMAGE_STAT_COEFF : 0;
       const isCrit = !!casterStats && Math.random() < casterStats.critChance;
-      const rawDamage = (effect.amount * scale + statBonus) * (isCrit ? CRIT_DAMAGE_MULTIPLIER : 1);
+      const rawDamage = (effect.amount * scale + statBonus) * (isCrit ? CRIT_DAMAGE_MULTIPLIER : 1) * (casterStats?.damageMultiplier ?? 1);
       // Flat reduction from an active 'armor' buff (e.g. Shield Wall) before
       // shields get a chance to absorb the rest.
       const armor = getBuffAmount(target.statusEffects, 'armor', now);
@@ -2465,13 +2745,17 @@ function resolveAbilityEffect(attackerId, player, ability, targetId = null, cast
 function getPlayerDerivedStats(player) {
   const classId = player.character?.classId;
   if (!classId) {
-    return { raw: zeroStats(), maxHealthBonus: 0, maxManaBonus: 0, spellPower: 0, physPower: 0, healPower: 0, critChance: 0, dodgeChance: 0, hpRegen: 0, mpRegen: 0, physDefense: 0, magicResist: 0, maxHealth: player.maxHealth, maxResourceBonus: 0 };
+    return { raw: zeroStats(), maxHealthBonus: 0, maxManaBonus: 0, spellPower: 0, physPower: 0, healPower: 0, critChance: 0, dodgeChance: 0, hpRegen: 0, mpRegen: 0, physDefense: 0, magicResist: 0, maxHealth: player.maxHealth, maxResourceBonus: 0, damageMultiplier: 1 };
   }
   const now = Date.now();
   const buffStats = {};
   for (const stat of PRIMARY_STAT_IDS) buffStats[stat] = getBuffAmount(player.statusEffects, stat, now);
   const gearStats = computeGearStatBonus(player.equipment || initEquipmentState(), authoredItemById);
-  return computeCharacterDerivedStats(classId, player.level, player.allocatedStats, buffStats, gearStats);
+  // A guild 'damage' buff rides along on the derived-stat blob rather than
+  // being threaded through every applySkillEffect call site — it is the only
+  // multiplicative term in there, so it stays clearly separate from the
+  // additive stat bonuses.
+  return { ...computeCharacterDerivedStats(classId, player.level, player.allocatedStats, buffStats, gearStats), damageMultiplier: guildMultipliersFor(player).damage };
 }
 
 /** Passive HP_Regen (VIT-driven, spec Section 1.2) — this project had no passive out-of-combat health regen before the stat system; ticked alongside ability-resource regen in every player-movement loop below. */
@@ -2508,7 +2792,9 @@ function awardKill(killerId, killerPlayer, monster) {
 
 /** Grant one player XP + kill-quest progress for a kill, apply any level-ups (full heal + higher maxHealth), and notify their client. */
 function creditKill(socketId, player, monster) {
-  const amount = xpRewardForMonster(monster);
+  // A guild 'xp' buff scales the reward before it is granted, so the number
+  // the client is told it gained is the number it actually gained.
+  const amount = Math.round(xpRewardForMonster(monster) * guildMultipliersFor(player).xp);
   const { state, levelsGained } = grantXp({ level: player.level, xp: player.xp }, amount);
   player.level = state.level;
   player.xp = state.xp;
@@ -2631,7 +2917,15 @@ function sendQuestState(socket, player) {
 /** Grant a quest's rewards to a player (xp via the same path as kills, plus gold/items). */
 function grantQuestRewards(socketId, player, rewards) {
   if (!rewards) return;
-  if (rewards.gold) player.gold += rewards.gold;
+  // Guild 'gold'/'xp' buffs apply to quest rewards too — the reward the
+  // player is shown below is the multiplied one, not the catalog value.
+  const guildMults = guildMultipliersFor(player);
+  if (rewards.gold) {
+    rewards = { ...rewards, gold: Math.round(rewards.gold * guildMults.gold), xp: rewards.xp ? Math.round(rewards.xp * guildMults.xp) : rewards.xp };
+    player.gold += rewards.gold;
+  } else if (rewards.xp) {
+    rewards = { ...rewards, xp: Math.round(rewards.xp * guildMults.xp) };
+  }
   for (const item of rewards.items || []) {
     player.inventory[item.itemId] = (player.inventory[item.itemId] || 0) + item.qty;
   }
@@ -2661,7 +2955,9 @@ function applyDamageToPlayer(id, damage, damageType = 'physical') {
     ? Math.max(0, damage - derived.physDefense)
     : damage * (1 - derived.magicResist);
   const armor = getBuffAmount(player.statusEffects, 'armor', now);
-  const afterArmor = Math.max(0, gseReduced - armor);
+  // A guild 'defense' buff is the last reduction before shields, so it scales
+  // what actually got through armour rather than the raw swing.
+  const afterArmor = Math.max(0, gseReduced - armor) * guildMultipliersFor(player).defense;
   const { statusEffects, remainingDamage } = absorbDamage(player.statusEffects, afterArmor, now);
   player.statusEffects = statusEffects;
   player.health = Math.max(0, player.health - remainingDamage);
@@ -2767,7 +3063,7 @@ function respawnIfReady(id, player) {
     .filter(([pid, p]) => pid !== id && p.currentFloor === 0 && !p.mapId)
     .map(([pid, p]) => ({ id: pid, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
   socket.emit('player-respawned', { position: player.position, facing: TOWER_EXIT_FACING, existingPlayers });
-  socket.broadcast.emit('player-joined', { id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player) });
+  socket.broadcast.emit('player-joined', { id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player), guild: guildBadgeFor(player) });
 }
 
 function enterFloor(socket, player, floorNumber) {
@@ -2785,7 +3081,7 @@ function enterFloor(socket, player, floorNumber) {
 
   const existingFloorPlayers = [...players.entries()]
     .filter(([id, p]) => id !== socket.id && p.currentFloor === floorNumber)
-    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
 
   socket.emit('floor-entered', {
     floorNumber,
@@ -2800,6 +3096,7 @@ function enterFloor(socket, player, floorNumber) {
     position: player.position,
     character: player.character,
     equipmentLoadout: weaponLoadoutFor(player),
+    guild: guildBadgeFor(player),
   });
 }
 
@@ -2854,18 +3151,18 @@ function movePlayerToMap(socket, player, targetMapId, targetPosition, targetFaci
   if (targetIsDefault) {
     const existingPlayers = [...players.entries()]
       .filter(([id, p]) => id !== socket.id && p.currentFloor === 0 && !p.inStore && !p.mapId)
-      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
     socket.emit('map-entered', { mapId: targetMapId, world: targetEntry.world, position: player.position, facing: targetFacing, existingMapPlayers: existingPlayers, isDefaultOverworld: true });
-    socket.broadcast.emit('player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player) });
+    socket.broadcast.emit('player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player), guild: guildBadgeFor(player) });
     return;
   }
 
   socket.join(`map-${targetMapId}`);
   const existingMapPlayers = [...players.entries()]
     .filter(([id, p]) => id !== socket.id && p.mapId === targetMapId)
-    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
   socket.emit('map-entered', { mapId: targetMapId, world: targetEntry.world, position: player.position, facing: targetFacing, existingMapPlayers, isDefaultOverworld: false });
-  socket.to(`map-${targetMapId}`).emit('map-player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player) });
+  socket.to(`map-${targetMapId}`).emit('map-player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player), guild: guildBadgeFor(player) });
 }
 
 // --- Tower Dungeon runs (src/sim/towerDungeon.js) ---
@@ -2950,10 +3247,79 @@ function leaveTowerRun(socket, player) {
   movePlayerToMap(socket, player, defaultOverworldMapId, returnPosition, returnFacing);
 }
 
+// --- Saved progression (see server/accounts.js) ---
+//
+// A WHITELIST, deliberately, not a spread of the whole player object. That
+// object also holds live session state — socket rooms, party membership, the
+// dungeon instance you happen to be standing in, timed status effects — and
+// blindly round-tripping all of it through disk would restore you into a
+// dungeon that no longer exists, or with a stun that never expires.
+const PERSISTED_PLAYER_FIELDS = [
+  'level', 'xp',
+  'inventory', 'equipment', 'itemCharges',
+  'gold',
+  'questState', 'eventState', 'eventQuestLog',
+  'unassignedStatPoints', 'allocatedStats',
+  'professions',
+  'towerProgress',
+  // Which classes' starter equipment this account has already been given
+  // (grantStarterKit). Persisted specifically so logging back in doesn't hand
+  // out a second set of everything every single session.
+  'starterKitsGranted',
+];
+
+/**
+ * What to write to the account. Position is only saved when the player is
+ * standing somewhere that will still exist next time: a dungeon instance is
+ * party-scoped and torn down, and a tower floor is mid-run, so logging back
+ * into either would be meaningless (or a free skip).
+ *
+ * Health is NOT saved on purpose — 'set-character' heals to full on every
+ * connect, so persisting it would be a value that is always immediately
+ * overwritten. Logging in rested is also just the friendlier rule.
+ */
+function captureProgress(player) {
+  const progress = {};
+  for (const key of PERSISTED_PLAYER_FIELDS) progress[key] = player[key];
+  if (!player.mapId && !player.dungeonInstanceId && player.currentFloor === 0 && !player.inStore) {
+    progress.position = { ...player.position };
+    progress.facingAngle = player.facingAngle;
+  }
+  return progress;
+}
+
+/** Merges a saved blob back onto a freshly-built player. Unknown/missing keys just fall through to the defaults. */
+function applySavedProgress(player, progress) {
+  if (!progress) return;
+  for (const key of PERSISTED_PLAYER_FIELDS) {
+    if (progress[key] !== undefined && progress[key] !== null) player[key] = progress[key];
+  }
+  if (progress.position) player.position = { ...progress.position };
+  if (typeof progress.facingAngle === 'number') player.facingAngle = progress.facingAngle;
+  // `professions` is a whole-map overwrite above, so a save written before a
+  // new profession shipped would leave that profession absent entirely — not
+  // level 1, ABSENT — and resolveCraft reads `player.professions[prof]`
+  // directly and rejects every craft as 'level-too-low'. COOKING (added
+  // 2026-08-07) is the first case; back-filling any id in PROFESSIONS that
+  // the save doesn't mention makes the next one a no-op too.
+  player.professions = { ...initAllProfessions(PROFESSIONS), ...player.professions };
+}
+
+/** Writes a player's progression to their account, if they are signed in at all. Guests are ephemeral exactly as before. */
+function saveProgress(player) {
+  if (!player?.accountId) return;
+  accountStore.setProgress(player.accountId, captureProgress(player));
+}
+
 io.on('connection', (socket) => {
-  console.log(`[connect] ${socket.id}`);
+  // The client passes its session token through the socket handshake (see
+  // src/net/client.js). No token, or a stale one, means a guest: everything
+  // below behaves exactly as it always did, just without ever being saved.
+  const account = accountStore.resolveSession(socket.handshake.auth?.token);
+  console.log(`[connect] ${socket.id}${account ? ` as ${account.username}` : ' (guest)'}`);
 
   players.set(socket.id, {
+    accountId: account?.id ?? null,
     position: spawnPositionOf(world),
     input: { moveX: 0, moveZ: 0 },
     character: null,
@@ -2964,6 +3330,7 @@ io.on('connection', (socket) => {
     respawnAt: null,
     inventory: {}, // itemId -> quantity
     equipment: initEquipmentState(), // concrete slot -> equipped itemId|null (src/sim/equipment.js)
+    starterKitsGranted: [], // classIds whose starter equipment set has already been handed out — see grantStarterKit
     itemCharges: {}, // itemId -> charges remaining on the current stack, for authored consumables with usageConfig.mode==='charges'
     itemCooldowns: {}, // itemId -> ms timestamp when usable again, for authored consumables with usageConfig.cooldownSeconds
     gold: 20,
@@ -2978,7 +3345,7 @@ io.on('connection', (socket) => {
     statusEffects: [], // stun/freeze/sleep/slow/dot/hot/buff/shield — see src/sim/statusEffects.js
     facingAngle: spawnFacingOf(world), // radians, atan2(moveX,moveZ) convention — seeded from the map's authored spawn facing, then updated on real movement input (see the 'input' handler below)
     ...initStatAllocation(), // unassignedStatPoints, allocatedStats — see src/sim/statDefs.js
-    professions: initAllProfessions(PROFESSIONS), // {BLACKSMITHING:{level,xp}, ...} — see src/sim/professionLeveling.js. Eagerly initialized (not lazy) so the client can show all six bars from minute one.
+    professions: initAllProfessions(PROFESSIONS), // {BLACKSMITHING:{level,xp}, ...} — see src/sim/professionLeveling.js. Eagerly initialized (not lazy) so the client can show every profession's bar from minute one.
     activeCraftingStation: null, // set by the openCraftingStation event effect, cleared implicitly by opening a different one — see src/sim/craftResolution.js's canUseStationForRecipe
     // --- Tower Dungeon (src/sim/towerDungeon.js) ---
     towerProgress: initTowerProgress(), // towerId (the tower event object's id) -> {clearedFloors} — which floors this player may enter
@@ -2986,9 +3353,23 @@ io.on('connection', (socket) => {
     towerRun: null, // {eventId, floorIndex, kills, killedMonsterIds, cleared, returnPosition} while actually inside a floor; null in the overworld
   });
 
+  // Restore BEFORE the 'welcome' below, which snapshots inventory/gold/level/
+  // stats straight off the player — restoring after it would send the client a
+  // brand-new level-1 payload and only then quietly swap the server's copy.
+  //
+  // The character is restored too, not just the progression: 'set-character'
+  // treats a changed classId as a class re-pick and wipes allocated stat
+  // points. Coming back with `character: null` would look like a re-pick every
+  // single time and throw away the points that were just loaded.
+  if (account) {
+    const player = players.get(socket.id);
+    player.character = accountStore.getCharacter(account.id);
+    applySavedProgress(player, accountStore.getProgress(account.id));
+  }
+
   const existingPlayers = [...players.entries()]
     .filter(([id, p]) => id !== socket.id && p.currentFloor === 0 && !p.mapId)
-    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+    .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
 
   socket.emit('welcome', {
     id: socket.id,
@@ -3018,22 +3399,49 @@ io.on('connection', (socket) => {
     eventQuestLog: players.get(socket.id).eventQuestLog,
   });
 
+  // Guild state rides its own event rather than the welcome payload: it is
+  // re-pushed on every roster/rank/bank/buff change anyway, so having exactly
+  // one code path that produces it keeps the two from drifting.
+  sendGuildState(socket.id);
+
   socket.broadcast.emit('player-joined', {
     id: socket.id,
     position: players.get(socket.id).position,
-    character: null,
+    character: players.get(socket.id).character, // restored from the account above, if any — so their name/guild plate is right immediately rather than only after set-character
+    equipmentLoadout: weaponLoadoutFor(players.get(socket.id)),
+    guild: guildBadgeFor(players.get(socket.id)),
   });
 
   // Character appearance/class is cosmetic, not gameplay-authoritative, but
   // the server still relays it so every client sees the same thing — a
   // client should never push cosmetic state directly to other clients.
   // Setting a class also (re)initializes authoritative ability state.
-  socket.on('set-character', (character) => {
+  socket.on('set-character', (rawCharacter) => {
     const player = players.get(socket.id);
-    if (!player || !character || typeof character !== 'object') return;
+    if (!player || !rawCharacter || typeof rawCharacter !== 'object') return;
+    // The name is relayed to every other player in range, so it is sanitized
+    // here rather than trusted — the creation form's validation is a courtesy
+    // to the person typing, not a control on what reaches anyone else. An
+    // unacceptable name is dropped (the client then falls back to a generic
+    // label) instead of rejecting the whole character.
+    // A character is created once and cannot be changed afterwards. The saved
+    // one therefore wins over anything the client sends: a signed-in player's
+    // comes from their account, a guest's is whatever they first sent this
+    // session. Only the FIRST payload is taken at face value — later ones are
+    // ignored rather than rejected, so the class (re)init below still runs on
+    // every 'welcome' handshake exactly as it did before.
+    const saved = player.accountId ? accountStore.getCharacter(player.accountId) : (player.characterLocked ? player.character : null);
+    const source = saved || rawCharacter;
+    player.characterLocked = true;
+
+    const character = { ...source };
+    const cleanName = normalizeCharacterName(character.name);
+    character.name = validateCharacterName(cleanName) === null ? cleanName : undefined;
+
     const classChanged = player.character?.classId !== character.classId;
     player.character = character;
     if (character.classId) {
+      grantStarterKit(socket, player, character.classId);
       try {
         player.abilityState = initAbilityState(character.classId);
         // A (re)pick of class invalidates any previously-allocated stat
@@ -3057,7 +3465,13 @@ io.on('connection', (socket) => {
         // unknown classId — leave abilityState/health untouched rather than crash the connection
       }
     }
-    socket.broadcast.emit('player-character', { id: socket.id, character });
+    // A guild roster shows character names, so a rename has to reach it —
+    // otherwise the roster keeps showing whoever they used to be.
+    if (player.accountId) {
+      const touched = guildStore.touchMemberName(player.accountId, character.name);
+      if (touched) broadcastGuildState(touched.id);
+    }
+    socket.broadcast.emit('player-character', { id: socket.id, character, guild: guildBadgeFor(player) });
   });
 
   /**
@@ -3158,9 +3572,9 @@ io.on('connection', (socket) => {
     player.position = { ...TOWER_EXIT_POINT };
     const existingPlayers = [...players.entries()]
       .filter(([id, p]) => id !== socket.id && p.currentFloor === 0 && !p.mapId)
-      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
     socket.emit('floor-exited', { position: player.position, existingPlayers });
-    socket.broadcast.emit('player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player) });
+    socket.broadcast.emit('player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player), guild: guildBadgeFor(player) });
   });
 
 
@@ -3281,14 +3695,14 @@ io.on('connection', (socket) => {
 
     const existingStorePlayers = [...players.entries()]
       .filter(([id, p]) => id !== socket.id && p.inStore)
-      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
 
     socket.emit('store-entered', {
       interior: STORE_INTERIOR,
       position: player.position,
       existingStorePlayers,
     });
-    socket.to('store').emit('store-player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player) });
+    socket.to('store').emit('store-player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player), guild: guildBadgeFor(player) });
   });
 
   socket.on('exit-store', () => {
@@ -3302,9 +3716,9 @@ io.on('connection', (socket) => {
 
     const existingPlayers = [...players.entries()]
       .filter(([id, p]) => id !== socket.id && p.currentFloor === 0 && !p.inStore && !p.mapId)
-      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p) }));
+      .map(([id, p]) => ({ id, position: p.position, character: p.character, equipmentLoadout: weaponLoadoutFor(p), guild: guildBadgeFor(p) }));
     socket.emit('store-exited', { position: player.position, existingPlayers });
-    socket.broadcast.emit('player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player) });
+    socket.broadcast.emit('player-joined', { id: socket.id, position: player.position, character: player.character, equipmentLoadout: weaponLoadoutFor(player), guild: guildBadgeFor(player) });
   });
 
   // Generic teleporter use — the one mechanism behind building
@@ -3397,6 +3811,246 @@ io.on('connection', (socket) => {
   });
 
   socket.on('party-leave', () => removeFromParty(socket.id));
+
+  // --- Guilds ---
+  //
+  // Every handler here re-resolves the guild from the ACCOUNT rather than
+  // trusting a guildId off the wire, and every permission is checked in
+  // server/guilds.js rather than here — the client's `permissions` map only
+  // decides which buttons to draw.
+
+  /** Shared preamble: the signed-in player behind this socket, or null after telling them why not. */
+  function guildActor() {
+    const player = players.get(socket.id);
+    if (!player) return null;
+    if (!player.accountId) {
+      socket.emit('guild-error', { error: 'Guilds are tied to an account — sign in first.' });
+      return null;
+    }
+    return player;
+  }
+
+  /** Answer a store result: broadcast on success, surface the message on failure. */
+  function applyGuildResult(result, guildId, extraBadgeSocketIds = []) {
+    if (!result.ok) {
+      socket.emit('guild-error', { error: result.error });
+      return false;
+    }
+    broadcastGuildState(guildId);
+    broadcastGuildBadgesFor(guildId, extraBadgeSocketIds);
+    return true;
+  }
+
+  socket.on('guild-request', () => sendGuildState(socket.id));
+
+  socket.on('guild-create', ({ name } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const result = guildStore.create({ accountId: player.accountId, characterName: player.character?.name, name });
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    sendGuildState(socket.id);
+    broadcastGuildBadge(socket.id);
+  });
+
+  // Invite by CHARACTER NAME, not by proximity or socket id.
+  //
+  // Names identify exactly one account (server/accounts.js's setCharacter
+  // claims them case-insensitively), so this is the addressable, guild-shaped
+  // version of an invite: you type who you mean, wherever they are on the map.
+  // Only players currently ONLINE can be invited — the invite is a live
+  // prompt, and there is nowhere to deliver it to someone logged out.
+  socket.on('guild-invite', ({ name } = {}) => {
+    const inviter = guildActor();
+    if (!inviter) return;
+    const guild = guildStore.byAccount(inviter.accountId);
+    if (!guild) return socket.emit('guild-error', { error: 'You are not in a guild.' });
+    if (!guildHasPermission(guild, inviter.accountId, 'invite')) return socket.emit('guild-error', { error: 'Your rank cannot invite.' });
+    if (guild.members.length >= MAX_GUILD_MEMBERS) return socket.emit('guild-error', { error: 'Your guild is full.' });
+
+    const wanted = normalizeCharacterName(name).toLowerCase();
+    if (!wanted) return socket.emit('guild-error', { error: 'Type the name of the player to invite.' });
+
+    const matches = [...players.entries()]
+      .filter(([id, p]) => id !== socket.id && normalizeCharacterName(p.character?.name).toLowerCase() === wanted);
+    if (!matches.length) return socket.emit('guild-error', { error: `No one called "${normalizeCharacterName(name)}" is online right now.` });
+    // Names made before they were unique can still collide. Refusing is the
+    // only honest answer — picking one at random would invite a stranger.
+    if (matches.length > 1) return socket.emit('guild-error', { error: 'More than one player is using that name. Ask them to rename.' });
+
+    const [targetId, target] = matches[0];
+    if (!target.accountId) return socket.emit('guild-error', { error: 'That player is not signed in, so they cannot join a guild.' });
+    if (guildStore.byAccount(target.accountId)) return socket.emit('guild-error', { error: 'They are already in a guild.' });
+
+    pendingGuildInvites.set(targetId, { guildId: guild.id, inviterName: inviter.character?.name || 'A guild member', expiresAt: Date.now() + GUILD_INVITE_TTL_MS });
+    io.sockets.sockets.get(targetId)?.emit('guild-invite', {
+      guildId: guild.id,
+      guildName: guild.name,
+      logoUrl: guild.logoUrl,
+      inviterName: inviter.character?.name || 'A guild member',
+    });
+    socket.emit('guild-notice', { message: `Invite sent to ${target.character.name}.` });
+  });
+
+  socket.on('guild-invite-accept', () => {
+    const player = guildActor();
+    if (!player) return;
+    const invite = pendingGuildInvites.get(socket.id);
+    pendingGuildInvites.delete(socket.id);
+    if (!invite || invite.expiresAt < Date.now()) return socket.emit('guild-error', { error: 'That invite has expired.' });
+    const result = guildStore.addMember(invite.guildId, player.accountId, player.character?.name);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    broadcastGuildState(invite.guildId);
+    broadcastGuildBadge(socket.id);
+  });
+
+  socket.on('guild-invite-decline', () => pendingGuildInvites.delete(socket.id));
+
+  socket.on('guild-leave', () => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    const result = guildStore.removeMember(guild.id, player.accountId, player.accountId);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    sendGuildState(socket.id);
+    broadcastGuildState(guild.id);
+    broadcastGuildBadgesFor(guild.id, [socket.id]);
+  });
+
+  socket.on('guild-kick', ({ accountId } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    // Grab the kicked player's socket BEFORE the removal — afterwards
+    // socketsInGuild() no longer finds them, and their own client would never
+    // be told they'd been kicked.
+    const kickedSocketId = socketsInGuild(guild.id).find(({ player: p }) => p.accountId === accountId)?.socketId;
+    const result = guildStore.removeMember(guild.id, player.accountId, accountId);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    if (kickedSocketId) {
+      io.sockets.sockets.get(kickedSocketId)?.emit('guild-kicked', { guildName: guild.name });
+      sendGuildState(kickedSocketId);
+    }
+    broadcastGuildState(guild.id);
+    broadcastGuildBadgesFor(guild.id, kickedSocketId ? [kickedSocketId] : []);
+  });
+
+  socket.on('guild-set-rank', ({ accountId, rankId } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    applyGuildResult(guildStore.setRank(guild.id, player.accountId, accountId, rankId), guild.id);
+  });
+
+  socket.on('guild-transfer-leadership', ({ accountId } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    applyGuildResult(guildStore.transferLeadership(guild.id, player.accountId, accountId), guild.id);
+  });
+
+  socket.on('guild-set-ranks', ({ ranks } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    applyGuildResult(guildStore.setRanks(guild.id, player.accountId, ranks), guild.id);
+  });
+
+  socket.on('guild-set-logo', ({ logoUrl } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    applyGuildResult(guildStore.setLogo(guild.id, player.accountId, logoUrl), guild.id);
+  });
+
+  socket.on('guild-set-motd', ({ motd } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    applyGuildResult(guildStore.setMotd(guild.id, player.accountId, motd), guild.id);
+  });
+
+  // --- Guild bank ---
+  // Gold and items move between the PLAYER and the bank in one step, so a
+  // failure at either end leaves neither side changed: the store validates
+  // and mutates the guild, and only then is the player's own side adjusted.
+
+  socket.on('guild-bank-deposit-gold', ({ amount } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    const gold = Math.floor(Number(amount));
+    if (!Number.isFinite(gold) || gold <= 0) return socket.emit('guild-error', { error: 'Enter an amount above zero.' });
+    if (player.gold < gold) return socket.emit('guild-error', { error: 'You do not have that much gold.' });
+    const result = guildStore.depositGold(guild.id, player.accountId, gold, player.character?.name);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    player.gold -= gold;
+    socket.emit('guild-gold', { gold: player.gold });
+    broadcastGuildState(guild.id);
+  });
+
+  socket.on('guild-bank-withdraw-gold', ({ amount } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    const result = guildStore.withdrawGold(guild.id, player.accountId, amount, player.character?.name);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    player.gold += result.gold;
+    socket.emit('guild-gold', { gold: player.gold });
+    broadcastGuildState(guild.id);
+  });
+
+  socket.on('guild-bank-deposit-item', ({ itemId, quantity } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    const qty = Math.floor(Number(quantity));
+    if (!itemId || !Number.isFinite(qty) || qty <= 0) return socket.emit('guild-error', { error: 'Nothing to deposit.' });
+    if ((player.inventory[itemId] || 0) < qty) return socket.emit('guild-error', { error: 'You do not have that many.' });
+    const result = guildStore.depositItem(guild.id, player.accountId, itemId, qty, player.character?.name);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    const left = (player.inventory[itemId] || 0) - qty;
+    if (left > 0) player.inventory[itemId] = left;
+    else delete player.inventory[itemId];
+    socket.emit('guild-inventory', { inventory: player.inventory });
+    broadcastGuildState(guild.id);
+  });
+
+  socket.on('guild-bank-withdraw-item', ({ itemId, quantity } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    const result = guildStore.withdrawItem(guild.id, player.accountId, itemId, quantity, player.character?.name);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    player.inventory[result.itemId] = (player.inventory[result.itemId] || 0) + result.quantity;
+    socket.emit('guild-inventory', { inventory: player.inventory });
+    broadcastGuildState(guild.id);
+  });
+
+  socket.on('guild-buy-buff', ({ buffId } = {}) => {
+    const player = guildActor();
+    if (!player) return;
+    const guild = guildStore.byAccount(player.accountId);
+    if (!guild) return;
+    const def = guildBuffCatalog.find((b) => b.id === buffId);
+    if (!def) return socket.emit('guild-error', { error: 'That guild buff no longer exists.' });
+    const result = guildStore.purchaseBuff(guild.id, player.accountId, def, player.character?.name);
+    if (!result.ok) return socket.emit('guild-error', { error: result.error });
+    for (const { socketId } of socketsInGuild(guild.id)) {
+      io.sockets.sockets.get(socketId)?.emit('guild-buff-activated', { name: def.name, iconUrl: def.iconUrl, by: player.character?.name || 'A guild member' });
+    }
+    broadcastGuildState(guild.id);
+  });
 
   // --- Quests ---
   // Talking to an NPC: validates real proximity, advances any 'talk' quests
@@ -3611,7 +4265,7 @@ io.on('connection', (socket) => {
         socket.emit('craft-result', { ok: false, recipeId, reason: stationCheck.reason, craftedSoFar: i });
         return;
       }
-      const result = resolveCraft(player, recipe, rng);
+      const result = resolveCraft(player, recipe, rng, guildMultipliersFor(player).craftXp);
       if (!result.ok) {
         player.inventory = result.inventory || player.inventory;
         socket.emit('craft-result', { ok: false, recipeId, reason: result.reason, craftedSoFar: i, inventory: player.inventory });
@@ -3651,7 +4305,7 @@ io.on('connection', (socket) => {
     }
 
     player.inventory[itemId] = owned - quantity;
-    const earned = itemDef.sellPrice * quantity;
+    const earned = Math.round(itemDef.sellPrice * quantity * guildMultipliersFor(player).gold);
     player.gold += earned;
     socket.emit('sell-result', { ok: true, itemId, quantity, earned, gold: player.gold, inventory: player.inventory });
   });
@@ -3816,8 +4470,14 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`[disconnect] ${socket.id}`);
+    // Save FIRST, while the player object is still intact — everything below
+    // this tears it down (party removal, room bookkeeping, players.delete).
+    saveProgress(players.get(socket.id));
     removeFromParty(socket.id); // promote/disband before the player object is gone
     pendingInvites.delete(socket.id);
+    pendingGuildInvites.delete(socket.id);
+    // Their guildmates' rosters show an online dot that just went out.
+    const leavingGuildId = players.get(socket.id)?.accountId ? guildStore.byAccount(players.get(socket.id).accountId)?.id : null;
     const player = players.get(socket.id);
     if (player && player.currentFloor !== 0) {
       socket.to(`floor-${player.currentFloor}`).emit('floor-player-left', { id: socket.id });
@@ -3841,6 +4501,7 @@ io.on('connection', (socket) => {
     // eventually, but there's no reason to leak a dead instance in the
     // meantime).
     if (leftDungeonInstanceId) closeDungeonInstanceIfEmpty(leftDungeonInstanceId);
+    if (leavingGuildId) broadcastGuildState(leavingGuildId);
     io.emit('player-left', { id: socket.id });
   });
 });
@@ -4204,6 +4865,15 @@ setInterval(() => {
     io.to(room).emit('map-state', { t: now, mapId: inst.mapId, players: playersInInstance, monsters: inst.monsters });
   }
 }, TICK_BUDGET_MS);
+
+// Autosave. Disconnect is the main save point, but it only fires on a clean
+// socket close — a killed tab, a crashed server or a dropped connection would
+// otherwise cost the player everything since they logged in. A whole minute of
+// lost progress is a bad hour; an entire session is a reason to stop playing.
+const AUTOSAVE_MS = 60_000;
+setInterval(() => {
+  for (const player of players.values()) saveProgress(player);
+}, AUTOSAVE_MS);
 
 // Node's default on an unhandled rejection (and, since v15, some uncaught
 // exceptions) is to KILL THE PROCESS. On a dev server with no auto-restart

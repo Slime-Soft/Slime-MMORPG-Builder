@@ -5666,7 +5666,34 @@ document.getElementById('save-item-btn').addEventListener('click', async () => {
   }
 
   const type = itemTypeEl.value;
+  // Fields this form does NOT own, carried across from the row being edited.
+  //
+  // The object below is built from scratch every save, which is correct for
+  // everything this form does own (an unchecked box must clear the field, not
+  // leave the old value behind) and destructive for everything it doesn't. The
+  // Equipment Builder (public/equipment.html) authors `appearance` — how the
+  // piece looks on a body — and `starterForClasses` on these same rows; without
+  // this, opening a piece here to tweak its sell price and hitting Save would
+  // quietly delete the model someone built for it.
+  //
+  // Deliberately an explicit list rather than a spread of the whole old row:
+  // a blanket `...existing` would resurrect fields the form intentionally
+  // cleared (a weaponTypeId left over from before the type was switched to
+  // armor, say), which is the opposite failure and a subtler one.
+  const existing = editingItemId ? itemCatalog.find((i) => i.id === editingItemId) : null;
+  const preserved = {};
+  // …and only while the item is still something that can be worn: changing a
+  // piece of armor into a consumable here would otherwise carry a model and a
+  // starter-kit flag onto it that the server's own validator rejects, failing
+  // the save with an error about a field this form never showed.
+  if (type === 'weapon' || type === 'armor') {
+    for (const key of ['appearance', 'starterForClasses']) {
+      if (existing?.[key] !== undefined) preserved[key] = existing[key];
+    }
+  }
+
   const item = {
+    ...preserved,
     id,
     name,
     type,

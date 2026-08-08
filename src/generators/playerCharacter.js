@@ -12,6 +12,7 @@
 import { buildCreatureRig } from './creatureRig.js';
 import { CHARACTER_PRESETS } from './characterPresets.js';
 import { ANIME_HAIR_SHAPES, ANIME_HAIR_STYLES } from './animeCharacter.js';
+import { mergeGearAppearances } from '../sim/gearVisuals.js';
 
 export const HAIR_STYLES = ['short', 'long', 'ponytail', 'spiky', 'bun', 'bald', ...ANIME_HAIR_STYLES];
 
@@ -183,7 +184,19 @@ export function applyAppearance(creatureType, appearance = {}) {
       }
     }
   }
-  return out;
+
+  // Worn equipment goes on LAST, deliberately.
+  //
+  // Everything above is the player's own body: their hair style replaces the
+  // preset's, their skin tone repaints every shape tintRoleOf calls skin.
+  // Merging gear before that would put a steel gauntlet through the skin-tone
+  // pass, and hiding a body shape before the hair swap would hide the OLD
+  // hair and let the new style straight through a closed helm.
+  //
+  // Empty/absent `gear` returns the body untouched, so an unequipped character
+  // (and every NPC, which never has any) goes down the exact same path it did
+  // before gear existed.
+  return mergeGearAppearances(out, appearance.gear);
 }
 
 /**
@@ -281,7 +294,11 @@ export function selectableBodies(catalog) {
 export function buildPlayerCharacter(catalog, classId, appearance) {
   const resolved = classBody(catalog, classId, appearance?.gender, appearance?.bodyId);
   const body = applyAppearance(resolved, appearance);
-  const { group } = buildCreatureRig(body);
+  // `weaponRender` is how the HELD weapon items look — their enchantment and
+  // their per-item grip nudge (src/sim/gearVisuals.js's weaponRenderLoadout).
+  // Neither can ride on the body the way worn gear's shapes do, because a
+  // weapon's mesh is procedural and has no authored shape to carry them.
+  const { group } = buildCreatureRig(body, { weaponRender: appearance?.weaponRender || null });
   // Keyed off the body that actually rendered, not the requested classId — a
   // Warrior wearing the adventurer body must skip the scale too.
   if (!GENDERED_BODY_IDS.has(resolved.id)) {

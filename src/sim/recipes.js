@@ -8,12 +8,20 @@
 // src/sim/lootTables.js already documents for the identical situation.
 
 /**
- * The six crafting professions. TAILORING (cloth) and LEATHERWORKING (hide)
+ * The seven crafting professions. TAILORING (cloth) and LEATHERWORKING (hide)
  * are deliberately SEPARATE professions with separate stations — an earlier
  * version folded both into a single "Loom & Tanning Rack" TAILORING entry,
  * which made leatherwork recipes unauthorable.
+ *
+ * COOKING was missing until 2026-08-07 even though its station prop
+ * ('station-campfire', "Campfire & Oven") and its cooking-house building had
+ * shipped long before — which meant a food recipe could not be authored and
+ * "Cooking" never appeared in the Recipe Builder's profession dropdown or the
+ * Events-mode station picker. Adding it here and adding
+ * STATION_CAMPFIRE_TIER_1 in craftingStations.js is the whole change: every
+ * consumer of this list is data-driven off it.
  */
-export const PROFESSIONS = ['BLACKSMITHING', 'WOODWORKING', 'TAILORING', 'LEATHERWORKING', 'JEWELCRAFTING', 'ALCHEMY'];
+export const PROFESSIONS = ['BLACKSMITHING', 'WOODWORKING', 'TAILORING', 'LEATHERWORKING', 'JEWELCRAFTING', 'ALCHEMY', 'COOKING'];
 
 export const FAIL_ACTIONS = ['DESTROY_ALL_MATERIALS', 'DESTROY_PERCENTAGE', 'KEEP_MATERIALS_LOSS_ENERGY'];
 

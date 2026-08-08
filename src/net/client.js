@@ -2,6 +2,7 @@
 // Talks to the Node.js server. Owns nothing authoritative — only forwards
 // input intent and reconciles local prediction against server state.
 import { stepMovement } from '../sim/movement.js';
+import { getToken } from '../web/auth.js';
 
 export class NetClient {
   /**
@@ -10,7 +11,10 @@ export class NetClient {
   constructor(handlers) {
     this.handlers = handlers;
     // `io` is provided globally by /socket.io/socket.io.js, served by the server.
-    this.socket = io();
+    // The session token rides along in the handshake so the server can load
+    // this player's saved progression instead of building a fresh level-1 one.
+    // No token = a guest, which still works, just without anything being saved.
+    this.socket = io({ auth: { token: getToken() || undefined } });
     this.socket.on('welcome', (msg) => this.handlers.onWelcome(msg));
     this.socket.on('state', (msg) => this.handlers.onState(msg));
     this.socket.on('player-joined', (msg) => this.handlers.onPlayerJoined(msg));
@@ -74,7 +78,41 @@ export class NetClient {
     this.socket.on('event-skill-learned', (msg) => this.handlers.onEventSkillLearned?.(msg));
     this.socket.on('stats-updated', (msg) => this.handlers.onStatsUpdated?.(msg));
     this.socket.on('stat-allocation-denied', (msg) => this.handlers.onStatAllocationDenied?.(msg));
+    // Guilds (server/guilds.js). 'guild-state' is the one full-state event —
+    // roster, ranks, bank, active buffs and this player's resolved
+    // permissions — re-pushed after every change rather than diffed.
+    this.socket.on('guild-state', (msg) => this.handlers.onGuildState?.(msg));
+    this.socket.on('guild-invite', (msg) => this.handlers.onGuildInvite?.(msg));
+    this.socket.on('guild-error', (msg) => this.handlers.onGuildError?.(msg));
+    this.socket.on('guild-notice', (msg) => this.handlers.onGuildNotice?.(msg));
+    this.socket.on('guild-kicked', (msg) => this.handlers.onGuildKicked?.(msg));
+    this.socket.on('guild-buff-activated', (msg) => this.handlers.onGuildBuffActivated?.(msg));
+    this.socket.on('guild-gold', (msg) => this.handlers.onGuildGold?.(msg));
+    this.socket.on('guild-inventory', (msg) => this.handlers.onGuildInventory?.(msg));
+    // Someone's overhead guild badge changed (founded/joined/left a guild, or
+    // uploaded a new logo) — nameplate-only, no gameplay state.
+    this.socket.on('player-guild', (msg) => this.handlers.onPlayerGuild?.(msg));
   }
+
+  // --- Guilds ---
+  requestGuild() { this.socket.emit('guild-request'); }
+  createGuild(name) { this.socket.emit('guild-create', { name }); }
+  /** @param {string} name the target's CHARACTER name — the server resolves it against online players and refuses ambiguous matches. */
+  inviteToGuild(name) { this.socket.emit('guild-invite', { name }); }
+  acceptGuildInvite() { this.socket.emit('guild-invite-accept'); }
+  declineGuildInvite() { this.socket.emit('guild-invite-decline'); }
+  leaveGuild() { this.socket.emit('guild-leave'); }
+  kickFromGuild(accountId) { this.socket.emit('guild-kick', { accountId }); }
+  setGuildRank(accountId, rankId) { this.socket.emit('guild-set-rank', { accountId, rankId }); }
+  transferGuildLeadership(accountId) { this.socket.emit('guild-transfer-leadership', { accountId }); }
+  saveGuildRanks(ranks) { this.socket.emit('guild-set-ranks', { ranks }); }
+  setGuildLogo(logoUrl) { this.socket.emit('guild-set-logo', { logoUrl }); }
+  setGuildMotd(motd) { this.socket.emit('guild-set-motd', { motd }); }
+  guildDepositGold(amount) { this.socket.emit('guild-bank-deposit-gold', { amount }); }
+  guildWithdrawGold(amount) { this.socket.emit('guild-bank-withdraw-gold', { amount }); }
+  guildDepositItem(itemId, quantity) { this.socket.emit('guild-bank-deposit-item', { itemId, quantity }); }
+  guildWithdrawItem(itemId, quantity) { this.socket.emit('guild-bank-withdraw-item', { itemId, quantity }); }
+  buyGuildBuff(buffId) { this.socket.emit('guild-buy-buff', { buffId }); }
 
   sendInput(input) {
     this.socket.emit('input', input);

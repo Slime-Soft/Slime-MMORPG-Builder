@@ -3,7 +3,7 @@
 // character-level curve (xpForLevel/initLevelState/grantXp), but a
 // deliberately separate instance: professions go to level 300 (spec's
 // section 6.2 example shows a level-182-of-300 Alchemy state) while
-// characters cap at 50 (leveling.js's MAX_LEVEL), and a player tracks SIX
+// characters cap at 50 (leveling.js's MAX_LEVEL), and a player tracks ALL
 // of these independently (one per PROFESSIONS entry in recipes.js), so
 // reusing leveling.js's single {level,xp} curve/state directly would be
 // wrong on both counts.
@@ -43,7 +43,7 @@ export function grantProfessionXp(state, amount) {
   return { state: { level, xp }, levelsGained };
 }
 
-/** A fresh {PROFESSION_ID: {level,xp}} map for a new player — every profession starts at level 1, so the UI can show all six bars from minute one instead of lazily creating them on first use. */
+/** A fresh {PROFESSION_ID: {level,xp}} map for a new player — every profession starts at level 1, so the UI can show every bar from minute one instead of lazily creating them on first use. */
 export function initAllProfessions(professionIds) {
   return Object.fromEntries(professionIds.map((id) => [id, initProfessionState()]));
 }

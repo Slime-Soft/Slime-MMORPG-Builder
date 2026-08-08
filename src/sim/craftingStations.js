@@ -38,6 +38,12 @@ export const CRAFTING_STATION_TYPES = {
   STATION_ALCHEMY_LAB_TIER_1: {
     id: 'STATION_ALCHEMY_LAB_TIER_1', name: 'Alchemy Lab', professions: ['ALCHEMY'], visualPropType: 'workstation-alchemy',
   },
+  // Cooking's station. The prop ('station-campfire', "Campfire & Oven")
+  // already existed and was placeable; it just had no station type pointing
+  // at it, so a placed campfire could not be turned into a working station.
+  STATION_CAMPFIRE_TIER_1: {
+    id: 'STATION_CAMPFIRE_TIER_1', name: 'Campfire & Oven', professions: ['COOKING'], visualPropType: 'station-campfire',
+  },
 };
 
 export const CRAFTING_STATION_TYPE_IDS = Object.keys(CRAFTING_STATION_TYPES);

@@ -7,11 +7,25 @@
 // the number of lights in the scene into every material's shader program, so
 // adding or removing one forces a recompile of every visible material — a
 // visible hitch, every single time a spell lands. The pool is created once,
-// on first use, and its lights are never added to or removed from the scene
-// afterwards; borrowing a light only changes its position, colour and
-// intensity, which are plain uniforms. That also puts a hard ceiling on how
-// much dynamic lighting a chaotic fight can cost, no matter how many effects
-// are on screen at once.
+// EAGERLY, in createVfxLightPool's body, and its lights are never added to or removed
+// from the scene afterwards; borrowing a light only changes its position,
+// colour and intensity, which are plain uniforms. That also puts a hard
+// ceiling on how much dynamic lighting a chaotic fight can cost, no matter
+// how many effects are on screen at once.
+//
+// Two rules keep that guarantee real — both were violated until 2026-08-07,
+// and together they were the whole of the "casting a spell for the first time
+// freezes for a moment" bug (measured: 250ms on the first light-using cast,
+// then 35-120ms on every later one):
+//
+// 1. **The pool is built eagerly, not on first use.** A lazy build meant the
+//    first spell that wanted a light added four PointLights to a fully-built
+//    scene at once, recompiling every material in the world.
+// 2. **`visible` is never toggled — idle means `intensity = 0`.** three.js's
+//    projectObject skips `visible === false` objects entirely, so an
+//    invisible light is an ABSENT light as far as the shader's baked light
+//    count is concerned; flipping it back on recompiles everything again.
+//    Same reasoning, and the same fix, as render/worldLights.js's unbind().
 //
 // Lights are the cheapest big win available for spell VFX: particles alone
 // never touch the world around them, so a fireball that doesn't light the
@@ -27,23 +41,22 @@ const DEFAULT_POOL_SIZE = 4;
 export function createVfxLightPool(scene, { size = DEFAULT_POOL_SIZE } = {}) {
   /** @type {Array<{light: THREE.PointLight, mode: 'idle'|'flash'|'hold', age: number, life: number, peak: number, follow: THREE.Object3D|null, offsetY: number, token: object|null}>} */
   const slots = [];
-  let built = false;
 
-  function build() {
-    if (built) return;
-    built = true;
-    for (let i = 0; i < size; i++) {
-      const light = new THREE.PointLight(0xffffff, 0, 10, 2);
-      light.castShadow = false; // shadow-casting point lights are 6 render passes each — never worth it for a 0.2s flash
-      light.visible = false;
-      scene.add(light);
-      slots.push({ light, mode: 'idle', age: 0, life: 0, peak: 0, follow: null, offsetY: 0, token: null });
-    }
+  // Built right here, at scene-setup time, rather than on the first claim() —
+  // see the header. The scene's light count must be final BEFORE the world's
+  // materials compile, or the first spell to want a light recompiles all of
+  // them.
+  for (let i = 0; i < size; i++) {
+    const light = new THREE.PointLight(0xffffff, 0, 10, 2);
+    light.castShadow = false; // shadow-casting point lights are 6 render passes each — never worth it for a 0.2s flash
+    // Stays visible for the process's whole life; `intensity: 0` above is what
+    // "idle" means here. See release().
+    scene.add(light);
+    slots.push({ light, mode: 'idle', age: 0, life: 0, peak: 0, follow: null, offsetY: 0, token: null });
   }
 
   /** An idle slot if one exists; otherwise the busiest-but-weakest one, so a big explosion can steal a light from a guttering ember rather than being ignored. */
   function claim() {
-    build();
     let fallback = null;
     let fallbackScore = Infinity;
     for (const slot of slots) {
@@ -63,7 +76,8 @@ export function createVfxLightPool(scene, { size = DEFAULT_POOL_SIZE } = {}) {
     slot.mode = 'idle';
     slot.follow = null;
     slot.token = null;
-    slot.light.visible = false;
+    // NOT `visible = false` — that changes the compiled light count and costs
+    // a full material recompile. Zero intensity is free.
     slot.light.intensity = 0;
   }
 
@@ -85,7 +99,6 @@ export function createVfxLightPool(scene, { size = DEFAULT_POOL_SIZE } = {}) {
     slot.light.distance = spec.distance ?? 10;
     slot.light.position.set(position.x, position.y, position.z);
     slot.light.intensity = slot.peak;
-    slot.light.visible = true;
   }
 
   /**
@@ -110,7 +123,6 @@ export function createVfxLightPool(scene, { size = DEFAULT_POOL_SIZE } = {}) {
     slot.light.color.set(spec.color ?? 0xffffff);
     slot.light.distance = spec.distance ?? 8;
     slot.light.intensity = slot.peak;
-    slot.light.visible = true;
     return () => {
       if (slot.token === token) release(slot);
     };
@@ -153,7 +165,6 @@ export function createVfxLightPool(scene, { size = DEFAULT_POOL_SIZE } = {}) {
       slot.light.dispose?.();
     }
     slots.length = 0;
-    built = false;
   }
 
   return { flash, attach, update, dispose };

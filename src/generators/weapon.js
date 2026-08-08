@@ -24,6 +24,7 @@
 import * as THREE from 'three';
 import { getWeaponTypeDef } from '../sim/weaponTypes.js';
 import { buildModelPlaceholder } from './modelLoader.js';
+import { buildWeaponEnchant } from './weaponEnchant.js';
 
 function metalMat(color = 0xc9c9d0) {
   return new THREE.MeshStandardMaterial({ color, metalness: 0.6, roughness: 0.35 });
@@ -288,7 +289,12 @@ const BUILDERS = {
  * Build one weapon's mesh, already positioned by its grip transform so the
  * caller can parent it straight onto a hand attach point.
  * @param {string} weaponTypeId
- * @param {{tint?: number}} [options] tint recolors a staff orb / wand gem
+ * @param {{tint?: number, glow?: import('../sim/gearVisuals.js').GearGlow|null, gripOffset?: object}} [options]
+ *   `tint` recolors a staff orb / wand gem. `glow` is the enchantment on the
+ *   equipment item being held — it lights the metal and hangs a particle cloud
+ *   off the blade (src/generators/weaponEnchant.js). `gripOffset` is a
+ *   per-ITEM nudge on top of the weapon type's own grip, authored in the
+ *   Equipment Builder; see applyGripOffset.
  * @returns {THREE.Group|null} null for an unknown id
  */
 export function generateWeapon(weaponTypeId, options = {}) {
@@ -317,6 +323,59 @@ export function generateWeapon(weaponTypeId, options = {}) {
     (rotationDeg.y * Math.PI) / 180,
     (rotationDeg.z * Math.PI) / 180
   );
+  applyGripOffset(mesh, options.gripOffset);
   mesh.userData.weaponTypeId = weaponTypeId;
+
+  if (options.glow && options.glow.mode !== 'none') {
+    // Two halves, and they do different jobs. The emissive lights the METAL —
+    // without it an enchanted blade is a dark blade with sparks near it. The
+    // particle cloud is the enchantment itself.
+    const glowColor = new THREE.Color(options.glow.color ?? 0xffffff);
+    mesh.traverse((o) => {
+      if (!o.isMesh) return;
+      // Cloned, never mutated in place: metalMat()/woodMat() build a fresh
+      // material per weapon so this is safe either way today, but a shared
+      // material is exactly the sort of optimisation that gets introduced
+      // later, and it would then light every unenchanted sword in the world.
+      o.material = o.material.clone();
+      o.material.emissive = glowColor.clone();
+      o.material.emissiveIntensity = options.glow.intensity ?? 0.7;
+    });
+    const enchant = buildWeaponEnchant(mesh, options.glow);
+    if (enchant) mesh.userData.weaponEnchant = enchant;
+  }
   return mesh;
+}
+
+/**
+ * A per-ITEM adjustment on top of the weapon TYPE's grip (src/sim/weaponTypes.js).
+ *
+ * The type's grip is shared by every sword in the game and is guarded to stay
+ * a nudge (`npm run check:prefabs` fails a grip offset over 0.05) — it decides
+ * how a fist closes around a hilt, and it must not become a per-item dumping
+ * ground. But an authored item legitimately wants its own small tweak: an
+ * oversized ceremonial blade that needs a touch more lean to clear the floor,
+ * a shield canted differently on the arm. That lives on the item, is applied
+ * here on top, and is deliberately outside the prefab guard's scope — nothing
+ * here can change how the six shipped weapon types sit for everyone.
+ *
+ * `scale` multiplies the whole weapon, which is the honest way to make a
+ * "greater" version of an existing type without a second mesh.
+ *
+ * @param {THREE.Group} mesh
+ * @param {{position?:{x,y,z}, rotationDeg?:{x,y,z}, scale?:number}} [offset]
+ */
+function applyGripOffset(mesh, offset) {
+  if (!offset) return;
+  const p = offset.position;
+  if (p) mesh.position.set(mesh.position.x + (p.x || 0), mesh.position.y + (p.y || 0), mesh.position.z + (p.z || 0));
+  const r = offset.rotationDeg;
+  if (r) {
+    mesh.rotation.set(
+      mesh.rotation.x + ((r.x || 0) * Math.PI) / 180,
+      mesh.rotation.y + ((r.y || 0) * Math.PI) / 180,
+      mesh.rotation.z + ((r.z || 0) * Math.PI) / 180,
+    );
+  }
+  if (offset.scale && offset.scale > 0) mesh.scale.multiplyScalar(offset.scale);
 }

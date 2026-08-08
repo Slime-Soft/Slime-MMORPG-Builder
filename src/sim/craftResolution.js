@@ -43,10 +43,14 @@ export function canUseStationForRecipe(player, recipe, stationTypeDefs) {
  * @param {{inventory:Object<string,number>, professions:Object<string,{level,xp}>}} player
  * @param {import('./recipes.js').RecipeDef} recipe
  * @param {() => number} rng
+ * @param {number} [xpMultiplier=1] scales the profession XP this craft awards
+ *   (a guild 'craftXp' buff — see src/sim/guilds.js). Only the XP is scaled:
+ *   reagents, yields and crit chance are untouched, so a buff can never
+ *   change what a craft physically produces.
  * @returns {{ok:true, inventory, professions, crit:boolean, outputItemId:string, yieldQty:number, xpGained:number, levelsGained:number}
  *         | {ok:false, reason:'level-too-low'|'insufficient-reagents'|'craft-failed', inventory?}}
  */
-export function resolveCraft(player, recipe, rng) {
+export function resolveCraft(player, recipe, rng, xpMultiplier = 1) {
   if (typeof rng !== 'function') throw new Error('resolveCraft requires an rng (see src/sim/rng.js)');
 
   const profState = player.professions[recipe.profession];
@@ -89,10 +93,11 @@ export function resolveCraft(player, recipe, rng) {
   }
   inventory[outputItemId] = (inventory[outputItemId] || 0) + yieldQty;
 
-  const { state: newProfState, levelsGained } = grantProfessionXp(profState, recipe.expReward);
+  const xpGained = Math.round(recipe.expReward * (Number(xpMultiplier) || 1));
+  const { state: newProfState, levelsGained } = grantProfessionXp(profState, xpGained);
   const professions = { ...player.professions, [recipe.profession]: newProfState };
 
   return {
-    ok: true, inventory, professions, crit, outputItemId, yieldQty, xpGained: recipe.expReward, levelsGained,
+    ok: true, inventory, professions, crit, outputItemId, yieldQty, xpGained, levelsGained,
   };
 }

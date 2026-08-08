@@ -78,6 +78,8 @@ export function buildCreatureRig(creatureType, options = {}) {
   const group = new THREE.Group();
   const rig = {};
   const hands = {};
+  /** Every held weapon's enchantment particle cloud, collected as it's built so the per-frame pass (src/render/scene.js's updateWalkCycle) doesn't have to traverse the whole mesh hunting for them. */
+  const weaponEnchants = [];
 
   for (const slot of creatureType.slots) {
     const pivot = new THREE.Group();
@@ -110,10 +112,27 @@ export function buildCreatureRig(creatureType, options = {}) {
   }
 
   const loadout = options.weapon ?? creatureType.equipment ?? {};
-  attachWeapons(rig, hands, loadout.mainHand ?? null, loadout.offHand ?? null);
+  attachWeapons(rig, hands, loadout.mainHand ?? null, loadout.offHand ?? null, {
+    // A held weapon's enchantment and grip nudge can't ride on a shape the way
+    // worn gear's geometry does — its mesh is procedural
+    // (src/generators/weapon.js), not authored — so they travel separately,
+    // from the equipped item down through here.
+    // src/sim/gearVisuals.js's weaponRenderLoadout is what produces this.
+    render: options.weaponRender ?? null,
+  });
 
   applyCreatureShadowFlags(group);
+  // Collected AFTER applyCreatureShadowFlags, which only ever touches meshes —
+  // an enchantment is a THREE.Points, so it is untouched either way, and this
+  // ordering keeps the "creatures cast, never receive" rule that function
+  // documents a single unqualified statement.
+  for (const hand of Object.values(hands)) {
+    for (const weapon of hand.children) {
+      if (weapon.userData?.weaponEnchant) weaponEnchants.push(weapon.userData.weaponEnchant);
+    }
+  }
 
+  group.userData.weaponEnchants = weaponEnchants;
   group.userData.rig = rig;
   group.userData.hands = hands;
   group.userData.gaitTable = resolveGaitTable(creatureType);
@@ -173,18 +192,23 @@ function applyCreatureShadowFlags(root) {
  * @param {Record<string, THREE.Group>} hands
  * @param {string|null} mainHandId
  * @param {string|null} offHandId
- * @param {{tint?: number}} [options] recolors a staff orb / wand gem (a priest's
- *   staff glows gold where a mage's glows violet)
+ * @param {{tint?: number, render?: {mainHand?:object, offHand?:object}}} [options]
+ *   `tint` recolors a staff orb / wand gem (a priest's staff glows gold where a
+ *   mage's glows violet). `render` carries the per-HAND equipment appearance
+ *   (src/sim/gearVisuals.js's weaponRenderLoadout): the enchantment glow and
+ *   the item's own grip nudge, which differ between the two hands whenever the
+ *   two weapons are different items.
  */
 export function attachWeapons(rig, hands, mainHandId, offHandId, options = {}) {
   for (const hand of Object.values(hands)) hand.clear();
 
-  for (const id of [mainHandId, offHandId]) {
+  for (const [handSlot, id] of [['mainHand', mainHandId], ['offHand', offHandId]]) {
     const def = id && getWeaponTypeDef(id);
     if (!def) continue;
     const hand = hands[handForWeapon(def)];
     if (!hand) continue; // this body has no such arm
-    const mesh = generateWeapon(id, options);
+    const render = options.render?.[handSlot] || {};
+    const mesh = generateWeapon(id, { tint: options.tint, glow: render.glow, gripOffset: render.gripOffset });
     if (mesh) hand.add(mesh);
   }
 

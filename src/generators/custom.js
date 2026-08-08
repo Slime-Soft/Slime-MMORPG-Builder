@@ -114,8 +114,20 @@ function faceMaterials(shapeDef, base) {
 export function buildShapeMesh(shapeDef) {
   const geometry = geometryForKind(shapeDef.kind, shapeDef);
   const opacity = shapeDef.opacity ?? 1;
+  // emissive/metalness/roughness arrived with equipment gear
+  // (src/sim/gearVisuals.js): a glowing rune on a chestplate and a polished
+  // pauldron are the same shape descriptor with different material fields, and
+  // authoring them as material properties means gear goes through this one
+  // mesh builder like everything else instead of needing its own. Undefined on
+  // every pre-existing shape, so nothing else changes — note `emissive`
+  // deliberately falls back to BLACK (Three's own default, i.e. no glow)
+  // rather than to `color`, or every prop in the game would start glowing.
   const material = new THREE.MeshStandardMaterial({
     color: shapeDef.color ?? 0xcccccc,
+    emissive: shapeDef.emissive ?? 0x000000,
+    emissiveIntensity: shapeDef.emissiveIntensity ?? 1,
+    ...(shapeDef.metalness !== undefined ? { metalness: shapeDef.metalness } : {}),
+    ...(shapeDef.roughness !== undefined ? { roughness: shapeDef.roughness } : {}),
     transparent: opacity < 1,
     opacity,
   });

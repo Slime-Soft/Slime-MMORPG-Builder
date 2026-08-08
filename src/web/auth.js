@@ -79,6 +79,38 @@ export async function logout() {
   }
 }
 
+/** The character saved against the signed-in account, or null. Never throws — a signed-out or offline caller just gets null and falls back to local storage. */
+export async function fetchAccountCharacter() {
+  if (!getToken()) return null;
+  try {
+    const response = await fetch('/api/account/character', { headers: authHeader() });
+    if (!response.ok) return null;
+    return (await response.json()).character || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Saves the character against the signed-in account. Returns whether it actually stuck, so callers can tell the player if it did not. */
+export async function saveAccountCharacter(character) {
+  if (!getToken()) return { ok: true }; // signed out: localStorage is the whole story, so there is nothing to fail
+  try {
+    const response = await fetch('/api/account/character', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ character }),
+    });
+    // The reason matters now, not just success: the server rejects a name
+    // another account already holds, and the creation form has to be able to
+    // say so instead of navigating away as though it had saved.
+    if (response.ok) return { ok: true };
+    const data = await response.json().catch(() => ({}));
+    return { ok: false, error: data.error || 'Could not save your character.', field: data.field || null };
+  } catch {
+    return { ok: false, error: 'Could not reach the server.' };
+  }
+}
+
 /** The signed-in account, or null. An expired/absent token is a normal null here, never a throw. */
 export async function currentUser() {
   if (!getToken()) return null;

@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createPostProcessing } from './render/postProcessing.js';
 import { defaultGraphicsSettings, playerCameraOf, PLAYER_CAMERA_DEFAULTS } from './sim/graphicsSettings.js';
-import { createRenderer, createScene, createCamera, buildWorldMeshes, buildFloorMeshes, buildStoreInteriorMeshes, buildPlayerMesh, buildMonsterMesh, buildNameLabel, buildQuestIndicatorSprite, updateQuestIndicatorSprite, triggerAbilityAnimation, updateAbilityAnimations, buildMonsterHealthBar, updateMonsterHealthBar, buildGatheringNodeMarker, setGatheringNodeDepleted, updateWalkCycle, toonify, applyColorTint, setCharacterTypes, updateWaterTime, renderUiOverlay } from './render/scene.js';
+import { createRenderer, createScene, createCamera, buildWorldMeshes, buildFloorMeshes, buildStoreInteriorMeshes, buildPlayerMesh, buildMonsterMesh, buildNameLabel, buildPlayerNameplate, disposeNameplate, buildQuestIndicatorSprite, updateQuestIndicatorSprite, triggerAbilityAnimation, updateAbilityAnimations, buildMonsterHealthBar, updateMonsterHealthBar, buildGatheringNodeMarker, setGatheringNodeDepleted, updateWalkCycle, toonify, applyColorTint, setCharacterTypes, updateWaterTime, renderUiOverlay } from './render/scene.js';
 import { createVfxSystem, registerCustomVfxDefs } from './render/vfx/index.js';
 import { NetClient, PredictedPlayer } from './net/client.js';
 import { parseWorld, sampleTerrainHeight } from './sim/world.js';
@@ -40,7 +40,10 @@ import { effectiveRankForLevel } from './sim/skillDefs.js';
 import { isCCd, getMoveSpeedMultiplier } from './sim/statusEffects.js';
 import { loadFloraPlugins } from './generators/pluginLoader.js';
 import { EQUIP_SLOT_IDS, initEquipmentState, baseSlotFor, equipmentToWeaponLoadout } from './sim/equipment.js';
+import { wornGearVisuals, weaponRenderLoadout } from './sim/gearVisuals.js';
 import { buildPlayerCharacter } from './generators/playerCharacter.js';
+import { resolveCharacter } from './web/character.js';
+import { displayName } from './web/characterName.js';
 
 // Zero-edit flora/decor props (src/generators/environment/plugins/) —
 // registers each one before the world below is fetched/built, so a placed
@@ -48,7 +51,10 @@ import { buildPlayerCharacter } from './generators/playerCharacter.js';
 // src/editor/main.js for the matching World Editor hookup.
 await loadFloraPlugins();
 
-const myCharacter = JSON.parse(localStorage.getItem('fantasy-mmo-character') || 'null');
+// Signed in, this comes from the ACCOUNT (so it follows you across browsers);
+// signed out, it falls back to this browser's localStorage exactly as before.
+// See src/web/character.js.
+const myCharacter = await resolveCharacter();
 if (!myCharacter) {
   window.location.href = '/character-creation.html';
   throw new Error('No character found — redirecting to character creation.');
@@ -66,16 +72,48 @@ if (!myCharacter) {
 // fetch fails — matches this file's existing fetch-catalog idiom.
 const skillsPromise = fetch('/api/skills')
   .then((r) => r.json())
-  .then((s) => { setSkillCatalog(s); return s; })
+  .then((s) => { setSkillCatalog(s); preloadAbilitySounds(s); return s; })
   .catch(() => []);
+
+// Cast sounds, fetched and decoded up front rather than on the first cast.
+// `new Audio(url).play()` at cast time starts a cold network request and an
+// audio-decode for a file the player has never heard, which is the audible
+// half of the "first cast hitches" problem (the visible half was the VFX
+// light pool — see render/vfx/lights.js). One primed element per URL, cloned
+// per playback so two casts of the same skill can overlap.
+/** @type {Map<string, HTMLAudioElement>} soundUrl -> a loaded, never-played template element */
+const abilitySoundCache = new Map();
+
+function preloadAbilitySounds(skills) {
+  for (const skill of skills) {
+    if (!skill.soundUrl || abilitySoundCache.has(skill.soundUrl)) continue;
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio.src = skill.soundUrl;
+    audio.load();
+    abilitySoundCache.set(skill.soundUrl, audio);
+  }
+}
+
+/** Plays a cast sound from the warmed cache, falling back to a cold Audio for anything not in the catalog at load time. */
+function playAbilitySound(url) {
+  const cached = abilitySoundCache.get(url);
+  const audio = cached ? /** @type {HTMLAudioElement} */ (cached.cloneNode()) : new Audio(url);
+  audio.play().catch(() => {});
+}
 
 const objectDefsPromise = fetch('/api/objects').then((r) => r.json()).catch(() => []);
 // Editor-authored gear/quest/consumable catalog (src/sim/authoredItems.js) —
 // getItemDef only knows the hardcoded materials in src/sim/items.js, so an
 // authored item (a loot drop, a merchant's stock) needs this lookup to show
 // a real name/icon instead of its raw id.
+// Awaited in onWelcome, not merely kicked off: since the Equipment Builder an
+// item also carries how it LOOKS on a body (src/sim/gearVisuals.js), so this
+// catalog is now a prerequisite for building the player's mesh at all — not
+// just for labelling a toast. A mesh built before it lands would be a
+// stark-naked character that only dresses itself on the next equip.
 let authoredItemById = {};
-fetch('/api/items')
+const authoredItemsPromise = fetch('/api/items')
   .then((r) => r.json())
   .then((list) => { authoredItemById = Object.fromEntries(list.map((i) => [i.id, i])); })
   .catch(() => {});
@@ -302,8 +340,19 @@ let questTargetLookups = { monsterGroupById: new Map(), staticMonsterPosByGroup:
 // No text-input UI exists yet in the live game (chat is unbuilt), so unlike
 // the editor's isTypingInFormField() guard, there's nothing to protect
 // against here — 'M' is safe to bind directly.
+/**
+ * True while the player is typing into a form field. The game's hotkeys are
+ * bare letters (M, G, I, J...), so without this, naming a guild "Iron Wolves"
+ * would open the inventory on the I, toggle the guild panel on the second
+ * word, and walk the character across the map on the W.
+ */
+function isTypingInField() {
+  const el = document.activeElement;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+}
+
 window.addEventListener('keydown', (e) => {
-  if (e.code !== 'KeyM') return;
+  if (e.code !== 'KeyM' || isTypingInField()) return;
   toggleGameWindow('map');
 });
 
@@ -340,14 +389,58 @@ let lastCameraTargetPos = cameraControls.target.clone();
 const remoteMeshes = new Map();
 /** @type {Map<string, object>} id -> character (needed to resolve which class's ability animation to play) */
 const playerCharacters = new Map();
-/** @type {Map<string, {mainHand:string|null, offHand:string|null}>} id -> the weapon TYPE ids another player currently has equipped (src/sim/equipment.js's equipmentToWeaponLoadout, server-computed) — merged into their cosmetic character params so their mesh actually holds it, mirroring how the local player's own equipment panel preview already does. */
+/** @type {Map<string, {mainHand:string|null, offHand:string|null, slots:object}>} id -> another player's equipment as the server sees it: the weapon TYPE ids (src/sim/equipment.js's equipmentToWeaponLoadout) plus `slots`, the raw slot->itemId state that worn gear's visuals are resolved from. Merged into their cosmetic character params so their mesh holds the right weapon AND wears the right armor, mirroring the local player's own preview. */
 const otherPlayerWeaponLoadouts = new Map();
 
-/** Merges a remote player's currently-known weapon loadout onto their cosmetic character params for buildPlayerMesh — never mutates the stored character object. No-op (returns character as-is) if we don't know their loadout yet. */
+/** @type {Map<string, {id:string,name:string,logoUrl:string}|null>} id -> that player's guild badge, as the server reports it. `null` means "we know they have no guild"; absent means "we haven't been told yet". */
+const playerGuilds = new Map();
+
+/**
+ * (Re)builds the overhead plate — character name plus guild name/logo — on a
+ * remote player's mesh, replacing whatever plate it already had.
+ *
+ * A player's plate is rebuilt rather than mutated whenever their name or
+ * guild changes (see buildPlayerNameplate), and their MESH is itself rebuilt
+ * on every cosmetic/gear change, so this runs on a fresh mesh far more often
+ * than it runs on a change of name — which is why it takes the mesh rather
+ * than looking one up.
+ */
+function attachPlayerNameplate(id, mesh) {
+  if (!mesh) return;
+  const existing = mesh.userData.nameplate;
+  if (existing) {
+    mesh.remove(existing);
+    disposeNameplate(existing);
+  }
+  const plate = buildPlayerNameplate({ name: playerCharacters.get(id)?.name, guild: playerGuilds.get(id) });
+  mesh.add(plate);
+  mesh.userData.nameplate = plate;
+}
+
+/** Merges a remote player's currently-known equipment onto their cosmetic character params for buildPlayerMesh — never mutates the stored character object. No-op (returns character as-is) if we don't know their loadout yet. */
 function withWeaponLoadout(id, character) {
   const loadout = otherPlayerWeaponLoadouts.get(id);
   if (!loadout) return character;
-  return { ...character, equipmentOverride: loadout };
+  return { ...character, equipmentOverride: loadout, ...gearVisualParams(loadout.slots) };
+}
+
+/**
+ * The two appearance fields that turn an EquipmentState into a LOOK: the worn
+ * pieces' authored shapes, and how the held weapons render (enchantment and
+ * per-item grip nudge). Both resolve item ids against this client's own
+ * /api/items catalog.
+ *
+ * One helper for the local player, remote players and the equipment panel's
+ * preview alike — three call sites that must agree, since they render the same
+ * character and any disagreement shows up as gear that appears in the preview
+ * and not in the world.
+ */
+function gearVisualParams(equipmentState) {
+  if (!equipmentState) return {};
+  return {
+    gear: wornGearVisuals(equipmentState, authoredItemById),
+    weaponRender: weaponRenderLoadout(equipmentState, authoredItemById),
+  };
 }
 let localMesh = null;
 let localId = null;
@@ -911,9 +1004,25 @@ const equipmentGridEl = document.getElementById('equipment-grid');
 const equipmentStatsEl = document.getElementById('equipment-stats-readout');
 let equipmentPanelOpen = false;
 
-/** The local player's own cosmetic character params, with their currently-equipped weapon merged in — so the player sees their own held weapon on their in-world body, not just in the Equipment panel's separate preview. */
+/** The local player's own cosmetic character params, with their currently-equipped weapon AND worn gear merged in — so the player sees their own held weapon and armor on their in-world body, not just in the Equipment panel's separate preview. */
 function localCharacterWithLoadout() {
-  return { ...myCharacter, equipmentOverride: equipmentToWeaponLoadout(equipment, authoredItemById) };
+  return {
+    ...myCharacter,
+    equipmentOverride: equipmentToWeaponLoadout(equipment, authoredItemById),
+    ...gearVisualParams(equipment),
+  };
+}
+
+/**
+ * (Re)builds the local player's OWN overhead plate. They never appear in
+ * remoteMeshes — a client doesn't network itself to itself — so joining or
+ * leaving a guild has to re-plate localMesh explicitly, or you'd be the one
+ * player who can't see their own guild tag.
+ */
+function refreshLocalNameplate() {
+  if (!localMesh) return;
+  playerCharacters.set(localId, myCharacter);
+  attachPlayerNameplate(localId, localMesh);
 }
 
 /** Rebuilds the local player's in-world mesh in place after an equip/unequip — mirrors onPlayerCharacter's remote-rebuild pattern, since a weapon can't hot-swap onto an already-built rig. */
@@ -925,6 +1034,7 @@ function rebuildLocalMesh() {
   localMesh.rotation.copy(old.rotation);
   scene.remove(old);
   scene.add(localMesh);
+  refreshLocalNameplate(); // the plate was a child of the mesh that just got thrown away
 }
 
 const EQUIP_SLOT_LABELS = {
@@ -1004,11 +1114,11 @@ function refreshEquipmentStatsReadout() {
 
 // --- 3D preview: reuses the exact character-creation.html pattern (own
 // isolated Scene/Camera/Renderer, buildPlayerCharacter, drag/auto-rotate)
-// scaled down to panel size. equipmentOverride reflects whatever's actually
-// in mainHand/offHand right now, so equipping a weapon genuinely changes
-// what's held here — cosmetic slots (armor) don't change the model yet,
-// since no gear-visual-rendering pipeline exists (see the item-builder
-// plan doc's "still open" section) — only the weapon loadout is wired.
+// scaled down to panel size. It's fed by localCharacterWithLoadout(), the same
+// params the in-world body is built from, so equipping anything with a visual —
+// a weapon in the hand, an armor piece authored in the Equipment Builder
+// (src/sim/gearVisuals.js), an enchantment glow on either — changes this
+// preview and the character walking around outside identically.
 let equipPreviewRenderer = null, equipPreviewScene = null, equipPreviewCamera = null, equipPreviewMesh = null;
 let equipPreviewRotY = 0, equipPreviewDragging = false, equipPreviewLastX = 0, equipPreviewAutoRotate = true;
 
@@ -1038,8 +1148,7 @@ function ensureEquipPreview() {
 function rebuildEquipPreview() {
   ensureEquipPreview();
   if (equipPreviewMesh) equipPreviewScene.remove(equipPreviewMesh);
-  const loadout = equipmentToWeaponLoadout(equipment, authoredItemById);
-  equipPreviewMesh = buildPlayerCharacter(characterTypeCatalog, myCharacter.classId, { ...myCharacter, equipmentOverride: loadout });
+  equipPreviewMesh = buildPlayerCharacter(characterTypeCatalog, myCharacter.classId, localCharacterWithLoadout());
   equipPreviewMesh.rotation.y = equipPreviewRotY;
   equipPreviewScene.add(equipPreviewMesh);
 }
@@ -1058,6 +1167,11 @@ function animateEquipPreview() {
     equipPreviewRotY += 0.006;
     equipPreviewMesh.rotation.y = equipPreviewRotY;
   }
+  // Idle-ticked so an enchantment's glow breathes here too — updateWalkCycle
+  // owns the aura animation (see updateGearAuras there), and a preview that
+  // held a dead-still glow would misrepresent what the piece looks like in
+  // the world, which is the whole point of previewing it.
+  if (equipPreviewMesh) updateWalkCycle(equipPreviewMesh, false, performance.now() / 1000, 1 / 60);
   equipPreviewRenderer.render(equipPreviewScene, equipPreviewCamera);
 }
 
@@ -1591,6 +1705,466 @@ function findNearestRemotePlayer() {
 
 document.getElementById('party-leave-btn').addEventListener('click', () => net.leaveParty());
 
+// --- Guilds -----------------------------------------------------------------
+//
+// One panel, five tabs, all rendered from the single 'guild-state' payload the
+// server pushes after every change. Nothing here decides what a player is
+// ALLOWED to do — `guildState.permissions` is resolved server-side and every
+// handler re-checks it — this only decides what to draw.
+const guildPanelEl = document.getElementById('guild-panel');
+const guildBodyEl = document.getElementById('guild-body');
+const guildErrorEl = document.getElementById('guild-error');
+const guildInvitePromptEl = document.getElementById('guild-invite-prompt');
+const guildBuffBannerEl = document.getElementById('guild-buff-banner');
+
+let guildPanelOpen = false;
+let guildTab = 'roster';
+/** Last 'guild-state' payload: { guild, permissions, myAccountId, myRankId, canFound, buffCatalog }. */
+let guildState = { guild: null, permissions: {}, canFound: false, buffCatalog: [] };
+/** Working copy of the rank table while the Ranks tab is open — edits are local until "Save ranks", so a half-typed rank name never reaches the server. */
+let guildRankDraft = null;
+
+/** Permission ids -> the label the Ranks tab shows. Mirrors src/sim/guilds.js's GUILD_PERMISSIONS, kept as a plain table here so the game client doesn't import the sim module just for prose. */
+const GUILD_PERMISSION_LABELS = {
+  invite: 'Invite members',
+  kick: 'Kick members',
+  promote: 'Change ranks',
+  editRanks: 'Edit ranks',
+  bankDeposit: 'Bank: deposit',
+  bankWithdraw: 'Bank: withdraw',
+  buyBuffs: 'Buy guild buffs',
+  editGuild: 'Edit guild',
+};
+
+const GUILD_EFFECT_LABELS = { xp: 'XP', craftXp: 'Crafting XP', damage: 'Damage', defense: 'Damage reduction', gold: 'Gold' };
+
+/** HTML-escapes anything player-authored (guild names, member names, MOTDs) before it goes near innerHTML. */
+function esc(text) {
+  return String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/** "1h 12m" / "4m 30s" — buff timers, which people read as "is it worth re-buying yet". */
+function formatGuildDuration(ms) {
+  if (ms <= 0) return 'expired';
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const sec = totalSeconds % 60;
+  if (h) return `${h}h ${m}m`;
+  if (m) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+/** The panel's one status line. `tone` only colours it — 'ok' for confirmations (invite sent), the default for refusals. */
+function showGuildError(text, tone = 'error') {
+  guildErrorEl.textContent = text || '';
+  guildErrorEl.classList.toggle('ok', tone === 'ok');
+}
+
+function openGuildPanel() {
+  guildPanelOpen = true;
+  guildPanelEl.style.display = 'block';
+  net?.requestGuild(); // a guildmate may have changed things since the last push
+  refreshGuildPanel();
+}
+
+function closeGuildPanel() {
+  guildPanelOpen = false;
+  guildPanelEl.style.display = 'none';
+  guildRankDraft = null;
+  showGuildError('');
+}
+
+document.getElementById('close-guild').addEventListener('click', closeGuildPanel);
+
+function guildCrestHtml(guild, cls = 'guild-crest') {
+  return guild?.logoUrl
+    ? `<img class="${cls}" src="${esc(guild.logoUrl)}" alt="" />`
+    : `<div class="${cls} empty">🛡</div>`;
+}
+
+function refreshGuildPanel() {
+  if (!guildPanelOpen) return;
+  const { guild } = guildState;
+  if (!guild) {
+    guildBodyEl.innerHTML = `
+      <div class="guild-section-title">No guild</div>
+      <div class="guild-empty">${guildState.canFound
+        ? 'Found your own guild, or get an invite from someone already in one.'
+        : 'Guilds are tied to an account — sign in from the home page to join or found one.'}</div>
+      ${guildState.canFound ? `
+        <div class="guild-form">
+          <input type="text" id="guild-create-name" maxlength="24" placeholder="Guild name" />
+          <button class="rb-btn" data-act="create">Found guild</button>
+        </div>` : ''}`;
+    return;
+  }
+
+  const tabs = [['roster', 'Roster'], ['bank', 'Bank'], ['buffs', 'Buffs'], ['ranks', 'Ranks'], ['settings', 'Settings']];
+  guildBodyEl.innerHTML = `
+    <div class="guild-head">
+      ${guildCrestHtml(guild)}
+      <div class="guild-head-meta">
+        <div class="gh-name">${esc(guild.name)}</div>
+        <div class="gh-sub">${guild.members.length}/${guild.maxMembers} members · ${guild.bank.gold.toLocaleString()}g in the bank</div>
+        ${guild.motd ? `<div class="gh-sub">${esc(guild.motd)}</div>` : ''}
+      </div>
+    </div>
+    <div class="guild-tabs">
+      ${tabs.map(([id, label]) => `<button class="rb-btn${guildTab === id ? ' active' : ''}" data-tab="${id}">${label}</button>`).join('')}
+    </div>
+    ${renderGuildTab(guild)}`;
+}
+
+function renderGuildTab(guild) {
+  switch (guildTab) {
+    case 'bank': return renderGuildBankTab(guild);
+    case 'buffs': return renderGuildBuffsTab(guild);
+    case 'ranks': return renderGuildRanksTab(guild);
+    case 'settings': return renderGuildSettingsTab(guild);
+    default: return renderGuildRosterTab(guild);
+  }
+}
+
+function renderGuildRosterTab(guild) {
+  const { permissions, myAccountId } = guildState;
+  const ranks = [...guild.ranks].sort((a, b) => a.order - b.order);
+  const rankName = (id) => ranks.find((r) => r.id === id)?.name || '-';
+  const myOrder = ranks.find((r) => r.id === guildState.myRankId)?.order ?? Infinity;
+  const isLeader = guild.leaderAccountId === myAccountId;
+
+  const rows = [...guild.members]
+    // Highest rank first, then alphabetically — the roster reads as a chain
+    // of command rather than in join order.
+    .sort((a, b) => (ranks.findIndex((r) => r.id === a.rankId) - ranks.findIndex((r) => r.id === b.rankId)) || a.name.localeCompare(b.name))
+    .map((m) => {
+      const isMe = m.accountId === myAccountId;
+      const theirOrder = ranks.find((r) => r.id === m.rankId)?.order ?? Infinity;
+      // The server enforces "strictly below you" for both; drawing the
+      // control anyway would just be a button that always errors.
+      const canAct = !isMe && (isLeader || theirOrder > myOrder);
+      const rankCell = permissions.promote && canAct
+        ? `<select data-act="set-rank" data-account="${esc(m.accountId)}">
+             ${ranks.map((r) => `<option value="${esc(r.id)}"${r.id === m.rankId ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}
+           </select>`
+        : `<span class="gr-sub">${esc(rankName(m.rankId))}</span>`;
+      return `<div class="guild-row">
+        <span class="gr-dot${m.online ? ' online' : ''}"></span>
+        <div class="gr-main">
+          <div class="gr-name${m.online ? '' : ' offline'}">${esc(m.name)}${isMe ? ' (you)' : ''}${guild.leaderAccountId === m.accountId ? ' &#9733;' : ''}</div>
+          <div class="gr-sub">Contributed ${(m.contributedGold || 0).toLocaleString()}g</div>
+        </div>
+        ${rankCell}
+        ${isLeader && !isMe ? `<button class="rb-btn" data-act="make-leader" data-account="${esc(m.accountId)}">Make leader</button>` : ''}
+        ${permissions.kick && canAct ? `<button class="rb-btn rb-danger" data-act="kick" data-account="${esc(m.accountId)}">Kick</button>` : ''}
+      </div>`;
+    }).join('');
+
+  return `
+    ${permissions.invite ? `<div class="guild-form">
+      <input type="text" id="guild-invite-name" maxlength="20" placeholder="Player name" />
+      <button class="rb-btn" data-act="invite">Invite</button>
+      <span class="gr-sub">They have to be online.</span>
+    </div>` : ''}
+    <div class="guild-section-title">Members</div>
+    ${rows}`;
+}
+
+function renderGuildBankTab(guild) {
+  const { permissions } = guildState;
+  const bankItems = Object.entries(guild.bank.items || {});
+  const myItems = Object.entries(inventory).filter(([, qty]) => qty > 0);
+
+  const bankRows = bankItems.length
+    ? bankItems.map(([itemId, qty]) => `<div class="guild-row">
+          <div class="gr-main"><div class="gr-name">${esc(resolveItemDisplay(itemId).name)}</div><div class="gr-sub">x${qty}</div></div>
+          ${permissions.bankWithdraw ? `<input type="number" min="1" max="${qty}" value="1" data-qty-for="${esc(itemId)}" style="width:70px" />
+          <button class="rb-btn" data-act="withdraw-item" data-item="${esc(itemId)}">Take</button>` : ''}
+        </div>`).join('')
+    : '<div class="guild-empty">The vault is empty.</div>';
+
+  const myRows = myItems.length
+    ? myItems.map(([itemId, qty]) => `<div class="guild-row">
+          <div class="gr-main"><div class="gr-name">${esc(resolveItemDisplay(itemId).name)}</div><div class="gr-sub">x${qty}</div></div>
+          <input type="number" min="1" max="${qty}" value="1" data-my-qty-for="${esc(itemId)}" style="width:70px" />
+          <button class="rb-btn" data-act="deposit-item" data-item="${esc(itemId)}">Give</button>
+        </div>`).join('')
+    : '<div class="guild-empty">You are carrying nothing to deposit.</div>';
+
+  const log = (guild.bank.log || []).slice(0, 10).map((e) => {
+    const what = e.kind === 'buff'
+      ? `activated ${esc(e.buffName)} (${e.amount.toLocaleString()}g)`
+      : e.kind === 'deposit-gold' ? `deposited ${e.amount.toLocaleString()}g`
+      : e.kind === 'withdraw-gold' ? `withdrew ${e.amount.toLocaleString()}g`
+      : e.kind === 'deposit-item' ? `deposited ${e.amount}x ${esc(resolveItemDisplay(e.itemId).name)}`
+      : `withdrew ${e.amount}x ${esc(resolveItemDisplay(e.itemId).name)}`;
+    return `<div class="gr-sub">${esc(e.by)} ${what}</div>`;
+  }).join('') || '<div class="guild-empty">Nothing yet.</div>';
+
+  return `
+    <div class="guild-section-title">Treasury</div>
+    <div class="guild-bank-gold">${guild.bank.gold.toLocaleString()}g</div>
+    <div class="guild-form">
+      <input type="number" min="1" id="guild-gold-amount" placeholder="Amount" />
+      ${permissions.bankDeposit ? '<button class="rb-btn" data-act="deposit-gold">Deposit</button>' : ''}
+      ${permissions.bankWithdraw ? '<button class="rb-btn" data-act="withdraw-gold">Withdraw</button>' : ''}
+      <span class="gr-sub">You carry ${gold.toLocaleString()}g</span>
+    </div>
+    <div class="guild-section-title">Vault</div>
+    ${bankRows}
+    ${permissions.bankDeposit ? `<div class="guild-section-title">Your bags</div>${myRows}` : ''}
+    <div class="guild-section-title">Recent activity</div>
+    ${log}`;
+}
+
+function renderGuildBuffsTab(guild) {
+  const now = Date.now();
+  const active = (guild.activeBuffs || []).filter((b) => b.expiresAt > now);
+  const catalog = guildState.buffCatalog || [];
+
+  const effectLine = (effects) => (effects || [])
+    .map((e) => `${e.percent > 0 ? '+' : ''}${e.percent}% ${GUILD_EFFECT_LABELS[e.type] || e.type}`)
+    .join(' / ');
+
+  const activeHtml = active.length
+    ? `<div class="guild-grid">${active.map((b) => `
+        <div class="guild-buff-card active">
+          ${b.iconUrl ? `<img src="${esc(b.iconUrl)}" alt="" />` : '<div class="bi-fallback">&#10022;</div>'}
+          <div>
+            <div class="bc-name">${esc(b.name)}</div>
+            <div class="bc-effects">${esc(effectLine(b.effects))}</div>
+            <div class="bc-line">${formatGuildDuration(b.expiresAt - now)} left, bought by ${esc(b.purchasedBy || '?')}</div>
+          </div>
+        </div>`).join('')}</div>`
+    : '<div class="guild-empty">No guild buffs running.</div>';
+
+  const catalogHtml = catalog.length
+    ? `<div class="guild-grid">${catalog.map((b) => `
+        <div class="guild-buff-card">
+          ${b.iconUrl ? `<img src="${esc(b.iconUrl)}" alt="" />` : '<div class="bi-fallback">&#10022;</div>'}
+          <div>
+            <div class="bc-name">${esc(b.name)}</div>
+            <div class="bc-effects">${esc(effectLine(b.effects))}</div>
+            <div class="bc-line">${b.costGold.toLocaleString()}g for ${formatGuildDuration(b.durationMinutes * 60000)}</div>
+            ${b.description ? `<div class="bc-line">${esc(b.description)}</div>` : ''}
+            ${guildState.permissions.buyBuffs
+              ? `<button class="rb-btn" data-act="buy-buff" data-buff="${esc(b.id)}"${guild.bank.gold < b.costGold ? ' disabled' : ''}>${
+                  guild.bank.gold < b.costGold ? 'Bank too low' : (active.some((a) => a.buffId === b.id) ? 'Extend' : 'Activate')
+                }</button>`
+              : ''}
+          </div>
+        </div>`).join('')}</div>`
+    : '<div class="guild-empty">No guild buffs have been authored yet - build some in the Guild Buff Builder.</div>';
+
+  return `
+    <div class="guild-section-title">Active</div>
+    ${activeHtml}
+    <div class="guild-section-title">Available</div>
+    ${catalogHtml}`;
+}
+
+function renderGuildRanksTab(guild) {
+  if (!guildState.permissions.editRanks) {
+    return '<div class="guild-section-title">Ranks</div>' + [...guild.ranks].sort((a, b) => a.order - b.order).map((r) => `
+      <div class="guild-rank-block">
+        <div class="gr-name">${esc(r.name)}</div>
+        <div class="gr-sub">${Object.keys(GUILD_PERMISSION_LABELS).filter((p) => r.permissions[p]).map((p) => GUILD_PERMISSION_LABELS[p]).join(', ') || 'No permissions'}</div>
+      </div>`).join('');
+  }
+  // Edits accumulate in the draft and only reach the server on Save — the
+  // rank table is order-sensitive, so it is sent whole or not at all.
+  if (!guildRankDraft) guildRankDraft = JSON.parse(JSON.stringify([...guild.ranks].sort((a, b) => a.order - b.order)));
+
+  return `
+    <div class="guild-section-title">Ranks, highest first</div>
+    <div class="gr-sub">The top rank is the guild master's and always keeps every permission.</div>
+    ${guildRankDraft.map((r, i) => `
+      <div class="guild-rank-block">
+        <div class="grb-head">
+          <input type="text" maxlength="24" value="${esc(r.name)}" data-rank-name="${i}" />
+          <button class="rb-btn" data-act="rank-up" data-index="${i}"${i === 0 ? ' disabled' : ''}>&#8593;</button>
+          <button class="rb-btn" data-act="rank-down" data-index="${i}"${i === guildRankDraft.length - 1 ? ' disabled' : ''}>&#8595;</button>
+          <button class="rb-btn rb-danger" data-act="rank-delete" data-index="${i}"${i === 0 || guildRankDraft.length <= 1 ? ' disabled' : ''}>x</button>
+        </div>
+        ${i === 0
+          ? '<div class="gr-sub">All permissions.</div>'
+          : `<div class="guild-perm-grid">
+              ${Object.entries(GUILD_PERMISSION_LABELS).map(([id, label]) => `
+                <label><input type="checkbox" data-rank-perm="${i}" data-perm="${id}"${r.permissions[id] ? ' checked' : ''} />${label}</label>`).join('')}
+            </div>`}
+      </div>`).join('')}
+    <div class="guild-form">
+      <button class="rb-btn" data-act="rank-add">Add rank</button>
+      <button class="rb-btn" data-act="rank-save">Save ranks</button>
+      <button class="rb-btn" data-act="rank-revert">Revert</button>
+    </div>`;
+}
+
+function renderGuildSettingsTab(guild) {
+  const canEdit = guildState.permissions.editGuild;
+  return `
+    ${canEdit ? `
+      <div class="guild-section-title">Crest</div>
+      <div class="guild-form">
+        ${guildCrestHtml(guild)}
+        <input type="file" id="guild-logo-file" accept="image/*" />
+        ${guild.logoUrl ? '<button class="rb-btn rb-danger" data-act="clear-logo">Remove</button>' : ''}
+      </div>
+      <div class="gr-sub">Shown above every member's head. Up to 2MB; square images look best.</div>
+      <div class="guild-section-title">Message of the day</div>
+      <div class="guild-form">
+        <input type="text" id="guild-motd-input" maxlength="240" style="flex:1" value="${esc(guild.motd || '')}" placeholder="Raid at eight." />
+        <button class="rb-btn" data-act="save-motd">Save</button>
+      </div>` : ''}
+    <div class="guild-section-title">Danger zone</div>
+    <button class="rb-btn rb-danger" data-act="leave">Leave guild</button>
+    ${guild.leaderAccountId === guildState.myAccountId ? '<div class="gr-sub">As guild master you must pass leadership on before you can leave.</div>' : ''}`;
+}
+
+/** Reads a number out of one of the panel's inputs, defaulting to 0 so a blank box is simply rejected by the server's own "above zero" check. */
+function guildInputNumber(selector) {
+  return Math.floor(Number(guildBodyEl.querySelector(selector)?.value) || 0);
+}
+
+guildBodyEl.addEventListener('click', (e) => {
+  const tabBtn = e.target.closest('[data-tab]');
+  if (tabBtn) {
+    guildTab = tabBtn.dataset.tab;
+    guildRankDraft = null;
+    showGuildError('');
+    refreshGuildPanel();
+    return;
+  }
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const act = btn.dataset.act;
+  showGuildError('');
+
+  switch (act) {
+    case 'create':
+      net.createGuild(guildBodyEl.querySelector('#guild-create-name')?.value || '');
+      break;
+    case 'invite': {
+      const input = guildBodyEl.querySelector('#guild-invite-name');
+      const name = input?.value.trim();
+      if (!name) { showGuildError('Type the name of the player to invite.'); break; }
+      net.inviteToGuild(name);
+      if (input) input.value = '';
+      break;
+    }
+    case 'kick': net.kickFromGuild(btn.dataset.account); break;
+    case 'make-leader': net.transferGuildLeadership(btn.dataset.account); break;
+    case 'leave': net.leaveGuild(); break;
+    case 'deposit-gold': net.guildDepositGold(guildInputNumber('#guild-gold-amount')); break;
+    case 'withdraw-gold': net.guildWithdrawGold(guildInputNumber('#guild-gold-amount')); break;
+    case 'deposit-item':
+      net.guildDepositItem(btn.dataset.item, guildInputNumber(`[data-my-qty-for="${CSS.escape(btn.dataset.item)}"]`));
+      break;
+    case 'withdraw-item':
+      net.guildWithdrawItem(btn.dataset.item, guildInputNumber(`[data-qty-for="${CSS.escape(btn.dataset.item)}"]`));
+      break;
+    case 'buy-buff': net.buyGuildBuff(btn.dataset.buff); break;
+    case 'save-motd': net.setGuildMotd(guildBodyEl.querySelector('#guild-motd-input')?.value || ''); break;
+    case 'clear-logo': net.setGuildLogo(''); break;
+    case 'rank-add':
+      guildRankDraft.push({ id: `rank${guildRankDraft.length}${Math.random().toString(36).slice(2, 6)}`, name: 'New rank', order: guildRankDraft.length, permissions: {} });
+      refreshGuildPanel();
+      break;
+    case 'rank-up': {
+      const i = Number(btn.dataset.index);
+      [guildRankDraft[i - 1], guildRankDraft[i]] = [guildRankDraft[i], guildRankDraft[i - 1]];
+      refreshGuildPanel();
+      break;
+    }
+    case 'rank-down': {
+      const i = Number(btn.dataset.index);
+      [guildRankDraft[i + 1], guildRankDraft[i]] = [guildRankDraft[i], guildRankDraft[i + 1]];
+      refreshGuildPanel();
+      break;
+    }
+    case 'rank-delete':
+      guildRankDraft.splice(Number(btn.dataset.index), 1);
+      refreshGuildPanel();
+      break;
+    case 'rank-save':
+      net.saveGuildRanks(guildRankDraft.map((r, i) => ({ ...r, order: i })));
+      guildRankDraft = null;
+      break;
+    case 'rank-revert':
+      guildRankDraft = null;
+      refreshGuildPanel();
+      break;
+    default: break;
+  }
+});
+
+// Rank name/permission edits write straight into the draft, so a re-render
+// (triggered by a reorder, or by someone else's change arriving) doesn't throw
+// away what was typed.
+guildBodyEl.addEventListener('input', (e) => {
+  const nameIdx = e.target.dataset?.rankName;
+  if (nameIdx !== undefined && guildRankDraft) guildRankDraft[Number(nameIdx)].name = e.target.value;
+});
+
+guildBodyEl.addEventListener('change', (e) => {
+  const permIdx = e.target.dataset?.rankPerm;
+  if (permIdx !== undefined && guildRankDraft) {
+    guildRankDraft[Number(permIdx)].permissions[e.target.dataset.perm] = e.target.checked;
+    return;
+  }
+  const rankSelect = e.target.closest('select[data-act="set-rank"]');
+  if (rankSelect) {
+    net.setGuildRank(rankSelect.dataset.account, rankSelect.value);
+    return;
+  }
+  if (e.target.id === 'guild-logo-file') uploadGuildLogo(e.target.files?.[0]);
+});
+
+/** Uploads a crest, then points the guild at the URL the server hands back. Two steps on purpose: the upload route mints the path, and only paths it minted are accepted by 'guild-set-logo'. */
+async function uploadGuildLogo(file) {
+  if (!file) return;
+  showGuildError('Uploading crest...');
+  try {
+    const body = new FormData();
+    body.append('logo', file);
+    const res = await fetch('/api/guilds/logo', { method: 'POST', body });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    net.setGuildLogo(data.url);
+    showGuildError('');
+  } catch (err) {
+    showGuildError(err.message);
+  }
+}
+
+function showGuildInvitePrompt(invite) {
+  guildInvitePromptEl.innerHTML = `
+    ${invite.logoUrl ? `<img src="${esc(invite.logoUrl)}" alt="" />` : ''}
+    <div><b>${esc(invite.inviterName)}</b> invites you to <b>${esc(invite.guildName)}</b></div>
+    <div class="guild-form" style="justify-content:center">
+      <button class="rb-btn" data-guild-invite="accept">Accept</button>
+      <button class="rb-btn rb-danger" data-guild-invite="decline">Decline</button>
+    </div>`;
+  guildInvitePromptEl.style.display = 'block';
+}
+
+guildInvitePromptEl.addEventListener('click', (e) => {
+  const choice = e.target.closest('[data-guild-invite]')?.dataset.guildInvite;
+  if (!choice) return;
+  if (choice === 'accept') net.acceptGuildInvite();
+  else net.declineGuildInvite();
+  guildInvitePromptEl.style.display = 'none';
+});
+
+/** A short banner when a guildmate activates a buff — the panel may not be open, and a guild-wide XP boost starting is worth noticing. */
+function showGuildBuffBanner(text) {
+  guildBuffBannerEl.textContent = text;
+  guildBuffBannerEl.style.display = 'block';
+  clearTimeout(showGuildBuffBanner._timer);
+  showGuildBuffBanner._timer = setTimeout(() => { guildBuffBannerEl.style.display = 'none'; }, 5000);
+}
+
+
 function clearGroup(group) {
   while (group.children.length) group.remove(group.children[0]);
 }
@@ -1643,11 +2217,16 @@ function populateRemoteRoster(roster) {
   clearRemoteMeshes();
   for (const p of roster || []) {
     if (p.equipmentLoadout) otherPlayerWeaponLoadouts.set(p.id, p.equipmentLoadout);
+    // Character and guild first: attachPlayerNameplate reads both out of
+    // these maps, so recording them afterwards would build every plate in the
+    // roster nameless and guildless.
+    if (p.character) playerCharacters.set(p.id, p.character);
+    if (p.guild !== undefined) playerGuilds.set(p.id, p.guild);
     const mesh = buildPlayerMesh(withWeaponLoadout(p.id, p.character || { seed: hashStringToSeed(p.id), outfitColor: 0xc23b3b }));
     mesh.position.set(p.position.x, p.position.y, p.position.z);
     remoteMeshes.set(p.id, mesh);
+    attachPlayerNameplate(p.id, mesh);
     scene.add(mesh);
-    if (p.character) playerCharacters.set(p.id, p.character);
   }
 }
 
@@ -1733,7 +2312,7 @@ function applyRemotePosition(mesh, position) {
 }
 
 const keys = { w: false, a: false, s: false, d: false };
-window.addEventListener('keydown', (e) => setKey(e.code, true));
+window.addEventListener('keydown', (e) => { if (!isTypingInField()) setKey(e.code, true); });
 window.addEventListener('keyup', (e) => setKey(e.code, false));
 function setKey(code, val) {
   if (code === 'KeyW' || code === 'ArrowUp') keys.w = val;
@@ -1749,6 +2328,7 @@ function setKey(code, val) {
 // anything while grounded, so this doesn't need to be cleared every frame.
 let jumpQueued = false;
 window.addEventListener('keydown', (e) => {
+  if (isTypingInField()) return;
   if (e.code === 'Space' && !e.repeat) jumpQueued = true;
 });
 // Fix for the "character auto-moves and won't stop" bug: if the window loses
@@ -1905,8 +2485,12 @@ function monsterDisplayName(type) {
   return monsterTypesById[type]?.name || 'Monster';
 }
 function playerDisplayName(id) {
-  const classId = playerCharacters.get(id)?.classId;
-  return (classId && CLASSES[classId]?.name) || 'Player';
+  const character = playerCharacters.get(id);
+  // Their actual character name, when we have it — the target panel used to
+  // read "Warrior" for every warrior on the map, which is exactly as useful
+  // as no name at all now that plates overhead say who people are.
+  if (character?.name) return character.name;
+  return (character?.classId && CLASSES[character.classId]?.name) || 'Player';
 }
 
 /** Reflects currentTargetId's latest cached HP/name — call after every state
@@ -2080,7 +2664,7 @@ function nearbyMonstersForTabTarget() {
 }
 
 window.addEventListener('keydown', (e) => {
-  if (e.code !== 'Tab') return;
+  if (e.code !== 'Tab' || isTypingInField()) return;
   e.preventDefault(); // Tab would otherwise move focus off the page
   const list = nearbyMonstersForTabTarget();
   if (!list.length) return;
@@ -2093,6 +2677,7 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('keydown', (e) => {
   const key = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5, Digit6: 6, Digit7: 7, Digit8: 8 }[e.code];
+  if (isTypingInField()) return;
   if (!key || isDeadLocally || isCCd(localStatusEffects, Date.now())) return;
   const ability = abilitiesByKey.get(key);
   if (!ability) return;
@@ -2117,7 +2702,7 @@ const net = new NetClient({
     // Anisotropy must land before buildWorldMeshes creates any ground/path/
     // mountain textures — they read it at creation time (see renderSettings.js).
     setCurrentAnisotropy(activeGraphicsSettings.anisotropy);
-    await Promise.all([weaponTuningPromise, characterTypesPromise, vfxCatalogPromise]); // grips + bodies before any character mesh is built; custom VFX before any skill can be used
+    await Promise.all([weaponTuningPromise, characterTypesPromise, vfxCatalogPromise, authoredItemsPromise]); // grips + bodies + worn-gear visuals before any character mesh is built; custom VFX before any skill can be used
     objectDefsById = Object.fromEntries((await objectDefsPromise).map((o) => [o.id, o]));
     monsterTypesById = Object.fromEntries((await monsterTypeDefsPromise).map((mt) => [mt.id, mt]));
     buildingPartsById = Object.fromEntries((await buildingPartsPromise).map((p) => [p.id, p]));
@@ -2216,12 +2801,16 @@ const net = new NetClient({
     scene.add(localMesh);
     net.sendCharacter(myCharacter);
     playerCharacters.set(id, myCharacter);
+    refreshLocalNameplate();
 
     populateRemoteRoster(existingPlayers);
 
     predicted = new PredictedPlayer(position);
     const className = CLASS_META[myCharacter.classId]?.name || myCharacter.classId;
-    document.getElementById('status').textContent = `Connected as ${id.slice(0, 6)} — ${className}`;
+    // Your character's name, not the socket id. The socket id is regenerated on
+    // every connection, so this used to read as a different random player after
+    // every refresh. Characters made before names existed fall back.
+    document.getElementById('status').textContent = `${displayName(myCharacter)} — ${className}`;
   },
   onState: ({ players, monsters, npcs }) => {
     if (inTower || inStore) return; // irrelevant to the floor/store I'm currently in
@@ -2240,6 +2829,7 @@ const net = new NetClient({
       if (!mesh) {
         mesh = buildPlayerMesh({ seed: hashStringToSeed(p.id), outfitColor: 0xc23b3b });
         remoteMeshes.set(p.id, mesh);
+        attachPlayerNameplate(p.id, mesh);
         scene.add(mesh);
       }
       applyRemotePosition(mesh, p.position);
@@ -2310,17 +2900,20 @@ const net = new NetClient({
     }
     refreshTargetPanel();
   },
-  onPlayerJoined: ({ id, position, character, equipmentLoadout }) => {
+  onPlayerJoined: ({ id, position, character, equipmentLoadout, guild }) => {
     if (character) playerCharacters.set(id, character);
+    if (guild !== undefined) playerGuilds.set(id, guild);
     if (equipmentLoadout) otherPlayerWeaponLoadouts.set(id, equipmentLoadout);
     if (inTower || inStore || id === localId || remoteMeshes.has(id)) return;
     const mesh = buildPlayerMesh(withWeaponLoadout(id, character || { seed: hashStringToSeed(id), outfitColor: 0xc23b3b }));
     mesh.position.set(position.x, position.y, position.z);
     remoteMeshes.set(id, mesh);
+    attachPlayerNameplate(id, mesh);
     scene.add(mesh);
   },
-  onPlayerCharacter: ({ id, character }) => {
+  onPlayerCharacter: ({ id, character, guild }) => {
     playerCharacters.set(id, character);
+    if (guild !== undefined) playerGuilds.set(id, guild);
     if (inTower || inStore || id === localId) return;
     const old = remoteMeshes.get(id);
     const mesh = buildPlayerMesh(withWeaponLoadout(id, character));
@@ -2329,6 +2922,7 @@ const net = new NetClient({
       scene.remove(old);
     }
     remoteMeshes.set(id, mesh);
+    attachPlayerNameplate(id, mesh);
     scene.add(mesh);
   },
   // A live equip/unequip elsewhere — same rebuild-mesh-in-place pattern as
@@ -2344,10 +2938,12 @@ const net = new NetClient({
     mesh.rotation.copy(old.rotation);
     scene.remove(old);
     remoteMeshes.set(id, mesh);
+    attachPlayerNameplate(id, mesh);
     scene.add(mesh);
   },
   onPlayerLeft: ({ id }) => {
     playerCharacters.delete(id);
+    playerGuilds.delete(id);
     otherPlayerWeaponLoadouts.delete(id);
     if (inTower || inStore) return;
     const mesh = remoteMeshes.get(id);
@@ -2389,7 +2985,7 @@ const net = new NetClient({
       }
       triggerAbilityAnimation(scene, mesh, ability, vfxSystem, targetMesh ? targetMesh.position : null);
     }
-    if (ability.soundUrl) new Audio(ability.soundUrl).play().catch(() => {}); // every client hears it, same as the VFX above
+    if (ability.soundUrl) playAbilitySound(ability.soundUrl); // every client hears it, same as the VFX above
     if (id === localId) flashSlot(ability.key, 'flash-effect', ability.windupMs + ability.effectMs);
   },
   onMonsterAbilityUsed: ({ monsterId, abilityId }) => {
@@ -2463,6 +3059,7 @@ const net = new NetClient({
       if (!mesh) {
         mesh = buildPlayerMesh(withWeaponLoadout(p.id, playerCharacters.get(p.id) || { seed: hashStringToSeed(p.id), outfitColor: 0xc23b3b }));
         remoteMeshes.set(p.id, mesh);
+        attachPlayerNameplate(p.id, mesh);
         scene.add(mesh);
       }
       applyRemotePosition(mesh, p.position);
@@ -2491,6 +3088,7 @@ const net = new NetClient({
     const mesh = buildPlayerMesh(withWeaponLoadout(id, character || { seed: hashStringToSeed(id), outfitColor: 0xc23b3b }));
     mesh.position.set(position.x, position.y, position.z);
     remoteMeshes.set(id, mesh);
+    attachPlayerNameplate(id, mesh);
     scene.add(mesh);
   },
   onFloorPlayerLeft: ({ id }) => {
@@ -2551,6 +3149,7 @@ const net = new NetClient({
       if (!mesh) {
         mesh = buildPlayerMesh(withWeaponLoadout(p.id, playerCharacters.get(p.id) || { seed: hashStringToSeed(p.id), outfitColor: 0xc23b3b }));
         remoteMeshes.set(p.id, mesh);
+        attachPlayerNameplate(p.id, mesh);
         scene.add(mesh);
       }
       applyRemotePosition(mesh, p.position);
@@ -2562,6 +3161,7 @@ const net = new NetClient({
     const mesh = buildPlayerMesh(withWeaponLoadout(id, character || { seed: hashStringToSeed(id), outfitColor: 0xc23b3b }));
     mesh.position.set(position.x, position.y, position.z);
     remoteMeshes.set(id, mesh);
+    attachPlayerNameplate(id, mesh);
     scene.add(mesh);
   },
   onStorePlayerLeft: ({ id }) => {
@@ -2848,6 +3448,7 @@ const net = new NetClient({
       if (!mesh) {
         mesh = buildPlayerMesh(withWeaponLoadout(p.id, playerCharacters.get(p.id) || { seed: hashStringToSeed(p.id), outfitColor: 0xc23b3b }));
         remoteMeshes.set(p.id, mesh);
+        attachPlayerNameplate(p.id, mesh);
         scene.add(mesh);
       }
       applyRemotePosition(mesh, p.position);
@@ -2877,6 +3478,7 @@ const net = new NetClient({
     const mesh = buildPlayerMesh(withWeaponLoadout(id, character || { seed: hashStringToSeed(id), outfitColor: 0xc23b3b }));
     mesh.position.set(position.x, position.y, position.z);
     remoteMeshes.set(id, mesh);
+    attachPlayerNameplate(id, mesh);
     scene.add(mesh);
   },
   onMapPlayerLeft: ({ id }) => {
@@ -3003,8 +3605,15 @@ const net = new NetClient({
         refreshEquipmentStatsReadout();
         rebuildEquipPreview();
       }
-      const name = resolveItemDisplay(itemId).name;
-      showGatherToast(action === 'equip' ? `Equipped ${name}` : `Unequipped ${name}`);
+      // The starter kit (server/index.js's grantStarterKit) arrives on this
+      // same channel as one result covering six pieces at once, and has no
+      // single `itemId` to name — one summary line, not six phantom toasts.
+      if (action === 'starter-kit') {
+        showGatherToast('Starting gear equipped');
+      } else {
+        const name = resolveItemDisplay(itemId).name;
+        showGatherToast(action === 'equip' ? `Equipped ${name}` : `Unequipped ${name}`);
+      }
     } else {
       const messages = {
         'not-owned': "You don't have that.", 'unknown-item': 'Unknown item.', 'wrong-slot': "That doesn't go there.",
@@ -3026,6 +3635,41 @@ const net = new NetClient({
   onItemUseDenied: ({ itemId, reason }) => {
     const messages = { cooldown: 'Still on cooldown.' };
     showTransientMessage(messages[reason] || `Cannot use ${resolveItemDisplay(itemId).name} yet.`);
+  },
+  // --- Guilds ---
+  onGuildState: (state) => {
+    guildState = { ...state, buffCatalog: state.buffCatalog || guildState.buffCatalog || [] };
+    // A guild change also changes MY OWN overhead plate, and the local player
+    // draws from localMesh rather than remoteMeshes, so it is re-plated here
+    // rather than through the 'player-guild' broadcast (which the server does
+    // not send to the player it is about).
+    playerGuilds.set(localId, state.guild ? { id: state.guild.id, name: state.guild.name, logoUrl: state.guild.logoUrl } : null);
+    refreshLocalNameplate();
+    refreshGuildPanel();
+  },
+  onGuildInvite: (invite) => showGuildInvitePrompt(invite),
+  onGuildError: ({ error }) => {
+    if (guildPanelOpen) showGuildError(error);
+    else showTransientMessage(error);
+  },
+  onGuildNotice: ({ message }) => {
+    if (guildPanelOpen) showGuildError(message, 'ok');
+    else showTransientMessage(message);
+  },
+  onGuildKicked: ({ guildName }) => showTransientMessage(`You were removed from ${guildName}.`),
+  onGuildBuffActivated: ({ name, by }) => showGuildBuffBanner(`${by} activated ${name} for the guild`),
+  onGuildGold: ({ gold: newGold }) => { gold = newGold; refreshGoldUI(); refreshGuildPanel(); },
+  onGuildInventory: ({ inventory: serverInventory }) => {
+    for (const key of Object.keys(inventory)) delete inventory[key];
+    Object.assign(inventory, serverInventory);
+    syncInventoryUI();
+    refreshGuildPanel();
+  },
+  onPlayerGuild: ({ id, guild }) => {
+    playerGuilds.set(id, guild);
+    if (id === localId) { refreshLocalNameplate(); return; }
+    const mesh = remoteMeshes.get(id);
+    if (mesh) attachPlayerNameplate(id, mesh);
   },
   onStatsUpdated: ({ unassignedStatPoints: newPoints, allocatedStats: newAllocated, derived }) => {
     unassignedStatPoints = newPoints;
@@ -3131,6 +3775,7 @@ function showTransientMessage(text) {
 }
 
 window.addEventListener('keydown', (e) => {
+  if (isTypingInField()) return;
   if (e.code === 'KeyE') {
     // An event script's dialog is open — closing it always takes priority
     // over starting some OTHER interaction, and must not depend on the
@@ -3209,6 +3854,7 @@ window.addEventListener('keydown', (e) => {
     if (vendorPanelOpen) refreshVendorPanel();
   }
   if (e.code === 'KeyI') toggleGameWindow('inventory');
+  if (e.code === 'KeyG') toggleGameWindow('guild');
 });
 
 // --- Window bar (#window-bar in index.html) ---------------------------------
@@ -3245,6 +3891,10 @@ const WINDOW_TOGGLES = {
       if (statsPanelOpen) refreshStatsPanel();
     },
   },
+  guild: {
+    isOpen: () => guildPanelOpen,
+    toggle: () => (guildPanelOpen ? closeGuildPanel() : openGuildPanel()),
+  },
   map: {
     isOpen: () => minimapController.isFullMapOpen,
     toggle: () => minimapController.toggleFullMap(),
@@ -3269,6 +3919,11 @@ document.getElementById('window-bar').addEventListener('click', (e) => {
 // A panel's own X button (and every other close path) bypasses the table, so
 // the lit states are re-derived on a slow timer rather than only on click.
 setInterval(refreshWindowBar, 250);
+// The Buffs tab shows live countdowns, so it re-renders on a slow timer while
+// it's the visible tab. Every other tab is push-driven and needs no polling.
+setInterval(() => {
+  if (guildPanelOpen && guildTab === 'buffs') refreshGuildPanel();
+}, 1000);
 
 let lastInputSent = 0;
 let lastTime = performance.now();
@@ -3458,6 +4113,13 @@ function animate() {
   healthLabelEl.textContent = `HP ${Math.max(0, Math.round(healthUI.health))}/${healthUI.maxHealth}`;
   for (const [nodeId, mesh] of gatherNodeMeshes) {
     setGatheringNodeDepleted(mesh, (gatherNodeAvailableAt.get(nodeId) || 0) > Date.now());
+  }
+  // Remote players' plates cull at the same distance NPC plates do — without
+  // it a player across the map renders a full-size, fully readable name.
+  for (const mesh of remoteMeshes.values()) {
+    if (mesh.userData.nameplate) {
+      mesh.userData.nameplate.visible = camera.position.distanceTo(mesh.position) <= NAMEPLATE_MAX_DISTANCE;
+    }
   }
   for (const [npcId, mesh] of overworldNpcMeshes) {
     if (mesh.userData.questIndicator) {

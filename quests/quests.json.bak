@@ -71,5 +71,23 @@
       "xp": 50,
       "gold": 20
     }
+  },
+  {
+    "id": "golems",
+    "name": "Heart of Stone",
+    "description": "The Golems are usually our friends and help us in the mine, but ever since finding these cursed stones in the mines, they have gone crazy. We have no other choice but to destroy them.",
+    "giverNpcId": "npc-126130054",
+    "objective": {
+      "type": "kill",
+      "target": "golems",
+      "count": 10
+    },
+    "dialogActive": "Did you destroy the golems yet?",
+    "dialogReady": "Thank you, adventurer. It's a pity, but we have no other choice.",
+    "dialogComplete": "I hope the mines open soon again.",
+    "rewards": {
+      "xp": 50,
+      "gold": 20
+    }
   }
 ]

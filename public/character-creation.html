@@ -16,6 +16,13 @@
     p.sub { color: #999; font-size: 12px; margin: 0 0 16px; }
     label { display: block; font-size: 12px; color: #bbb; margin: 10px 0 4px; }
     select { width: 100%; background: #22222a; color: #eee; border: 1px solid #444; border-radius: 4px; padding: 6px; }
+    input[type="text"] {
+      width: 100%; box-sizing: border-box; background: #22222a; color: #eee;
+      border: 1px solid #444; border-radius: 4px; padding: 8px; font-size: 14px;
+    }
+    input[type="text"]:focus { outline: none; border-color: #3f88c5; box-shadow: 0 0 0 2px rgba(63,136,197,0.25); }
+    input[type="text"].invalid { border-color: #c65b2e; }
+    .field-error { min-height: 14px; margin: 4px 0 0; font-size: 11px; color: #e8927c; }
     .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
     .swatch {
       width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent;
@@ -56,6 +63,12 @@
   <div id="panel">
     <h1>Create Your Character</h1>
     <p class="sub">This is how you'll appear in the world.</p>
+
+    <h2>Name</h2>
+    <label for="char-name">Character name</label>
+    <input id="char-name" type="text" maxlength="20" autocomplete="off" spellcheck="false"
+           placeholder="Ashvale" />
+    <p id="name-error" class="field-error" role="alert"></p>
 
     <h2>Appearance</h2>
 

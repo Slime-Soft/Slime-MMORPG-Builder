@@ -1,0 +1,41 @@
+[
+  {
+    "id": "scholars-favor",
+    "name": "Scholar's Favour",
+    "description": "The guild pools its notes. Everyone learns faster.",
+    "iconUrl": "",
+    "costGold": 1500,
+    "durationMinutes": 120,
+    "effects": [{ "type": "xp", "percent": 15 }]
+  },
+  {
+    "id": "forgefire",
+    "name": "Forgefire",
+    "description": "The guild hall's forges burn hot for a while.",
+    "iconUrl": "",
+    "costGold": 1200,
+    "durationMinutes": 120,
+    "effects": [{ "type": "craftXp", "percent": 25 }]
+  },
+  {
+    "id": "war-banner",
+    "name": "War Banner",
+    "description": "The colours fly. Members hit harder and take less.",
+    "iconUrl": "",
+    "costGold": 3000,
+    "durationMinutes": 60,
+    "effects": [
+      { "type": "damage", "percent": 10 },
+      { "type": "defense", "percent": 5 }
+    ]
+  },
+  {
+    "id": "merchants-tongue",
+    "name": "Merchant's Tongue",
+    "description": "The guild's name opens purses. Better prices everywhere.",
+    "iconUrl": "",
+    "costGold": 900,
+    "durationMinutes": 180,
+    "effects": [{ "type": "gold", "percent": 20 }]
+  }
+]

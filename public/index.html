@@ -182,6 +182,83 @@
       position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%);
       border-radius: 8px; padding: 12px 18px; z-index: 13; display: none; font-size: 15px;
     }
+    /* --- Guilds --------------------------------------------------------
+       One panel with its own tab strip rather than five separate windows:
+       roster, bank, ranks and buffs are all "guild", and a player toggling
+       between them shouldn't be closing and reopening windows. */
+    #guild-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: min(760px, 94vw); max-height: 82vh; overflow-y: auto;
+      border-radius: 10px; padding: 16px 18px; z-index: 14; display: none; font-size: 14px;
+    }
+    #guild-panel h3 { margin: 0 0 4px; color: var(--rb-gold-bright, #f4d78a); font-size: 18px; }
+    #close-guild { position: absolute; top: 10px; right: 12px; padding: 2px 9px; }
+    .guild-head { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+    .guild-crest {
+      width: 64px; height: 64px; flex: none; object-fit: cover; border-radius: 8px;
+      border: 1px solid var(--rb-gold, #d9a441); background: rgba(0,0,0,0.35);
+    }
+    .guild-crest.empty { display: flex; align-items: center; justify-content: center; font-size: 26px; color: rgba(232,217,181,0.4); }
+    .guild-head-meta { min-width: 0; }
+    .guild-head-meta .gh-name { font-size: 20px; color: var(--rb-gold-bright, #f4d78a); }
+    .guild-head-meta .gh-sub { color: rgba(232,217,181,0.65); font-size: 13px; }
+    .guild-tabs { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
+    .guild-tabs button.active { border-color: var(--rb-gold-bright, #f4d78a); color: var(--rb-gold-bright, #f4d78a); }
+    .guild-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 4px; border-bottom: 1px solid rgba(217,164,65,0.18);
+    }
+    .guild-row .gr-main { flex: 1; min-width: 0; }
+    .guild-row .gr-name { color: var(--rb-parchment, #e8d9b5); }
+    .guild-row .gr-name.offline { opacity: 0.5; }
+    .guild-row .gr-sub { font-size: 12px; color: rgba(232,217,181,0.6); }
+    .guild-row .gr-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #4a5a4a; }
+    .guild-row .gr-dot.online { background: #7fd18a; box-shadow: 0 0 6px rgba(127,209,138,0.6); }
+    .guild-row select, .guild-row input { padding: 3px 5px; font-size: 12px; }
+    .guild-row button { padding: 3px 9px; font-size: 12px; }
+    .guild-section-title {
+      font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--rb-gold, #d9a441); margin: 14px 0 6px;
+    }
+    .guild-bank-gold { font-size: 22px; color: var(--rb-gold-bright, #f4d78a); }
+    .guild-form { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+    .guild-form input[type=text], .guild-form input[type=number] {
+      padding: 5px 7px; background: rgba(0,0,0,0.35); color: var(--rb-parchment, #e8d9b5);
+      border: 1px solid var(--rb-gold-dim, #8a6423); border-radius: 5px; font: inherit;
+    }
+    .guild-form input[type=number] { width: 110px; }
+    .guild-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+    .guild-buff-card {
+      border: 1px solid rgba(217,164,65,0.35); border-radius: 8px; padding: 9px 10px;
+      background: rgba(0,0,0,0.25); display: flex; gap: 9px;
+    }
+    .guild-buff-card.active { border-color: #7fd18a; }
+    .guild-buff-card img, .guild-buff-card .bi-fallback {
+      width: 40px; height: 40px; flex: none; border-radius: 6px; object-fit: cover;
+      background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .guild-buff-card .bc-name { color: var(--rb-gold-bright, #f4d78a); }
+    .guild-buff-card .bc-line { font-size: 12px; color: rgba(232,217,181,0.7); }
+    .guild-buff-card .bc-effects { font-size: 12px; color: #7fd18a; }
+    .guild-perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 10px; margin: 4px 0 0 0; }
+    .guild-perm-grid label { display: flex; gap: 5px; align-items: center; font-size: 12px; color: rgba(232,217,181,0.85); }
+    .guild-rank-block { border: 1px solid rgba(217,164,65,0.25); border-radius: 7px; padding: 8px 10px; margin-top: 7px; }
+    .guild-rank-block .grb-head { display: flex; gap: 6px; align-items: center; }
+    .guild-rank-block .grb-head input { flex: 1; }
+    .guild-empty { color: rgba(232,217,181,0.6); padding: 10px 0; }
+    #guild-error { color: #e0955a; min-height: 17px; margin-top: 8px; font-size: 13px; }
+    #guild-error.ok { color: #7fd18a; }
+    #guild-invite-prompt {
+      position: fixed; bottom: 260px; left: 50%; transform: translateX(-50%);
+      border-radius: 8px; padding: 12px 18px; z-index: 13; display: none; font-size: 15px;
+      text-align: center;
+    }
+    #guild-invite-prompt img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; display: block; margin: 0 auto 6px; }
+    #guild-buff-banner {
+      position: fixed; top: 96px; left: 50%; transform: translateX(-50%);
+      border-radius: 8px; padding: 8px 16px; z-index: 13; display: none; font-size: 15px;
+      color: var(--rb-gold-bright, #f4d78a);
+    }
     #quest-log h4 { margin: 0 0 8px; font-size: 15px; color: var(--rb-gold-bright, #f4d78a); }
     .quest-log-entry { border-bottom: 1px solid rgba(217,164,65,0.2); padding: 6px 0; }
     .quest-log-entry .q-title { font-weight: 600; color: var(--rb-parchment, #e8d9b5); }
@@ -566,7 +643,8 @@
 </head>
 <body>
   <div id="status">Connecting…</div>
-  <div id="hint"><a href="/character-creation.html" style="color: var(--rb-gold-bright, #f4d78a);">Change character</a></div>
+  <!-- No "Change character" link: a character is created once and is fixed
+       afterwards (see server/accounts.js setCharacter). -->
   <!-- One button per window; `data-window` is what main.js's WINDOW_TOGGLES
        table keys off, so adding a panel here means adding one entry there. -->
   <div id="window-bar">
@@ -575,6 +653,7 @@
     <button class="window-btn" data-window="skills" title="Skill Book (K)"><span class="wb-key">K</span><span class="wb-glyph">✨</span><span class="wb-label">Skills</span></button>
     <button class="window-btn" data-window="stats" title="Character Stats (T)"><span class="wb-key">T</span><span class="wb-glyph">🛡️</span><span class="wb-label">Stats</span></button>
     <button class="window-btn" data-window="map" title="World Map (M)"><span class="wb-key">M</span><span class="wb-glyph">🗺️</span><span class="wb-label">Map</span></button>
+    <button class="window-btn" data-window="guild" title="Guild (G)"><span class="wb-key">G</span><span class="wb-glyph">🛡</span><span class="wb-label">Guild</span></button>
   </div>
   <div id="target-panel">
     <div id="target-name"></div>
@@ -609,6 +688,18 @@
     <button id="party-leave-btn" class="rb-btn rb-danger">Leave party</button>
   </div>
   <div id="party-invite-prompt" class="rb-panel"></div>
+  <!-- Guild. Everything inside #guild-body is rendered by src/main.js — the
+       panel has five tabs whose contents all depend on the live guild-state
+       payload, so authoring them as static markup would just be five empty
+       shells to keep in sync. -->
+  <div id="guild-panel" class="rb-panel">
+    <button id="close-guild" class="rb-btn">✕</button>
+    <h3>Guild (G to close)</h3>
+    <div id="guild-body"></div>
+    <div id="guild-error"></div>
+  </div>
+  <div id="guild-invite-prompt" class="rb-panel"></div>
+  <div id="guild-buff-banner" class="rb-panel"></div>
   <div id="health-label"></div>
   <div id="health-bar-wrap"><div id="health-bar-fill"></div></div>
   <div id="status-effect-row"></div>
