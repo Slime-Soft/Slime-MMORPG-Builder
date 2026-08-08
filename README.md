@@ -2,7 +2,7 @@
 
 # Slime MMORPG Builder
 
-A work-in-progress **no-code MMORPG Builder** built with **JavaScript, Three.js, Express, and Socket.IO**.
+A work-in-progress **no-code MMORPG Builder** built with **JavaScript, Three.js, Express, and Socket.IO**. **The project is currently on hold, since i can't afford a sub at the moment.**
 
 Design complete MMORPG worlds directly in your browser: maps, terrain, NPCs, monsters, quests, skills, buildings, crafting, dungeons, events, particles and more—without writing game logic.
 
